@@ -1,0 +1,141 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import { driveEmbed, getWalkthroughs, mediaSrc } from '@data/portfolio';
+
+/**
+ * The films, in one place. Some belong to a project page and link back to it;
+ * a couple stand on their own, because the property behind them has no
+ * project entry.
+ */
+const walkthroughs = await getWalkthroughs();
+---
+
+<BaseLayout
+  title="Walkthroughs"
+  description="Walking video of finished gardens, recorded on completion."
+>
+  <div class="films">
+    <h1 class="page-title films__title">Walk the finished yards.</h1>
+    <div class="rule-accent rule-accent--short"></div>
+    <p class="lead films__lede">
+      Video carries the levels and the sight lines in a way stills cannot. These are recorded on
+      completion, walking the property the way you would.
+    </p>
+
+    <div class="films__list">
+      {
+        walkthroughs.map((film) => (
+          <article>
+            <div class="film__head">
+              <h2 class="film__name">{film.name}</h2>
+              <p class="film__meta">{film.meta}</p>
+            </div>
+
+            {film.drive && (
+              <iframe
+                class="film__player"
+                src={driveEmbed(film.drive)}
+                title={`${film.name} walkthrough`}
+                allow="autoplay"
+                loading="lazy"
+              />
+            )}
+
+            {film.file && (
+              <video
+                class="film__player"
+                src={mediaSrc(film.file)}
+                controls
+                muted
+                playsinline
+                preload="metadata"
+              />
+            )}
+
+            {!film.drive && !film.file && (
+              <div class="film__player awaiting">
+                <span>Walkthrough to come</span>
+              </div>
+            )}
+
+            <div class="rule-accent" />
+            <p class="film__note">{film.note}</p>
+
+            {film.href && (
+              <a class="link-accent film__link" href={film.href}>
+                See the full project
+              </a>
+            )}
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .films {
+    max-width: var(--width-content);
+    margin-inline: auto;
+    padding: 2.75rem var(--gutter) 0;
+  }
+
+  .films__title {
+    max-width: 22ch;
+  }
+
+  .films__lede {
+    margin-block-start: 1.375rem;
+  }
+
+  .films__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xl);
+    margin-block-start: 2.75rem;
+  }
+
+  .film__head {
+    border-block-start: var(--rule-structure) solid var(--color-structure);
+    padding-block-start: 0.75rem;
+    display: flex;
+    gap: var(--space-lg);
+    align-items: baseline;
+    flex-wrap: wrap;
+  }
+
+  .film__name {
+    font-size: var(--text-xl);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--color-structure);
+    line-height: var(--leading-tight);
+  }
+
+  .film__meta {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .film__player {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: none;
+    display: block;
+    margin-block-start: 1.125rem;
+    background: var(--gmz-ink);
+    object-fit: cover;
+  }
+
+  .film__note {
+    margin-block-start: 1rem;
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    color: var(--color-text);
+    max-width: 58ch;
+  }
+
+  .film__link {
+    margin-block-start: 1.125rem;
+  }
+</style>

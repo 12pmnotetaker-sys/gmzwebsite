@@ -1,0 +1,516 @@
+---
+import { Image } from 'astro:assets';
+import type { GetStaticPaths } from 'astro';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Drawings from '@components/Drawings.astro';
+import CompareSlider from '@components/CompareSlider.astro';
+import Lightbox from '@components/Lightbox.astro';
+import MediaClip from '@components/MediaClip.astro';
+import { driveEmbed, getProjects, mediaSrc, neighbours, projectHref } from '@data/portfolio';
+import { company } from '@data/site';
+
+export const getStaticPaths = (async () => {
+  const projects = await getProjects();
+  return projects.map((project) => ({
+    params: { slug: project.id },
+    props: { project, ...neighbours(projects, project) },
+  }));
+}) satisfies GetStaticPaths;
+
+const { project, previous, next } = Astro.props;
+const { name, kicker, meta, scope, phase, summary, built, photos, walkthrough, alternates } =
+  project.data;
+---
+
+<BaseLayout title={name} description={summary} type="article">
+  <div class="project">
+    <a class="link-back" href="/portfolio">&larr; Back to the work</a>
+
+    <header class="project__head">
+      <div>
+        <p class="kicker project__kicker">{kicker}</p>
+        <h1 class="project__name">{name}</h1>
+      </div>
+      <div class="project__meta">
+        <p>{meta}</p>
+        <p>{scope.join(' · ')}</p>
+      </div>
+    </header>
+
+    <p class="project__summary">{summary}</p>
+
+    {
+      walkthrough && (
+        <section class="block">
+          <div class="section-head">
+            <div>
+              <p class="kicker">Walkthrough</p>
+              <h2 class="section-title">{walkthrough.heading ?? 'Walk the finished garden'}</h2>
+            </div>
+            <p class="section-head__note">{walkthrough.note}</p>
+          </div>
+
+          {walkthrough.drive && (
+            <iframe
+              class="film"
+              src={driveEmbed(walkthrough.drive)}
+              title={`${name} walkthrough`}
+              allow="autoplay"
+              loading="lazy"
+            />
+          )}
+
+          {walkthrough.file && (
+            <div class="film film--local">
+              <video
+                src={mediaSrc(walkthrough.file)}
+                controls
+                muted
+                loop
+                playsinline
+                preload="metadata"
+                data-clip-video
+                data-clip-key={project.id}
+              />
+            </div>
+          )}
+
+          {walkthrough.pending && (
+            <div class="film awaiting">
+              <span>Walkthrough to come</span>
+            </div>
+          )}
+
+          {walkthrough.clips.length > 0 && (
+            <div class="clips">
+              {walkthrough.clips.map((clip) => (
+                <MediaClip {clip} project={project.id} />
+              ))}
+            </div>
+          )}
+
+          {walkthrough.beforeAfter.length > 0 && (
+            <>
+              <div class="section-head block__nested">
+                <div>
+                  <p class="kicker">Before and after</p>
+                  <h2 class="section-title section-title--tight">
+                    {walkthrough.beforeAfterHeading ?? 'Before and after'}
+                  </h2>
+                </div>
+                {walkthrough.beforeAfterNote && (
+                  <p class="section-head__note">{walkthrough.beforeAfterNote}</p>
+                )}
+              </div>
+              <div class="clips clips--pairs">
+                {walkthrough.beforeAfter.map((clip) => (
+                  <MediaClip {clip} project={project.id} />
+                ))}
+              </div>
+            </>
+          )}
+
+          <div class="rule-accent" />
+        </section>
+      )
+    }
+
+    {
+      built.length > 0 && (
+        <section class="block">
+          <div class="section-head">
+            <div>
+              <p class="kicker">Finished</p>
+              <h2 class="section-title">Photographed on completion</h2>
+            </div>
+          </div>
+
+          <div class="grid grid--built">
+            {built.map((picture, i) => (
+              <figure class="figure">
+                <button
+                  type="button"
+                  class="zoom"
+                  aria-label={`View ${picture.label} full screen`}
+                  data-lb-set="built"
+                  data-lb-index={i}
+                >
+                  <Image
+                    src={picture.src}
+                    alt={picture.alt}
+                    widths={[400, 640, 1024]}
+                    sizes="(width >= 1100px) 400px, (width >= 700px) 45vw, 100vw"
+                    loading="lazy"
+                    class="shot shot--card"
+                  />
+                </button>
+                <div class="rule-accent" />
+                <figcaption class="figure__caption">
+                  <p class="figure__label">{picture.label}</p>
+                  {picture.note && <p class="figure__note">{picture.note}</p>}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+      )
+    }
+
+    {
+      photos.length > 0 && (
+        <section class="block">
+          <div class="section-head">
+            <div>
+              <p class="kicker">Photographs</p>
+              <h2 class="section-title">More from the site</h2>
+            </div>
+          </div>
+
+          <div class="grid grid--photos">
+            {photos.map((picture, i) => (
+              <figure class="figure">
+                <button
+                  type="button"
+                  class="zoom"
+                  aria-label={`View ${picture.label} full screen`}
+                  data-lb-set="photos"
+                  data-lb-index={i}
+                >
+                  <Image
+                    src={picture.src}
+                    alt={picture.alt}
+                    widths={[320, 520, 800]}
+                    sizes="(width >= 1100px) 320px, (width >= 700px) 40vw, 100vw"
+                    loading="lazy"
+                    class="shot shot--tall"
+                  />
+                </button>
+                <div class="rule-accent" />
+                <figcaption class="figure__caption">
+                  <p class="figure__label figure__label--sm">{picture.label}</p>
+                  {picture.note && <p class="figure__note">{picture.note}</p>}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+      )
+    }
+
+    <Drawings {project} />
+
+    <div class="facts-row">
+      <div class="facts-row__panel">
+        <dl class="facts">
+          <div class="facts__row facts__row--inline">
+            <dt>Scope</dt>
+            <dd>
+              <span class="facts__stack">
+                {scope.map((item) => <span>{item}</span>)}
+              </span>
+            </dd>
+          </div>
+          <div class="facts__row facts__row--inline">
+            <dt>Stage</dt>
+            <dd>{phase}</dd>
+          </div>
+          <div class="facts__row facts__row--inline">
+            <dt>Drawings</dt>
+            <dd>{company.drawings}</dd>
+          </div>
+        </dl>
+        <a class="btn btn--primary btn--block facts-row__cta" href="/contact">
+          Start your transformation
+        </a>
+      </div>
+    </div>
+
+    {
+      alternates && (
+        <section class="block">
+          <div class="section-head">
+            <div>
+              <p class="kicker">Other schemes</p>
+              <h2 class="section-title section-title--tight">{alternates.heading}</h2>
+            </div>
+            <p class="section-head__note section-head__note--wide">{alternates.note}</p>
+          </div>
+
+          {alternates.groups.map((group) => (
+            <div class="scheme">
+              <div class="scheme__head">
+                <p class="scheme__name">{group.name}</p>
+                <p class="scheme__note">{group.note}</p>
+              </div>
+              <div class="grid grid--schemes">
+                {group.items.map((picture) => (
+                  <figure class="figure">
+                    <Image
+                      src={picture.src}
+                      alt={picture.alt}
+                      widths={[320, 520, 800]}
+                      sizes="(width >= 1100px) 320px, (width >= 700px) 40vw, 100vw"
+                      loading="lazy"
+                      class="shot shot--alt"
+                    />
+                    <div class="rule-accent" />
+                    <figcaption class="scheme__caption">{picture.label}</figcaption>
+                  </figure>
+                ))}
+              </div>
+            </div>
+          ))}
+        </section>
+      )
+    }
+
+    <CompareSlider {project} />
+
+    <nav class="pager" aria-label="Other projects">
+      <a href={projectHref(previous)}>&larr; {previous.data.name}</a>
+      <a class="pager__next" href={projectHref(next)}>{next.data.name} &rarr;</a>
+    </nav>
+  </div>
+
+  <Lightbox {project} />
+</BaseLayout>
+
+<style>
+  .project {
+    max-width: var(--width-content);
+    margin-inline: auto;
+    padding: 2.125rem var(--gutter) 0;
+  }
+
+  .project__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 2.25rem;
+    flex-wrap: wrap;
+    margin-block-start: 1.375rem;
+    padding-block-end: 1.25rem;
+    border-block-end: var(--rule-structure) solid var(--color-structure);
+  }
+
+  .project__kicker {
+    margin-block-end: 0.5625rem;
+  }
+
+  .project__name {
+    font-size: var(--text-4xl);
+    font-weight: 800;
+    letter-spacing: var(--tracking-display);
+    color: var(--color-text);
+    line-height: var(--leading-tight);
+  }
+
+  .project__meta {
+    font-size: 1rem;
+    color: var(--color-text-muted);
+    line-height: 1.7;
+    flex: none;
+  }
+
+  .project__summary {
+    margin-block-start: 1.375rem;
+    font-size: var(--text-lg);
+    line-height: var(--leading-normal);
+    color: var(--color-text);
+    max-width: 64ch;
+  }
+
+  /* ---- Sections -------------------------------------------------------- */
+
+  .block {
+    margin-block-start: var(--space-2xl);
+  }
+
+  .block:first-of-type {
+    margin-block-start: 2.125rem;
+  }
+
+  .block__nested {
+    margin-block-start: 2.75rem;
+  }
+
+  .section-title--tight {
+    max-width: 26ch;
+  }
+
+  .section-head__note--wide {
+    max-width: 38ch;
+  }
+
+  /* ---- Video ----------------------------------------------------------- */
+
+  .film {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: none;
+    display: block;
+    margin-block-start: 1.125rem;
+    background: var(--gmz-ink);
+  }
+
+  .film--local {
+    background: var(--gmz-teal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .film--local video {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+  }
+
+  .clips {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.25rem;
+    margin-block-start: 1.125rem;
+    align-items: start;
+  }
+
+  .clips--pairs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @media (width < 560px) {
+    .clips--pairs {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* ---- Photo grids ----------------------------------------------------- */
+
+  .grid {
+    display: grid;
+    margin-block-start: 1.5rem;
+  }
+
+  .grid--built {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 2.25rem 1.75rem;
+  }
+
+  .grid--photos {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.75rem 1.5rem;
+  }
+
+  .grid--schemes {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.5rem;
+    margin-block-start: 1.125rem;
+    align-items: start;
+  }
+
+  .shot--card {
+    aspect-ratio: 3 / 2;
+  }
+
+  .shot--tall {
+    aspect-ratio: 4 / 5;
+  }
+
+  .shot--alt {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    background: var(--gmz-well);
+  }
+
+  .figure__label--sm {
+    font-size: var(--text-base);
+  }
+
+  /* ---- Alternate schemes ----------------------------------------------- */
+
+  .scheme {
+    margin-block-start: 2.125rem;
+  }
+
+  .scheme__head {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    flex-wrap: wrap;
+    border-block-end: 1px solid var(--color-border);
+    padding-block-end: 0.625rem;
+  }
+
+  .scheme__name {
+    font-size: 1.1875rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: var(--gmz-teal);
+  }
+
+  .scheme__note {
+    font-size: var(--text-sm);
+    line-height: 1.55;
+    color: var(--color-text-muted);
+    max-width: 52ch;
+  }
+
+  .scheme__caption {
+    margin-block-start: 0.625rem;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-text-muted);
+  }
+
+  /* ---- Facts panel ----------------------------------------------------- */
+
+  .facts-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-2xl);
+    padding-block-start: 3.25rem;
+    flex-wrap: wrap;
+  }
+
+  .facts-row__panel {
+    flex: 1 1 300px;
+    max-width: 360px;
+    min-width: 240px;
+  }
+
+  .facts-row__cta {
+    margin-block-start: var(--space-lg);
+    padding: 0.9375rem;
+  }
+
+  /* ---- Pager ----------------------------------------------------------- */
+
+  .pager {
+    display: flex;
+    justify-content: space-between;
+    gap: 1.25rem;
+    margin-block-start: 3.25rem;
+    padding-block-start: 1.25rem;
+    border-block-start: 1px solid var(--color-border);
+  }
+
+  .pager a {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+
+  .pager__next {
+    text-align: end;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .scheme__name {
+      color: var(--color-text);
+    }
+  }
+</style>

@@ -136,6 +136,12 @@ hr {
   outline-color: var(--color-focus-inverse);
 }
 
+/* While the unlock veil is up, nothing behind it scrolls. The flag is set by
+   GateFlag.astro before the first paint. */
+html[data-locked] body {
+  overflow: hidden;
+}
+
 /* ---- Layout primitives ----------------------------------------------- */
 
 .wrap {

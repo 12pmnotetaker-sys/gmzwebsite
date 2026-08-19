@@ -1,19 +1,21 @@
 /**
- * Whether this site is ready to be found.
+ * Whether this site is ready to be found, and which parts never are.
  *
- * Phase 0 is a scaffold: the routes exist, the design system works, the build
- * gate runs, and there is no content on any of it. A placeholder page that
- * Google indexes is worse than no page, because it ranks for the business's
- * own name and shows a visitor nothing.
+ * Two separate decisions live here, and they must not be conflated.
  *
- * So indexing is off, and it is off in all three places that matter at once:
- * `noindex` on every page, `Disallow: /` in robots.txt, and no sitemap. Those
- * three have to agree. Dropping one while keeping the others is a
- * contradictory signal, which is the mistake the portfolio's config comments
- * warn about at length.
+ * `searchIndexing.enabled` covers the PUBLIC marketing site. It is off while
+ * that site is a scaffold: a placeholder page Google indexes ranks for the
+ * business's own name and shows a visitor nothing. Phase 2 turns it on.
  *
- * Flip `enabled` to true in Phase 2, when there is a real site behind it. That
- * one change turns on all three.
+ * `gatedPrefixes` covers the PRIVATE portfolio, and is not a phase. Those
+ * routes are never indexable, never in the sitemap, and always disallowed in
+ * robots.txt, whatever `searchIndexing.enabled` says. Turning the marketing
+ * site on must not drag the portfolio into a search result with it, which is
+ * exactly the mistake this file exists to make impossible.
+ *
+ * Three signals read these values and have to agree: the `noindex` meta tag in
+ * BaseLayout, robots.txt, and the sitemap integration. `scripts/content-lint.mjs`
+ * fails the build if they ever disagree.
  *
  * Imported by `astro.config.mjs`, so keep this dependency-free: no path
  * aliases, no Astro globals.
@@ -23,3 +25,19 @@ export const searchIndexing = {
   /** Why it is off, surfaced in robots.txt so the reason is not lost. */
   reason: 'Scaffold. No content yet; nothing here is worth indexing.',
 } as const;
+
+/**
+ * Route prefixes that sit behind the unlock veil.
+ *
+ * The veil itself is a courtesy screen, not access control: the code ships in
+ * the client bundle and every page stays fetchable by URL. What actually keeps
+ * this work out of a search result is the three signals below. Keep them
+ * together; dropping one while keeping the others is a contradictory signal.
+ */
+export const gatedPrefixes = ['/portfolio'] as const;
+
+/** True when a path sits behind the veil. Used by BaseLayout and the sitemap. */
+export function isGatedPath(pathname: string): boolean {
+  const path = pathname.replace(/\/$/, '') || '/';
+  return gatedPrefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+}

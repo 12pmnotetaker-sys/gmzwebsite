@@ -3,9 +3,16 @@
 The public marketing site for **GMZ Landscaping Inc.** — Astro, static output,
 deployed to Vercel at `gmzlandscape.com`.
 
-This repo is at **Phase 0**: the scaffold exists, the design system works, the
-build gate runs, and there is no content on any of it. Every route is a
-placeholder and the whole site is `noindex`.
+This repo is at **Phase 1**: the scaffold works and the private portfolio has
+moved in under `/portfolio`, veil and all. The marketing routes are still
+placeholders and the whole site is `noindex` until Phase 2.
+
+The live `gmz-portfolio` deployment is untouched and still serving prospects.
+Nothing switches over until the Phase 3 cutover.
+
+**The unlock code and its storage key are preserved byte-for-byte**, so anyone
+who has already entered the code stays through the veil. Changing the storage
+key locks every existing prospect out; see `CLAUDE.md` before touching it.
 
 ## Running it
 
@@ -38,7 +45,10 @@ src/
   data/canonical.ts      the canonical URL form
   styles/tokens.css      the palette; names stable, values swappable
   styles/global.css      fonts, reset, and the repeated design patterns
-  content.config.ts      schemas for projects, services, testimonials, faqs
+  content.config.ts      schemas: projects (town only), services, testimonials,
+                         faqs, and portfolio (gated, street names)
+  content/portfolio/     the seven gated project entries
+  pages/portfolio/       the gated index, project pages and walkthroughs
   layouts/               BaseLayout
   components/            Header, Footer, Logo, SEO, PageHeader, Placeholder
   pages/                 the route skeleton, all placeholders

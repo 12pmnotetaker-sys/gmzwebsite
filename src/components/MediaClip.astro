@@ -1,0 +1,178 @@
+---
+import { Image } from 'astro:assets';
+import { driveEmbed, mediaSrc } from '@data/portfolio';
+import type { CollectionEntry } from 'astro:content';
+
+type Clip = NonNullable<CollectionEntry<'portfolio'>['data']['walkthrough']>['clips'][number];
+
+interface Props {
+  clip: Clip;
+  /** Project id, so a saved playback position is scoped to this project. */
+  project: string;
+}
+
+const { clip, project } = Astro.props;
+---
+
+<figure class="clip">
+  {
+    clip.still && (
+      <div class="clip__well">
+        <Image src={clip.still} alt={clip.alt ?? clip.label} widths={[640, 1024, 1400]} />
+      </div>
+    )
+  }
+
+  {
+    clip.drive && (
+      <div class="clip__well">
+        <iframe src={driveEmbed(clip.drive)} title={clip.label} allow="autoplay" loading="lazy" />
+      </div>
+    )
+  }
+
+  {
+    clip.file && (
+      <div class="clip__well">
+        <video
+          src={mediaSrc(clip.file)}
+          controls
+          muted
+          loop
+          playsinline
+          preload="metadata"
+          data-clip-video
+          data-clip-key={`${project}-${clip.key}`}
+          data-clip-stop={clip.stop}
+        />
+      </div>
+    )
+  }
+
+  {
+    clip.pending && (
+      <div class="clip__well awaiting">
+        <span>Footage to come</span>
+      </div>
+    )
+  }
+
+  <figcaption>{clip.label}</figcaption>
+</figure>
+
+<script>
+  /*
+   * Shared by every clip on the page.
+   *
+   * Three behaviours, all of them from the design: a clip plays when it scrolls
+   * into view and pauses when it leaves; it remembers where you were so
+   * scrolling back does not restart it; and a clip with a `stop` rewinds there,
+   * because only its opening is worth showing.
+   *
+   * The IntersectionObserver is skipped entirely for anyone who has asked for
+   * reduced motion. Autoplaying video is exactly what that preference is about,
+   * and the controls still work.
+   */
+  const videos = [...document.querySelectorAll<HTMLVideoElement>('[data-clip-video]')];
+  const stillsOnly = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (videos.length > 0) {
+    const positionKey = (video: HTMLVideoElement) => `gmz-vid-${video.dataset.clipKey}`;
+    const stopAt = (video: HTMLVideoElement) => Number(video.dataset.clipStop) || 0;
+
+    for (const video of videos) {
+      video.addEventListener('loadedmetadata', () => {
+        // Match the well to the footage, so a portrait clip is not letterboxed
+        // into a 16/9 box.
+        if (video.videoWidth && video.videoHeight && video.parentElement) {
+          video.parentElement.style.aspectRatio = `${video.videoWidth} / ${video.videoHeight}`;
+        }
+
+        if (stopAt(video)) return;
+        try {
+          const saved = Number(window.localStorage.getItem(positionKey(video)));
+          if (saved > 0 && saved < video.duration - 1) video.currentTime = saved;
+        } catch {
+          /* Storage unavailable; the clip just starts from the top. */
+        }
+      });
+
+      let lastWrite = 0;
+      video.addEventListener('timeupdate', () => {
+        const stop = stopAt(video);
+        if (stop && video.currentTime >= stop) {
+          video.currentTime = 0;
+          if (!video.loop) video.pause();
+          return;
+        }
+
+        // Once every 1.5s is often enough to be useful and rare enough not to
+        // hammer storage on every frame.
+        const now = Date.now();
+        if (now - lastWrite < 1500) return;
+        lastWrite = now;
+        try {
+          window.localStorage.setItem(positionKey(video), String(video.currentTime));
+        } catch {
+          /* Nothing to do; the position simply is not remembered. */
+        }
+      });
+    }
+
+    if (!stillsOnly && 'IntersectionObserver' in window) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            const video = entry.target as HTMLVideoElement;
+            if (entry.isIntersecting) void video.play().catch(() => {});
+            else if (!video.paused) video.pause();
+          }
+        },
+        { threshold: 0.6 },
+      );
+      for (const video of videos) observer.observe(video);
+    }
+  }
+</script>
+
+<style>
+  .clip {
+    margin: 0;
+    min-width: 0;
+  }
+
+  .clip__well {
+    background: var(--gmz-teal);
+    aspect-ratio: 16 / 9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .clip__well :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .clip__well video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .clip__well iframe {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border: none;
+    display: block;
+  }
+
+  .clip figcaption {
+    margin-block-start: 0.625rem;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-text-muted);
+  }
+</style>

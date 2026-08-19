@@ -27,10 +27,37 @@ The street name and number stay in the estimating system. This is enforced by th
 `townOnly` schema in `src/content.config.ts`, so the way to break it is to delete
 that refinement on purpose, in a diff someone reviews.
 
-The gated portfolio indexes projects _by street name_, which GMZ agreed to
-explicitly and which is conditioned on that site sitting behind a veil. When the
-portfolio arrives here in Phase 1 it keeps its own collection and its own rule.
-Do not let the two mix.
+**The gated portfolio is the exception, and it is fenced.** The `portfolio`
+collection indexes work _by street name_, which GMZ agreed to explicitly and
+which is conditioned on those pages sitting behind the veil. The two collections
+never mix: `projects` has no street field, and `portfolio` never becomes public
+by copying an entry across.
+
+## The veil
+
+Everything under `/portfolio` sits behind an unlock code.
+
+**`gate` in `src/data/site.ts` is preserved byte-for-byte from the portfolio
+repo, and that matters.** `storageKey` is what an already-unlocked browser reads
+to stay through the veil. Change it and every prospect who has ever entered the
+code is locked out on their next visit, mid-conversation, with no warning.
+Changing `code` alone does not do that; changing the key does. Bump the key only
+when the point is to revoke access, and only when someone has decided to.
+
+**The veil is not access control.** The code ships in the client bundle and every
+page stays fetchable by URL. What keeps this work out of search is three things
+together: `noindex` on every gated page, `Disallow: /portfolio/` in robots.txt,
+and exclusion from the sitemap. Keep all three. Never put anything in this repo
+that genuinely must not be public.
+
+**Gated status is derived from the route, not passed as a prop.** `BaseLayout`
+asks `isGatedPath()`, so a new page under `/portfolio` is gated because of where
+it lives. A prop can be forgotten; a path cannot. Change the set by editing
+`gatedPrefixes` in `src/data/publication.ts`, which is one line in a diff.
+
+**The gated half does not follow the phase switch.** Turning the marketing site
+on in Phase 2 must not drag private client work into a search result with it.
+`content-lint` fails the build if it ever does.
 
 **Undecided policy does not get published.** An FAQ answer stays
 `published: false` until the underlying decision is actually made. The site must
@@ -69,16 +96,19 @@ stay. A redesign that drops one is a regression, not a style change.
 
 ## Where things are
 
-| What                       | Where                          |
-| -------------------------- | ------------------------------ |
-| Company facts              | `src/data/site.ts`             |
-| Claims not yet allowed     | `claims` in `src/data/site.ts` |
-| Search indexing switch     | `src/data/publication.ts`      |
-| Canonical URL form         | `src/data/canonical.ts`        |
-| Design tokens              | `src/styles/tokens.css`        |
-| Repeated patterns          | `src/styles/global.css`        |
-| Content schemas            | `src/content.config.ts`        |
-| The last check before live | `scripts/content-lint.mjs`     |
+| What                       | Where                                            |
+| -------------------------- | ------------------------------------------------ |
+| Company facts              | `src/data/site.ts`                               |
+| Claims not yet allowed     | `claims` in `src/data/site.ts`                   |
+| Search indexing switch     | `src/data/publication.ts`                        |
+| Canonical URL form         | `src/data/canonical.ts`                          |
+| Design tokens              | `src/styles/tokens.css`                          |
+| Repeated patterns          | `src/styles/global.css`                          |
+| Content schemas            | `src/content.config.ts`                          |
+| The last check before live | `scripts/content-lint.mjs`                       |
+| The veil                   | `gate` in `src/data/site.ts`, `Gate.astro`       |
+| Which routes are gated     | `gatedPrefixes` in `src/data/publication.ts`     |
+| Gated content              | `src/content/portfolio/`, `src/pages/portfolio/` |
 
 ## Restyling
 
@@ -128,8 +158,13 @@ a note in a style guide.
 ## Phases
 
 - **Phase 0 (done).** Scaffold: tokens, facts, chrome, schemas, build gate, CI.
-- **Phase 1.** The portfolio moves in. Public projects (town only) split from the
-  gated portfolio (street names, veil, noindex).
+- **Phase 1 (done).** The portfolio moved in under `/portfolio`, veil and all,
+  with the gate config preserved so existing unlocks survive. The live
+  `gmz-portfolio` deployment is untouched and still serving prospects; nothing
+  switches over until Phase 3.
+  _Still outstanding:_ the public `/work` split. It needs GMZ to pick which
+  projects go public and to supply a town for each, since the gated entries
+  carry street names and the public schema will not accept one.
 - **Phase 2.** The marketing site: home, services, process, about, answers,
   intake. Indexing goes on.
 - **Phase 3.** Cutover: redirects, DNS, then Wix.

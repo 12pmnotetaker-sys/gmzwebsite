@@ -1,0 +1,26 @@
+---
+import { gate } from '@data/site';
+
+/**
+ * Marks the document locked before it paints.
+ *
+ * This belongs in `<head>` and has to be blocking: read the flag any later and
+ * the portfolio flashes into view behind the veil on every load. Gate.astro
+ * draws the veil itself and does the unlocking; this is only the flag.
+ *
+ * It fails open. With JavaScript off, or storage unreadable, no veil ever
+ * appears. That is the accepted cost of a cosmetic gate, and the reason
+ * README.md is blunt about this not being access control: failing closed would
+ * leave a static site permanently blank for anyone with scripting disabled.
+ */
+---
+
+<script is:inline define:vars={{ storageKey: gate.storageKey }}>
+  try {
+    if (window.localStorage.getItem(storageKey) !== '1') {
+      document.documentElement.setAttribute('data-locked', '');
+    }
+  } catch {
+    document.documentElement.setAttribute('data-locked', '');
+  }
+</script>

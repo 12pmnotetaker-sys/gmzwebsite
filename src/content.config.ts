@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { defineCollection, reference, z, type SchemaContext } from 'astro:content';
 import { glob } from 'astro/loaders';
 
@@ -172,6 +174,209 @@ const testimonials = defineCollection({
   }),
 });
 
+/* ---------------------------------------------------------------------- */
+/* The gated portfolio                                                     */
+/* ---------------------------------------------------------------------- */
+
+/**
+ * This collection is the private portfolio, and it plays by different rules to
+ * `projects` above.
+ *
+ * It indexes work BY STREET NAME, which GMZ agreed to explicitly and which is
+ * conditioned on these pages sitting behind the veil: a street name plus a
+ * photograph of the house often identifies whose garden it is. Every route
+ * built from this collection is gated and carries noindex, and robots.txt
+ * disallows the whole prefix, permanently and independently of whether the
+ * marketing site is indexable.
+ *
+ * Never move an entry from here into `projects` by copying it. The public
+ * collection has no street field, on purpose.
+ */
+
+const mediaFile = z.string().refine(
+  (file) => existsSync(path.join(process.cwd(), 'public/media', file)),
+  (file) => ({
+    message:
+      `public/media/${file} does not exist. Add the video, or drop the field ` +
+      `so the "to come" state renders instead.`,
+  }),
+);
+
+/**
+ * A Google Drive file id, embedded as an iframe player.
+ *
+ * Used only where GMZ has no local copy of the footage. These depend on the
+ * Drive file staying link-shared: revoke the share and the player goes blank,
+ * with nothing at build time to warn us. Prefer a local file under
+ * `public/media/` whenever one exists.
+ */
+const driveId = z.string().regex(/^[A-Za-z0-9_-]{20,}$/, 'Not a Google Drive file id.');
+
+/**
+ * A photograph or rendering, with the alt text required alongside it.
+ *
+ * Alt is not optional and there is no way around it: a portfolio that is
+ * almost entirely images is unusable without it. `label` is the visible
+ * caption and `alt` is what a screen reader is told, so they are allowed to
+ * differ: "The stairs" is a fine caption and a useless alt.
+ */
+const picture = (image: SchemaContext['image']) =>
+  z.object({
+    /** Visible caption. Short. */
+    label: z.string().min(1),
+    src: image(),
+    /**
+     * A larger crop for the lightbox, when one exists. The grid keeps using
+     * `src`, so this is bandwidth spent only when someone zooms in.
+     */
+    full: image().optional(),
+    alt: z.string().min(1, 'Every image needs alt text describing what is shown.'),
+    /** The sentence or two under the caption. */
+    note: z.string().optional(),
+  });
+
+/**
+ * One panel in a video row: a local clip, a Drive embed, or a still standing
+ * in for footage that does not exist. Exactly one of the three.
+ */
+const clip = (image: SchemaContext['image']) =>
+  z
+    .object({
+      /** Stable id. Keys the saved playback position, so do not renumber. */
+      key: z.string().min(1),
+      label: z.string().min(1),
+      file: mediaFile.optional(),
+      drive: driveId.optional(),
+      still: image().optional(),
+      /** Alt text, required when `still` is set. */
+      alt: z.string().optional(),
+      /**
+       * The footage exists but is not in the repo yet. Renders the design's
+       * "to come" panel under this clip's label rather than an empty box.
+       * Swap it for `file:` when the mp4 lands in public/media/.
+       */
+      pending: z.literal(true).optional(),
+      /**
+       * Rewind at this many seconds. Used where only the opening of a clip is
+       * worth showing.
+       */
+      stop: z.number().positive().optional(),
+    })
+    .refine(
+      (c) => [c.file, c.drive, c.still, c.pending].filter(Boolean).length === 1,
+      'A clip needs exactly one of file, drive, still or pending.',
+    )
+    .refine((c) => !c.still || !!c.alt, 'A still needs alt text.');
+
+/** A before/after pair for the drag-to-compare slider. */
+const comparePair = (image: SchemaContext['image']) =>
+  z.object({
+    /** Tab label, when a project has more than one pair. */
+    label: z.string().min(1),
+    a: image(),
+    b: image(),
+    aAlt: z.string().min(1),
+    bAlt: z.string().min(1),
+    /** Overrides the section's own handle labels for this pair. */
+    aLabel: z.string().optional(),
+    bLabel: z.string().optional(),
+    note: z.string().min(1),
+  });
+
+const portfolio = defineCollection({
+  loader: glob({ base: './src/content/portfolio', pattern: '**/*.md' }),
+  schema: ({ image }) =>
+    z.object({
+      /**
+       * The name the project is indexed under.
+       *
+       * The portfolio indexes by street name, which is how GMZ refers to jobs
+       * internally and what the design was drawn around. That is a deliberate
+       * departure from the town-only rule the public scaffold used for client
+       * privacy, and it is the reason this portfolio sits behind the veil
+       * rather than in the sitemap. Never add a house number.
+       */
+      name: z.string().min(1),
+      /** The editorial headline for the project. */
+      title: z.string().min(1),
+      /** Kicker above the name, e.g. "Design & Construction". */
+      kicker: z.string().min(1),
+      /** One-line descriptor shown opposite the name. Not an address. */
+      meta: z.string().min(1),
+      /** The trades involved. Rendered as a list and joined with "·". */
+      scope: z.array(z.string().min(1)).min(1),
+      /** Where the job stands, in GMZ's own words. */
+      phase: z.string().min(1),
+      /** The paragraph under the project header, and the index card blurb. */
+      summary: z.string().min(1),
+      /** Index order. The design sets this by hand, so it is explicit. */
+      order: z.number(),
+      /** Index card image. Falls back to the first drawing when absent. */
+      hero: picture(image).optional(),
+
+      /** The tabbed "Drawings" set: the design as it was drawn. */
+      drawings: z.array(picture(image)).default([]),
+      /** The "Finished" grid: photographed on completion. */
+      built: z.array(picture(image)).default([]),
+      /** The "Photographs" grid: more from the site. */
+      photos: z.array(picture(image)).default([]),
+
+      /** Schemes that were drawn and not chosen. */
+      alternates: z
+        .object({
+          heading: z.string().min(1),
+          note: z.string().min(1),
+          groups: z
+            .array(
+              z.object({
+                name: z.string().min(1),
+                note: z.string().min(1),
+                items: z.array(picture(image)).min(1),
+              }),
+            )
+            .min(1),
+        })
+        .optional(),
+
+      /** The walkthrough section: a single film, a row of clips, or both. */
+      walkthrough: z
+        .object({
+          heading: z.string().optional(),
+          note: z.string().min(1),
+          /** A single feature film, as a local file or a Drive embed. */
+          file: mediaFile.optional(),
+          drive: driveId.optional(),
+          /**
+           * The film exists but is not in the repo yet. Renders the design's
+           * "Walkthrough to come" panel. Swap for `file:` when it lands.
+           */
+          pending: z.literal(true).optional(),
+          /** A row of short clips. */
+          clips: z.array(clip(image)).default([]),
+          /** A second row, shot before and after the build. */
+          beforeAfterHeading: z.string().optional(),
+          beforeAfterNote: z.string().optional(),
+          beforeAfter: z.array(clip(image)).default([]),
+        })
+        .optional(),
+
+      /** The drag-to-compare slider. */
+      compare: z
+        .object({
+          heading: z.string().min(1),
+          intro: z.string().min(1),
+          aLabel: z.string().min(1),
+          bLabel: z.string().min(1),
+          pairs: z.array(comparePair(image)).min(1),
+        })
+        .optional(),
+
+      /** Hidden from the index but still buildable, for work in progress. */
+      draft: z.boolean().default(false),
+      seo,
+    }),
+});
+
 /** The eight stages a customer moves through, in order. Drives FAQ grouping. */
 export const FAQ_PHASES = [
   'getting-started',
@@ -215,4 +420,4 @@ const faqs = defineCollection({
   }),
 });
 
-export const collections = { projects, services, testimonials, faqs };
+export const collections = { projects, services, testimonials, faqs, portfolio };

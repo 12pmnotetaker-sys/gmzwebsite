@@ -254,6 +254,47 @@ export const site = {
   ogImage: '/og-default.jpg',
 } as const;
 
+/* ---------------------------------------------------------------------- */
+/* The gated portfolio                                                     */
+/* ---------------------------------------------------------------------- */
+
+/**
+ * PRESERVED BYTE-FOR-BYTE from the portfolio repo, and that matters.
+ *
+ * `storageKey` is what an already-unlocked browser reads to stay through the
+ * veil. Change it and every prospect who has ever entered the code is locked
+ * out on their next visit, mid-conversation, with no warning. Changing `code`
+ * alone does not do that; changing the key does.
+ *
+ * So: do not "tidy" either value while porting. Bump the key only when the
+ * point is to revoke access, and only when someone has decided to.
+ */
+
+/**
+ * The private-portfolio veil.
+ *
+ * This is a courtesy screen, NOT access control. The code ships in the client
+ * bundle and every page stays directly fetchable by URL, so treat it as a
+ * "please don't browse this casually" sign rather than a lock. Anything that
+ * genuinely must not be public does not belong in this repo at all. See the
+ * "Private portfolio" section of README.md.
+ */
+export const gate = {
+  enabled: true,
+  /** Compared case-insensitively after trimming. */
+  code: 'cercis',
+  /**
+   * localStorage key holding the unlocked flag.
+   *
+   * Bumping this suffix re-locks every browser that had already unlocked,
+   * because the old flag is stored under the old key and nothing reads it any
+   * more. Changing `code` alone does not do that: someone who unlocked with a
+   * previous code stays through the veil until this key changes too. Bump it
+   * when the point is to revoke access rather than just to change the word.
+   */
+  storageKey: 'gmz-portfolio-unlocked-3',
+} as const;
+
 export interface NavItem {
   label: string;
   href: string;

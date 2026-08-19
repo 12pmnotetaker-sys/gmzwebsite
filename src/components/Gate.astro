@@ -1,0 +1,268 @@
+---
+import { company, gate, licenseShort } from '@data/site';
+import Logo from '@components/Logo.astro';
+
+/**
+ * The unlock veil.
+ *
+ * This is a courtesy screen, not access control. The code is in the client
+ * bundle, every page stays directly fetchable by URL, and with JavaScript off
+ * the veil never appears at all. It exists so the portfolio is not casually
+ * browsed by someone who wandered in, and that is the whole of its job. The
+ * gated routes carry noindex and are excluded from the sitemap, which is what
+ * actually keeps them out of search results.
+ *
+ * If something here genuinely must not be seen by the public, it does not
+ * belong in this repo. See the "Private portfolio" section of README.md.
+ */
+---
+
+<div class="veil on-dark" data-gate-veil>
+  <div class="veil__lockup">
+    <Logo height={88} class="veil__mark" />
+    <p class="veil__name">
+      {company.name}<br /><span>Design Portfolio</span>
+    </p>
+  </div>
+
+  <div class="veil__bar"></div>
+
+  <p class="veil__intro">
+    This portfolio is private. Please enter the code from your consultation.
+  </p>
+
+  <form class="veil__form" data-gate-form>
+    <label class="visually-hidden" for="gate-code">Consultation code</label>
+    <input
+      id="gate-code"
+      name="code"
+      type="text"
+      placeholder="Code"
+      autocomplete="off"
+      spellcheck="false"
+      data-gate-input
+    />
+    <button type="submit" data-gate-submit>Enter</button>
+  </form>
+
+  <p class="veil__message" role="status" aria-live="polite" data-gate-message></p>
+
+  <p class="veil__legal">{licenseShort} · {company.address.locality}, California</p>
+</div>
+
+<script is:inline define:vars={{ code: gate.code, storageKey: gate.storageKey }}>
+  /*
+   * Inline rather than bundled, because the veil has to resolve in the same
+   * tick the page paints. The matching `data-locked` flag is set by the
+   * blocking script in BaseLayout's head.
+   */
+  (() => {
+    const root = document.documentElement;
+    const veil = document.querySelector('[data-gate-veil]');
+    const form = document.querySelector('[data-gate-form]');
+    const input = document.querySelector('[data-gate-input]');
+    const submit = document.querySelector('[data-gate-submit]');
+    const message = document.querySelector('[data-gate-message]');
+    if (!veil || !form || !input || !submit || !message) return;
+
+    let checking = false;
+
+    const say = (text, tone) => {
+      message.textContent = text;
+      veil.dataset.tone = tone ?? '';
+    };
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (checking) return;
+
+      checking = true;
+      submit.textContent = 'Checking';
+      veil.dataset.checking = '1';
+      say('');
+
+      // The pause is deliberate: an instant reject reads as a page glitch,
+      // a beat of "Checking" reads as an answer.
+      window.setTimeout(() => {
+        checking = false;
+        veil.removeAttribute('data-checking');
+        submit.textContent = 'Enter';
+
+        if (input.value.trim().toUpperCase() !== code.toUpperCase()) {
+          say("That code isn't right. Please check your consultation notes.", 'error');
+          input.select();
+          return;
+        }
+
+        say('Welcome back.', 'ok');
+        try {
+          window.localStorage.setItem(storageKey, '1');
+        } catch {
+          /* Private browsing. The veil still lifts for this page view. */
+        }
+
+        veil.dataset.open = '1';
+        window.setTimeout(() => {
+          root.removeAttribute('data-locked');
+          veil.removeAttribute('data-open');
+          input.value = '';
+          say('');
+        }, 950);
+      }, 600);
+    });
+
+    // "Lock portfolio" in the footer puts the veil back.
+    document.querySelector('[data-gate-lock]')?.addEventListener('click', () => {
+      try {
+        window.localStorage.removeItem(storageKey);
+      } catch {
+        /* Nothing was stored, so nothing to clear. */
+      }
+      window.scrollTo(0, 0);
+      root.setAttribute('data-locked', '');
+      input.focus();
+    });
+
+    // Focus the field when the veil is what the visitor is looking at.
+    if (root.hasAttribute('data-locked')) input.focus();
+  })();
+</script>
+
+<style>
+  .veil {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: var(--gmz-teal);
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    padding-inline: clamp(1.5rem, 7vw, 5rem);
+    overflow-y: auto;
+    transform: translateY(0);
+    transition: transform 900ms cubic-bezier(0.7, 0, 0.2, 1);
+    will-change: transform;
+  }
+
+  :global(html[data-locked]) .veil {
+    display: flex;
+  }
+
+  .veil[data-open] {
+    transform: translateY(-100%);
+  }
+
+  .veil__lockup {
+    display: flex;
+    align-items: center;
+    gap: 1.375rem;
+    align-self: flex-start;
+    animation: gmzRise 700ms var(--ease) both;
+  }
+
+  .veil__lockup :global(.veil__mark) {
+    height: clamp(66px, 7.1vw, 88px);
+    width: auto;
+    flex: none;
+  }
+
+  .veil__name {
+    font-size: clamp(1.3125rem, 2.8vw, 1.875rem);
+    font-weight: 700;
+    letter-spacing: var(--tracking-heading);
+    line-height: 1.2;
+    color: #fff;
+  }
+
+  .veil__name span {
+    color: var(--gmz-amber);
+  }
+
+  .veil__bar {
+    height: 4px;
+    width: 64px;
+    background: var(--gmz-amber);
+    margin-block-start: 1.625rem;
+    transform-origin: left center;
+    animation: gmzWipe 620ms var(--ease) 340ms both;
+  }
+
+  .veil__intro {
+    margin-block-start: 1.625rem;
+    font-size: var(--text-lg);
+    line-height: var(--leading-normal);
+    color: #fff;
+    opacity: 0.9;
+    max-width: 32ch;
+    animation: gmzRise 700ms var(--ease) 520ms both;
+  }
+
+  .veil__form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.625rem;
+    margin-block-start: 1.75rem;
+    animation: gmzRise 700ms var(--ease) 700ms both;
+  }
+
+  .veil__form input {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 1rem 1.125rem;
+    width: 200px;
+    background: transparent;
+    color: #fff;
+    border: 1px solid rgb(255 255 255 / 38%);
+    transition: border-color var(--transition);
+  }
+
+  .veil[data-tone='error'] .veil__form input {
+    border-color: var(--gmz-amber);
+  }
+
+  .veil__form button {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    padding: 1rem 1.75rem;
+    background: var(--gmz-green);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+
+  .veil[data-checking] .veil__form button {
+    background: rgb(255 255 255 / 18%);
+  }
+
+  .veil__message {
+    margin-block-start: 0.875rem;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--gmz-amber);
+    min-height: 22px;
+    opacity: 0;
+    transition: opacity var(--transition);
+  }
+
+  .veil[data-tone] .veil__message {
+    opacity: 1;
+  }
+
+  .veil__legal {
+    margin-block-start: 2.375rem;
+    font-size: 0.875rem;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: #fff;
+    opacity: 0.5;
+    font-weight: 500;
+    animation: gmzRise 700ms var(--ease) 860ms both;
+  }
+</style>

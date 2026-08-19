@@ -159,22 +159,33 @@ function checkDocument(file, html) {
     const value = alt?.[1] ?? alt?.[2];
     if (value === undefined)
       report(file, 'missing-alt', `<img> with no alt attribute: ${tag[0].slice(0, 90)}`);
-    else if (value.trim() === '' && !/\brole\s*=\s*["']presentation["']/i.test(tag[0]))
+    else if (
+      value.trim() === '' &&
+      !/\brole\s*=\s*["']presentation["']/i.test(tag[0]) &&
+      !/\bdata-alt-set-by-script\b/i.test(tag[0])
+    )
       report(
         file,
         'empty-alt',
-        `<img> with empty alt and no presentation role: ${tag[0].slice(0, 90)}`,
+        `<img> with empty alt, no presentation role and no data-alt-set-by-script: ${tag[0].slice(0, 90)}`,
       );
   }
 }
 
 /**
- * The three search signals have to agree.
+ * The search signals have to agree, and the site now has two kinds of page.
  *
- * robots.txt, the noindex meta tag and the sitemap are one decision expressed
- * three times. Turning one on and leaving the others behind tells a crawler two
- * different things at once, which is the failure the portfolio's config
- * comments warn about at length. This asserts they match.
+ * PUBLIC pages follow the phase switch: noindex and disallowed while the
+ * marketing site is a scaffold, indexable and in the sitemap once it is not.
+ *
+ * GATED pages never move. They carry noindex, they are disallowed by prefix,
+ * and they stay out of the sitemap whatever the public site is doing. The
+ * failure this exists to prevent is turning the marketing site on in Phase 2
+ * and dragging private client work into a search result with it.
+ *
+ * A page counts as gated because it rendered the veil, not because of its
+ * path, so a gated page that somehow lost its veil is caught here rather than
+ * assumed safe.
  */
 async function checkIndexingConsistency(files) {
   const robotsPath = path.join(DIST, 'robots.txt');
@@ -188,46 +199,94 @@ async function checkIndexingConsistency(files) {
   }
 
   const robots = await readFile(robotsPath, 'utf8');
-  const allowed = /^\s*Disallow:\s*$/m.test(robots) || /^\s*Allow:\s*\/\s*$/m.test(robots);
-  const disallowed = /^\s*Disallow:\s*\/\s*$/m.test(robots);
   const hasSitemap = existsSync(path.join(DIST, 'sitemap-index.xml'));
+  /** A bare `Disallow: /` closes the whole site: the scaffold state. */
+  const scaffold = /^\s*Disallow:\s*\/\s*$/m.test(robots);
 
-  const html = files.filter((f) => f.endsWith('.html'));
-  const noindexed = [];
-  for (const file of html) {
+  const gated = [];
+  const open = [];
+  for (const file of files.filter((f) => f.endsWith('.html'))) {
     const source = await readFile(file, 'utf8');
-    if (/<meta[^>]+name=["']robots["'][^>]+noindex/i.test(source)) noindexed.push(file);
+    const route =
+      `/${path.relative(DIST, file).replace(/(?:^|\/)index\.html$/, '')}`.replace(/\/+$/, '') ||
+      '/';
+    const entry = {
+      file,
+      route,
+      noindex: /<meta[^>]+name=["']robots["'][^>]+noindex/i.test(source),
+    };
+    (source.includes('data-gate-veil') ? gated : open).push(entry);
   }
-  const allNoindexed = html.length > 0 && noindexed.length === html.length;
-  const noneNoindexed = noindexed.length === 0;
 
-  if (disallowed && !allNoindexed) {
+  const relative = (file) => path.relative(process.cwd(), file);
+
+  // Gated pages, in every state, without exception.
+  for (const page of gated.filter((p) => !p.noindex)) {
     problems.push({
-      file: 'dist/',
+      file: relative(page.file),
       rule: 'indexing',
-      detail: `robots.txt disallows everything but ${html.length - noindexed.length} page(s) lack a noindex tag.`,
+      detail: 'Gated page is missing noindex. The veil is client-side and stops no crawler.',
     });
   }
-  if (disallowed && hasSitemap) {
+
+  const gatedPrefixes = [
+    ...new Set(gated.map((p) => `/${p.route.split('/').filter(Boolean)[0] ?? ''}`)),
+  ].filter((prefix) => prefix !== '/');
+
+  if (scaffold) {
+    for (const page of open.filter((p) => !p.noindex)) {
+      problems.push({
+        file: relative(page.file),
+        rule: 'indexing',
+        detail: 'robots.txt disallows the whole site but this page has no noindex tag.',
+      });
+    }
+    if (hasSitemap) {
+      problems.push({
+        file: 'dist/sitemap-index.xml',
+        rule: 'indexing',
+        detail: 'A sitemap was generated while robots.txt disallows the whole site.',
+      });
+    }
+    return;
+  }
+
+  // Published: the public half is open, the gated half is still shut.
+  for (const prefix of gatedPrefixes) {
+    if (!new RegExp(`^\\s*Disallow:\\s*${prefix}/?\\s*$`, 'm').test(robots)) {
+      problems.push({
+        file: 'dist/robots.txt',
+        rule: 'indexing',
+        detail: `Gated prefix ${prefix}/ is not disallowed in robots.txt.`,
+      });
+    }
+  }
+  for (const page of open.filter((p) => p.noindex)) {
     problems.push({
-      file: 'dist/sitemap-index.xml',
+      file: relative(page.file),
       rule: 'indexing',
-      detail: 'A sitemap was generated while robots.txt disallows the whole site.',
+      detail: 'robots.txt allows crawling but this public page still carries noindex.',
     });
   }
-  if (allowed && !disallowed && !noneNoindexed) {
-    problems.push({
-      file: 'dist/',
-      rule: 'indexing',
-      detail: `robots.txt allows crawling but ${noindexed.length} page(s) still carry noindex.`,
-    });
-  }
-  if (allowed && !disallowed && !hasSitemap) {
+  if (!hasSitemap) {
     problems.push({
       file: 'dist/',
       rule: 'indexing',
       detail: 'robots.txt allows crawling but no sitemap was generated.',
     });
+    return;
+  }
+  for (const file of files.filter((f) => /sitemap.*\.xml$/.test(f))) {
+    const xml = await readFile(file, 'utf8');
+    for (const prefix of gatedPrefixes) {
+      if (xml.includes(`${prefix}/`) || xml.includes(`${prefix}<`)) {
+        problems.push({
+          file: relative(file),
+          rule: 'indexing',
+          detail: `Sitemap lists a gated path under ${prefix}/.`,
+        });
+      }
+    }
   }
 }
 
