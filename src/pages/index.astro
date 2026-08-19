@@ -1,0 +1,39 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Placeholder from '@components/Placeholder.astro';
+import { company, foundedLine, serviceRegionInline } from '@data/site';
+---
+
+<BaseLayout>
+  <div class="hero">
+    <div class="container">
+      <p class="kicker">{company.tagline}</p>
+      <h1 class="page-title hero__title">{company.summary}</h1>
+      <div class="rule-accent rule-accent--short"></div>
+      <p class="lead hero__lede">
+        {company.legalName}, a family company working across {serviceRegionInline}
+        {foundedLine}.
+      </p>
+    </div>
+  </div>
+
+  <Placeholder
+    phase="Phase 2"
+    what="The home page leads with real project photography, the three service pillars, selected work, and the route to the intake form."
+  />
+</BaseLayout>
+
+<style>
+  .hero {
+    padding-block: var(--space-2xl) var(--space-xl);
+  }
+
+  .hero__title {
+    margin-block-start: 0.875rem;
+    max-width: 20ch;
+  }
+
+  .hero__lede {
+    margin-block-start: 1.375rem;
+  }
+</style>

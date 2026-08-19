@@ -1,0 +1,39 @@
+---
+import { Image } from 'astro:assets';
+import { company } from '@data/site';
+import logo from '@/assets/brand/gmz-logo.png';
+
+interface Props {
+  /**
+   * Rendered height in px. The mark is portrait (627 x 850), so the width
+   * follows from it; never set both.
+   */
+  height: number;
+  class?: string;
+}
+
+const { height, class: className } = Astro.props;
+
+/**
+ * The GMZ mark.
+ *
+ * White artwork on transparent, so it is only legible on the teal chrome.
+ * Every place this site uses it (masthead, drawer, footer) is teal. Do not put
+ * it on a light ground without a dark plate behind it.
+ *
+ * This is a raster export. The vector master is `GMZ_Logo.pdf` in Drive; an
+ * SVG traced from it should replace this file, at which point the ratio below
+ * comes from the artwork rather than from a measurement.
+ */
+const RATIO = 627 / 850;
+const width = Math.round(height * RATIO);
+---
+
+<Image
+  src={logo}
+  alt={company.name}
+  width={width}
+  height={height}
+  densities={[1, 2]}
+  class={className}
+/>

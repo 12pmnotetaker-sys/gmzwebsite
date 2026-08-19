@@ -1,0 +1,60 @@
+---
+import '@styles/global.css';
+import SEO from '@components/SEO.astro';
+import Header from '@components/Header.astro';
+import Footer from '@components/Footer.astro';
+import { searchIndexing } from '@data/publication';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  type?: 'website' | 'article';
+  /** Force a page out of search independently of the site-wide switch. */
+  noindex?: boolean;
+  /** Set false on a page that supplies its own full-bleed chrome. */
+  chrome?: boolean;
+}
+
+const { title, description, image, type, noindex = false, chrome = true } = Astro.props;
+
+/**
+ * Nothing is indexable while the site is a scaffold.
+ *
+ * `searchIndexing.enabled` is the one switch: it drives this meta tag,
+ * robots.txt and whether a sitemap is generated at all. All three have to say
+ * the same thing, and flipping one alone is how a site ends up inviting
+ * crawlers to pages it is simultaneously asking them to skip.
+ */
+const hideFromSearch = noindex || !searchIndexing.enabled;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <meta name="generator" content={Astro.generator} />
+
+    <link
+      rel="preload"
+      href="/fonts/gabarito-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
+    <SEO {title} {description} {image} {type} noindex={hideFromSearch} />
+    <slot name="head" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    {chrome && <Header />}
+    <main id="main">
+      <slot />
+    </main>
+    {chrome && <Footer />}
+  </body>
+</html>
