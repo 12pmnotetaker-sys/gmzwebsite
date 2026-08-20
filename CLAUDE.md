@@ -76,7 +76,22 @@ stairs" is a fine caption and a useless alt.
 **Strip metadata on anything new.** Photographs handed over by GMZ have carried
 GPS coordinates identifying client home addresses. Astro strips metadata from the
 derivatives it serves, but a committed source file keeps its own, and git history
-is permanent: a later deletion does not remove it. Review before committing.
+is permanent: a later deletion does not remove it.
+
+This is no longer a matter of remembering. `npm run lint:photos` walks everything
+committed under `src/assets` and `public` and fails the build on a location tag,
+and it is wired into `npm run build`. The intake route for a new photograph is:
+
+```sh
+npm run photo:audit -- path/to/original.jpg          # what does it carry?
+npm run photo:clean -- path/to/original.jpg src/assets/projects/<slug>/<name>.webp
+```
+
+`clean` applies the orientation to the pixels, resizes, writes no metadata, then
+re-audits its own output and refuses to leave a dirty file behind. **Commit the
+output, never the original.** The audit reports that coordinates are present and
+how precise they are, never what they are, because a build log is not the place
+to reprint a client's address either.
 
 **Accessibility floor.** The skip link, visible `:focus-visible` rings (amber on
 the teal chrome), `aria-current` on the active nav item, one `h1` per page, the
@@ -106,6 +121,7 @@ stay. A redesign that drops one is a regression, not a style change.
 | Repeated patterns          | `src/styles/global.css`                          |
 | Content schemas            | `src/content.config.ts`                          |
 | The last check before live | `scripts/content-lint.mjs`                       |
+| Photograph intake          | `scripts/photo-intake.mjs`                       |
 | The veil                   | `gate` in `src/data/site.ts`, `Gate.astro`       |
 | Which routes are gated     | `gatedPrefixes` in `src/data/publication.ts`     |
 | Gated content              | `src/content/portfolio/`, `src/pages/portfolio/` |
@@ -142,13 +158,14 @@ visitor nothing. Flip it in Phase 2, when there is a site behind it.
 
 ```
 npm run check          # types, schemas, broken image paths, content references
-npm run build          # check + build + content lint
+npm run build          # check + build + content lint + photo metadata scan
 npm run lint:content   # the written rules, against dist/
+npm run lint:photos    # no committed image carries a location
 npm run format:check   # prettier
 ```
 
 `npm run build` fails loudly on a broken photo path, a missing video, absent alt
-text or a schema violation, which is the point.
+text, a schema violation or a photograph carrying GPS, which is the point.
 
 **Nobody edits this site through a CMS.** Changes go through a commit, so there
 is no human editor standing between a mistake and the public. That makes the

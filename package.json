@@ -10,11 +10,14 @@
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
-    "build": "astro check && astro build && npm run lint:content",
+    "build": "astro check && astro build && npm run lint:content && npm run lint:photos",
     "build:fast": "astro build",
     "preview": "astro preview",
     "check": "astro check",
     "lint:content": "node scripts/content-lint.mjs",
+    "lint:photos": "node scripts/photo-intake.mjs scan",
+    "photo:audit": "node scripts/photo-intake.mjs audit",
+    "photo:clean": "node scripts/photo-intake.mjs clean",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "astro": "astro"

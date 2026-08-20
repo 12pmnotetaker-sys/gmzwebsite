@@ -27,14 +27,25 @@ Node 22 (see `.nvmrc`).
 
 ```sh
 npm run check          # types, content schemas, broken image paths
-npm run build          # check + build + content lint
+npm run build          # check + build + content lint + photo metadata scan
 npm run lint:content   # the written rules, against dist/
+npm run lint:photos    # no committed image carries a location
 npm run format:check   # prettier
 ```
 
 `npm run build` is the gate. It fails on a broken photo path, absent alt text, a
-schema violation, or a sentence that breaks house style. CI runs all four on
-every push.
+schema violation, a sentence that breaks house style, or a committed photograph
+that still carries GPS coordinates. CI runs it on every push.
+
+Before a new photograph goes anywhere near `git add`:
+
+```sh
+npm run photo:audit -- original.jpg
+npm run photo:clean -- original.jpg src/assets/projects/<slug>/<name>.webp
+```
+
+Commit the cleaned output, not the original. Git history is permanent, so a file
+committed with coordinates in it stays that way even after it is deleted.
 
 ## What is where
 
