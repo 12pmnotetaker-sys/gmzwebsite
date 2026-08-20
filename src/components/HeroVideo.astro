@@ -1,0 +1,203 @@
+---
+import { getImage } from 'astro:assets';
+import posterSource from '@/assets/home/hero-poster.webp';
+
+/**
+ * The home hero: a silent clip behind the headline, with the poster frame
+ * doing the work whenever the clip should not.
+ *
+ * The clip plays once and stops on its closing frame rather than looping. A
+ * background that loops forever is restless, and this one ends on the lockup,
+ * which a loop would snap away every twelve seconds.
+ *
+ * Nothing is downloaded by the markup. There is no `src` attribute and
+ * `preload` is `none`, so the browser fetches the poster and stops there. The
+ * script below attaches the source only when playing it is actually the right
+ * thing to do, which means the no-JavaScript case, the reduced-motion case and
+ * the narrow-viewport case all get a still hero rather than a broken one.
+ *
+ * The pause control is not decoration. WCAG 2.2.2 requires a way to stop
+ * motion that starts on its own and runs past five seconds, and this runs for
+ * twelve.
+ *
+ * Provenance, because this one needs recording. The footage is cut from the
+ * Los Charros walkthrough, which lives in the gated portfolio, and putting it
+ * on a public page was a decision rather than an oversight. It was chosen over
+ * the alternatives precisely because no house, street or recognisable
+ * architecture appears anywhere in the take, which is not true of the other
+ * clips in `public/media`. Anything replacing it has to clear the same bar.
+ */
+const poster = await getImage({ src: posterSource, width: 1280, format: 'webp' });
+---
+
+<section class="hero-video on-dark">
+  <!-- Decorative: the clip carries no information the headline does not. -->
+  <video
+    class="hero-video__media"
+    poster={poster.src}
+    muted
+    playsinline
+    preload="none"
+    aria-hidden="true"
+    tabindex="-1"
+    data-hero-video
+    data-src-webm="/media/home-hero.webm"
+    data-src-mp4="/media/home-hero.mp4"></video>
+
+  <div class="hero-video__scrim"></div>
+
+  <div class="hero-video__content">
+    <div class="container">
+      <slot />
+    </div>
+  </div>
+
+  <button type="button" class="hero-video__toggle" data-hero-toggle hidden>Pause</button>
+</section>
+
+<script>
+  /*
+   * Load and play only when it is wanted. The source is attached here rather
+   * than in the markup so that a narrow viewport or a reduced-motion
+   * preference costs nothing at all, not merely a paused download.
+   */
+  const video = document.querySelector<HTMLVideoElement>('[data-hero-video]');
+  const toggle = document.querySelector<HTMLButtonElement>('[data-hero-toggle]');
+
+  if (video && toggle) {
+    const wide = window.matchMedia('(min-width: 760px)');
+    const still = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    const label = (text: string) => {
+      toggle.textContent = text;
+      toggle.setAttribute('aria-label', `${text} the background film`);
+    };
+
+    /*
+     * Two encodes of the same twelve seconds. VP9 is the smaller of the two
+     * and every current browser but Safari takes it; H.264 is what Safari
+     * needs. Picking here rather than with <source> children keeps the
+     * property that nothing is fetched until the checks above have passed.
+     */
+    const source = () =>
+      video.canPlayType('video/webm; codecs=\"vp9\"')
+        ? video.dataset.srcWebm
+        : video.dataset.srcMp4;
+
+    const start = () => {
+      if (video.src || !wide.matches || still.matches) return;
+      video.src = source() ?? '';
+      toggle.hidden = false;
+      label('Pause');
+      // A refused autoplay is not a failure worth shouting about: the poster
+      // is already the right image, and the button now offers the film.
+      video.play().catch(() => label('Play'));
+    };
+
+    toggle.addEventListener('click', () => {
+      if (video.paused) {
+        video
+          .play()
+          .then(() => label('Pause'))
+          .catch(() => label('Play'));
+      } else {
+        video.pause();
+        label('Play');
+      }
+    });
+
+    video.addEventListener('ended', () => label('Replay'));
+
+    start();
+    // Someone who turns motion back on, or rotates a tablet into a wide
+    // viewport, should get the film without reloading the page.
+    wide.addEventListener('change', start);
+    still.addEventListener('change', start);
+  }
+</script>
+
+<style>
+  .hero-video {
+    position: relative;
+    isolation: isolate;
+    background: var(--gmz-teal);
+    display: grid;
+    align-items: end;
+    min-block-size: clamp(26rem, 58vh, 40rem);
+    overflow: hidden;
+  }
+
+  .hero-video__media {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    z-index: -2;
+  }
+
+  /*
+   * The scrim is what keeps the headline legible over whatever frame happens
+   * to be under it. Weighted to the left, where the text sits, so the right
+   * of the frame stays open.
+   */
+  .hero-video__scrim {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--gmz-teal) 88%, transparent) 0%,
+      color-mix(in srgb, var(--gmz-teal) 66%, transparent) 46%,
+      color-mix(in srgb, var(--gmz-teal) 34%, transparent) 100%
+    );
+  }
+
+  .hero-video__content {
+    position: relative;
+    padding-block: var(--space-2xl) var(--space-xl);
+  }
+
+  .hero-video__toggle {
+    position: absolute;
+    inset-block-end: 0.875rem;
+    inset-inline-end: 0.875rem;
+    z-index: 1;
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #fff;
+    background: color-mix(in srgb, var(--gmz-teal) 78%, transparent);
+    border: 1px solid color-mix(in srgb, #fff 34%, transparent);
+    border-radius: 0;
+    padding: 0.5rem 0.875rem;
+    cursor: pointer;
+  }
+
+  .hero-video__toggle:hover {
+    border-color: var(--gmz-amber);
+    color: var(--gmz-amber);
+  }
+
+  @media (width < 760px) {
+    .hero-video {
+      min-block-size: clamp(20rem, 52vh, 26rem);
+    }
+
+    /*
+     * The sideways gradient is built for the desktop layout, where the type
+     * occupies the left half and the right stays open. On a phone the type
+     * runs the full width and crosses into the light end, which left the lede
+     * sitting on sunlit gravel. Narrow viewports get an even wash instead.
+     */
+    .hero-video__scrim {
+      background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--gmz-teal) 74%, transparent) 0%,
+        color-mix(in srgb, var(--gmz-teal) 82%, transparent) 100%
+      );
+    }
+  }
+</style>

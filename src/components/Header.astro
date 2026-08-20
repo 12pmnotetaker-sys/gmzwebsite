@@ -1,0 +1,285 @@
+---
+import { primaryNav, primaryCta, primaryPhone } from '@data/site';
+import Logo from '@components/Logo.astro';
+
+/**
+ * The masthead: teal bar, logo, nav, the CTA, and the 4px amber rule under it.
+ *
+ * The desktop/mobile switch is a CSS media query rather than a measured
+ * viewport width, so it is correct before JavaScript runs and stays correct if
+ * JavaScript never does. Only the menu's open/closed state needs script.
+ */
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+
+/** A nav item is current when the path matches, or sits under it. */
+const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`);
+---
+
+<header class="masthead on-dark">
+  <div class="masthead__inner">
+    <a class="masthead__logo" href="/" aria-label="GMZ Landscaping, home">
+      <Logo height={56} />
+    </a>
+
+    <nav class="masthead__nav" aria-label="Primary">
+      {
+        primaryNav.map((item) => (
+          <a
+            href={item.href}
+            class:list={['masthead__link', { 'is-current': isCurrent(item.href) }]}
+            aria-current={isCurrent(item.href) ? 'page' : undefined}
+          >
+            {item.label}
+          </a>
+        ))
+      }
+      <a class="btn btn--amber masthead__cta" href={primaryCta.href}>{primaryCta.label}</a>
+    </nav>
+
+    <button
+      type="button"
+      class="masthead__burger"
+      aria-label="Menu"
+      aria-expanded="false"
+      aria-controls="mobile-menu"
+      data-menu-open
+    >
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+  <div class="masthead__rule"></div>
+</header>
+
+<div class="drawer on-dark" id="mobile-menu" hidden data-menu>
+  <div class="drawer__top">
+    <Logo height={44} />
+    <button type="button" class="drawer__close" aria-label="Close menu" data-menu-close
+      >&times;</button
+    >
+  </div>
+
+  <div class="rule-accent drawer__bar"></div>
+
+  <nav class="drawer__nav" aria-label="Primary">
+    {
+      primaryNav.map((item) => (
+        <a href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}>
+          {item.label}
+        </a>
+      ))
+    }
+  </nav>
+
+  <a class="btn btn--amber drawer__cta" href={primaryCta.href}>{primaryCta.label}</a>
+  <a class="drawer__call" href={`tel:${primaryPhone.tel}`}>Call {primaryPhone.display}</a>
+</div>
+
+<script>
+  /*
+   * Open and close the mobile drawer.
+   *
+   * The drawer uses the `hidden` attribute rather than a CSS class so it is
+   * genuinely out of the accessibility tree when closed, and focus moves into
+   * it on open and back to the burger on close.
+   */
+  const burger = document.querySelector<HTMLButtonElement>('[data-menu-open]');
+  const drawer = document.querySelector<HTMLElement>('[data-menu]');
+  const close = document.querySelector<HTMLButtonElement>('[data-menu-close]');
+
+  if (burger && drawer && close) {
+    const setOpen = (open: boolean) => {
+      drawer.hidden = !open;
+      burger.setAttribute('aria-expanded', String(open));
+      document.documentElement.style.overflow = open ? 'hidden' : '';
+      if (open) close.focus();
+      else burger.focus();
+    };
+
+    burger.addEventListener('click', () => setOpen(true));
+    close.addEventListener('click', () => setOpen(false));
+
+    // A link tap navigates, so the drawer does not need closing first; Escape
+    // is the only other way out.
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !drawer.hidden) setOpen(false);
+    });
+  }
+</script>
+
+<style>
+  .masthead {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: var(--gmz-teal);
+  }
+
+  .masthead__inner {
+    max-width: var(--width-content);
+    margin-inline: auto;
+    padding: 1rem var(--gutter);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-lg);
+  }
+
+  .masthead__logo {
+    display: flex;
+    align-items: center;
+    flex: none;
+    text-decoration: none;
+  }
+
+  .masthead__nav {
+    display: flex;
+    gap: 1.625rem;
+    font-size: 1rem;
+    font-weight: 500;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .masthead__link {
+    color: #fff;
+    text-decoration: none;
+    opacity: 0.78;
+    border-block-end: 2px solid transparent;
+    padding-block-end: 3px;
+    transition: opacity var(--transition);
+  }
+
+  .masthead__link:hover {
+    color: #fff;
+    opacity: 1;
+  }
+
+  .masthead__link.is-current {
+    opacity: 1;
+    border-block-end-color: var(--gmz-amber);
+  }
+
+  .masthead__cta {
+    padding: 0.625rem 1.0625rem;
+    font-size: var(--text-sm);
+  }
+
+  .masthead__burger {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    padding: 11px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    flex: none;
+  }
+
+  .masthead__burger span {
+    width: 26px;
+    height: 2px;
+    background: #fff;
+    display: block;
+  }
+
+  .masthead__rule {
+    height: 4px;
+    background: var(--gmz-amber);
+  }
+
+  @media (width < 1000px) {
+    .masthead__nav {
+      display: none;
+    }
+
+    .masthead__burger {
+      display: flex;
+    }
+  }
+
+  @media (width < 760px) {
+    /*
+     * Shrink the lockup by its own custom property rather than by sizing the
+     * images. Setting `img { height }` here would flatten the mark and the
+     * wordmark to the same height and leave the gap at its desktop value.
+     *
+     * 40px is the floor measured on the scale test: below it the word
+     * Landscaping stops reading and the mark should stand alone instead.
+     */
+    .masthead__logo :global(.logo) {
+      --logo-h: 40px;
+    }
+  }
+
+  /* ---- Drawer ---------------------------------------------------------- */
+
+  .drawer {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: var(--gmz-teal);
+    padding: var(--space-lg) var(--gutter);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    animation: gmzFade 220ms var(--ease) both;
+  }
+
+  .drawer[hidden] {
+    display: none;
+  }
+
+  .drawer__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .drawer__close {
+    font-family: var(--font-body);
+    font-size: 1.875rem;
+    line-height: 1;
+    color: #fff;
+    background: transparent;
+    border: none;
+    padding: 0.75rem;
+    cursor: pointer;
+  }
+
+  .drawer__bar {
+    width: 56px;
+    margin-block-start: 1.375rem;
+  }
+
+  .drawer__nav {
+    display: flex;
+    flex-direction: column;
+    margin-block-start: 1.625rem;
+  }
+
+  .drawer__nav a {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: var(--tracking-heading);
+    color: #fff;
+    text-decoration: none;
+    padding-block: 1rem;
+    border-block-end: 1px solid rgb(255 255 255 / 20%);
+  }
+
+  .drawer__cta {
+    margin-block-start: 1.75rem;
+    padding: 1.0625rem;
+  }
+
+  .drawer__call {
+    margin-block-start: 1.125rem;
+    font-size: var(--text-base);
+    font-weight: 600;
+    color: #fff;
+    opacity: 0.86;
+    text-decoration: none;
+    text-align: center;
+  }
+</style>

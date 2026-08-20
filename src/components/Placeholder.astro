@@ -1,0 +1,34 @@
+---
+interface Props {
+  /** Which phase of the build fills this page in. */
+  phase: string;
+  /** What will be here, in one sentence. */
+  what: string;
+}
+
+const { phase, what } = Astro.props;
+---
+
+<div class="container placeholder">
+  <div class="awaiting">
+    <span>Arrives in {phase}</span>
+  </div>
+  <p class="placeholder__note">{what}</p>
+</div>
+
+<style>
+  .placeholder {
+    padding-block-end: var(--space-3xl);
+  }
+
+  .awaiting {
+    min-height: 13rem;
+  }
+
+  .placeholder__note {
+    margin-block-start: var(--space-md);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    max-width: 60ch;
+  }
+</style>

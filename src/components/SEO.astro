@@ -1,0 +1,75 @@
+---
+import { company, site } from '@data/site';
+import { canonicalUrl } from '@data/canonical';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** Absolute or root-relative path to the social image. */
+  image?: string;
+  /** og:type, "website" for most pages, "article" for a project page. */
+  type?: 'website' | 'article';
+  noindex?: boolean;
+}
+
+const { title, description, image, type = 'website', noindex = false } = Astro.props;
+
+const pageTitle = title ? site.titleTemplate.replace('%s', title) : site.title;
+const pageDescription = description ?? site.description;
+const origin = Astro.site ?? new URL(site.url);
+const canonical = canonicalUrl(Astro.url.pathname, origin);
+const socialImage = new URL(image ?? site.ogImage, origin);
+
+/**
+ * LocalBusiness structured data. Every value is read from src/data/site.ts, so
+ * a corrected phone number reaches the search result too.
+ *
+ * `hasCredential` states the CSLB licence and nothing else. It deliberately
+ * does not assert insurance: see `claims.licensedAndInsured` in site.ts.
+ */
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'LandscapingBusiness',
+  name: company.legalName,
+  description: company.summary,
+  url: site.url,
+  email: company.email,
+  telephone: company.phones[0].tel,
+  foundingDate: String(company.founded),
+  address: {
+    '@type': 'PostalAddress',
+    addressLocality: company.address.locality,
+    addressRegion: company.address.region,
+    postalCode: company.address.postalCode,
+    addressCountry: company.address.country,
+  },
+  areaServed: company.serviceArea.map((name) => ({ '@type': 'City', name })),
+  hasCredential: {
+    '@type': 'EducationalOccupationalCredential',
+    credentialCategory: 'license',
+    name: company.license.display,
+  },
+  sameAs: Object.values(company.social).filter(Boolean),
+};
+---
+
+<title>{pageTitle}</title>
+<meta name="description" content={pageDescription} />
+<link rel="canonical" href={canonical} />
+
+{noindex && <meta name="robots" content="noindex, nofollow" />}
+
+<meta property="og:site_name" content={company.name} />
+<meta property="og:type" content={type} />
+<meta property="og:title" content={pageTitle} />
+<meta property="og:description" content={pageDescription} />
+<meta property="og:url" content={canonical} />
+<meta property="og:image" content={socialImage} />
+<meta property="og:locale" content={site.locale} />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={pageTitle} />
+<meta name="twitter:description" content={pageDescription} />
+<meta name="twitter:image" content={socialImage} />
+
+<script type="application/ld+json" set:html={JSON.stringify(structuredData)} is:inline />

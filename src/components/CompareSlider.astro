@@ -1,0 +1,354 @@
+---
+import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  project: CollectionEntry<'portfolio'>;
+}
+
+const { project } = Astro.props;
+const compare = project.data.compare;
+const base = `${project.id}-cmp`;
+---
+
+{
+  compare && (
+    <section class="compare">
+      <div class="section-head">
+        <div>
+          <p class="kicker">Compare</p>
+          <h2 class="section-title compare__title">{compare.heading}</h2>
+        </div>
+        <p class="section-head__note">{compare.intro}</p>
+      </div>
+
+      {compare.pairs.length > 1 && (
+        <div class="compare__tabs" role="tablist" aria-label="Comparisons">
+          {compare.pairs.map((pair, i) => (
+            <button
+              type="button"
+              role="tab"
+              id={`${base}-tab-${i}`}
+              aria-controls={`${base}-panel-${i}`}
+              aria-selected={i === 0 ? 'true' : 'false'}
+              tabindex={i === 0 ? 0 : -1}
+              data-cmp-tab={i}
+            >
+              {pair.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {compare.pairs.map((pair, i) => {
+        const aLabel = pair.aLabel ?? compare.aLabel;
+        const bLabel = pair.bLabel ?? compare.bLabel;
+        return (
+          <div
+            role={compare.pairs.length > 1 ? 'tabpanel' : undefined}
+            id={`${base}-panel-${i}`}
+            aria-labelledby={compare.pairs.length > 1 ? `${base}-tab-${i}` : undefined}
+            hidden={i !== 0}
+            data-cmp-panel={i}
+          >
+            <div class="compare__frame" style="--pos:50%" data-cmp-frame>
+              <Image
+                class="compare__base"
+                src={pair.b}
+                alt={pair.bAlt}
+                widths={[640, 1024, 1600]}
+                loading="lazy"
+              />
+              <Image
+                class="compare__overlay"
+                src={pair.a}
+                alt={pair.aAlt}
+                widths={[640, 1024, 1600]}
+                loading="lazy"
+              />
+
+              <span class="compare__tag compare__tag--a">{aLabel}</span>
+              <span class="compare__tag compare__tag--b">{bLabel}</span>
+              <span class="compare__divider" />
+
+              <button
+                type="button"
+                class="compare__handle"
+                role="slider"
+                aria-label={`Reveal ${aLabel} or ${bLabel}`}
+                aria-orientation="horizontal"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                aria-valuenow="50"
+                aria-valuetext={`Half ${aLabel}, half ${bLabel}`}
+                data-cmp-handle
+                data-a-label={aLabel}
+                data-b-label={bLabel}
+              >
+                <span />
+                <span />
+              </button>
+            </div>
+
+            <p class="compare__note">{pair.note}</p>
+          </div>
+        );
+      })}
+    </section>
+  )
+}
+
+<script>
+  /*
+   * The drag-to-compare slider.
+   *
+   * Position lives in a `--pos` custom property, so dragging touches one style
+   * property and the browser does the rest. The handle is a real slider to the
+   * accessibility tree: arrow keys move it in 4% steps, Home and End jump to
+   * the ends, and the value is announced as which image you are looking at
+   * rather than as a bare percentage.
+   *
+   * With JavaScript off both photographs are in the document and the "before"
+   * sits at 50%, so the comparison is still legible; it just does not move.
+   */
+  for (const frame of document.querySelectorAll<HTMLElement>('[data-cmp-frame]')) {
+    const handle = frame.querySelector<HTMLButtonElement>('[data-cmp-handle]');
+    if (!handle) continue;
+
+    const aLabel = handle.dataset.aLabel ?? 'before';
+    const bLabel = handle.dataset.bLabel ?? 'after';
+
+    const set = (percent: number) => {
+      const value = Math.max(0, Math.min(100, percent));
+      frame.style.setProperty('--pos', `${value.toFixed(2)}%`);
+      handle.setAttribute('aria-valuenow', String(Math.round(value)));
+      handle.setAttribute(
+        'aria-valuetext',
+        value <= 2
+          ? `All ${bLabel}`
+          : value >= 98
+            ? `All ${aLabel}`
+            : `${Math.round(value)}% ${aLabel}, ${100 - Math.round(value)}% ${bLabel}`,
+      );
+    };
+
+    const fromPointer = (event: PointerEvent) => {
+      const box = frame.getBoundingClientRect();
+      if (!box.width) return;
+      set(((event.clientX - box.left) / box.width) * 100);
+    };
+
+    let dragging = false;
+
+    frame.addEventListener('pointerdown', (event) => {
+      dragging = true;
+      frame.setPointerCapture?.(event.pointerId);
+      fromPointer(event);
+    });
+    frame.addEventListener('pointermove', (event) => {
+      if (dragging) fromPointer(event);
+    });
+    const release = () => {
+      dragging = false;
+    };
+    frame.addEventListener('pointerup', release);
+    frame.addEventListener('pointercancel', release);
+
+    handle.addEventListener('keydown', (event) => {
+      const current = Number(handle.getAttribute('aria-valuenow')) || 50;
+      const step = event.key === 'ArrowRight' ? 4 : event.key === 'ArrowLeft' ? -4 : 0;
+
+      if (step) {
+        event.preventDefault();
+        set(current + step);
+      } else if (event.key === 'Home') {
+        event.preventDefault();
+        set(0);
+      } else if (event.key === 'End') {
+        event.preventDefault();
+        set(100);
+      }
+    });
+  }
+
+  // Pair tabs, where a project has more than one comparison.
+  for (const strip of document.querySelectorAll<HTMLElement>('.compare__tabs')) {
+    const tabs = [...strip.querySelectorAll<HTMLButtonElement>('[data-cmp-tab]')];
+    const panels = [...document.querySelectorAll<HTMLElement>('[data-cmp-panel]')];
+
+    const select = (index: number, moveFocus = false) => {
+      tabs.forEach((tab, i) => {
+        tab.setAttribute('aria-selected', String(i === index));
+        tab.tabIndex = i === index ? 0 : -1;
+      });
+      panels.forEach((panel, i) => {
+        panel.hidden = i !== index;
+        // The design resets the handle to the middle on every pair change, so
+        // a new comparison always opens showing both halves.
+        if (i === index) {
+          panel.querySelector<HTMLElement>('[data-cmp-frame]')?.style.setProperty('--pos', '50%');
+        }
+      });
+      if (moveFocus) tabs[index]?.focus();
+    };
+
+    tabs.forEach((tab, i) => {
+      tab.addEventListener('click', () => select(i));
+      tab.addEventListener('keydown', (event) => {
+        const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+        if (!step) return;
+        event.preventDefault();
+        select((i + step + tabs.length) % tabs.length, true);
+      });
+    });
+  }
+</script>
+
+<style>
+  .compare {
+    margin-block-start: var(--space-3xl);
+  }
+
+  .compare__title {
+    max-width: 26ch;
+  }
+
+  .compare__tabs {
+    display: flex;
+    margin-block-start: 1.375rem;
+    border: 1px solid var(--color-border-strong);
+    overflow-x: auto;
+  }
+
+  .compare__tabs button {
+    font-family: var(--font-body);
+    flex: 1 0 auto;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    padding: 0.8125rem 1rem;
+    background: transparent;
+    color: var(--color-text);
+    border: none;
+    border-inline-end: 1px solid var(--color-border-strong);
+    cursor: pointer;
+    text-align: start;
+    white-space: nowrap;
+    transition:
+      background var(--transition),
+      color var(--transition);
+  }
+
+  .compare__tabs button[aria-selected='true'] {
+    background: var(--gmz-teal);
+    color: #fff;
+  }
+
+  .compare__frame {
+    position: relative;
+    margin-block-start: 1.125rem;
+    overflow: hidden;
+    background: var(--gmz-ink);
+    cursor: ew-resize;
+    touch-action: none;
+    user-select: none;
+  }
+
+  /* The "after" is the base, so the frame takes its natural height. */
+  .compare__frame :global(.compare__base) {
+    width: 100%;
+    height: auto;
+    display: block;
+    pointer-events: none;
+  }
+
+  /* The "before" is clipped over the top of it. */
+  .compare__frame :global(.compare__overlay) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+    clip-path: inset(0 calc(100% - var(--pos)) 0 0);
+  }
+
+  .compare__tag {
+    position: absolute;
+    inset-block-end: 1.5rem;
+    font-size: var(--text-xs);
+    letter-spacing: var(--tracking-kicker);
+    text-transform: uppercase;
+    font-weight: 600;
+    padding: 0.4375rem 0.75rem;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  .compare__tag--a {
+    inset-inline-start: 1.5rem;
+    color: var(--gmz-teal);
+    background: var(--gmz-amber);
+  }
+
+  .compare__tag--b {
+    inset-inline-end: 1.5rem;
+    color: #fff;
+    background: var(--gmz-teal);
+  }
+
+  .compare__divider {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: var(--pos);
+    width: 3px;
+    background: var(--gmz-amber);
+    pointer-events: none;
+    transform: translateX(-1.5px);
+  }
+
+  .compare__handle {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: var(--pos);
+    transform: translate(-50%, -50%);
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--gmz-amber);
+    border: 3px solid #fff;
+    cursor: ew-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 0;
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Two small arrowheads, pointing out from the middle. */
+  .compare__handle span {
+    width: 0;
+    height: 0;
+    border-style: solid;
+  }
+
+  .compare__handle span:first-child {
+    border-width: 6px 8px 6px 0;
+    border-color: transparent var(--gmz-teal) transparent transparent;
+  }
+
+  .compare__handle span:last-child {
+    border-width: 6px 0 6px 8px;
+    border-color: transparent transparent transparent var(--gmz-teal);
+  }
+
+  .compare__note {
+    margin-block-start: 1rem;
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    color: var(--color-text);
+    max-width: 64ch;
+  }
+</style>

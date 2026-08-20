@@ -1,0 +1,160 @@
+/**
+ * Design tokens for the GMZ portfolio.
+ *
+ * These values come from the Claude Design portfolio ("GMZ Portfolio.dc.html").
+ * The token NAMES are the ones the scaffold shipped with, so components keep
+ * reading tokens rather than literals; only the VALUES moved.
+ *
+ * The palette is four brand colors doing distinct jobs. Keep the jobs straight
+ * and the design holds together:
+ *
+ *   teal   #002B37  chrome: header, footer, veil, inverse panels
+ *   green  #008C41  action: links, primary buttons
+ *   amber  #F6A400  accent: the 3px/4px rule under things, button hover
+ *   blue   #0062B9  structure: section kickers, 2px section rules, project names
+ *
+ * See DESIGN-HANDOFF.md for the swap procedure.
+ */
+
+:root {
+  /* ---- Brand palette ------------------------------------------------ */
+  --gmz-teal: #002b37;
+  --gmz-green: #008c41;
+  --gmz-amber: #f6a400;
+  --gmz-blue: #0062b9;
+  --gmz-ink: #222222;
+  --gmz-muted: #4a5558;
+  /* The well behind an image while it loads, and behind a zoomable figure. */
+  --gmz-well: #e9e9e9;
+
+  /* Names the scaffold shipped with, remapped onto the palette above. */
+  --gmz-green-deep: var(--gmz-teal);
+  --gmz-green-light: #eef3f1;
+  --gmz-rule: rgb(34 34 34 / 16%);
+
+  /* ---- Semantic colors ---------------------------------------------- */
+  --color-bg: #ffffff;
+  --color-bg-subtle: #f6f7f7;
+  --color-bg-tint: var(--gmz-well);
+  --color-bg-inverse: var(--gmz-teal);
+
+  --color-text: var(--gmz-ink);
+  --color-text-muted: var(--gmz-muted);
+  --color-text-inverse: #ffffff;
+
+  --color-accent: var(--gmz-green);
+  --color-accent-hover: var(--gmz-teal);
+  --color-accent-contrast: #ffffff;
+
+  --color-structure: var(--gmz-blue);
+  --color-highlight: var(--gmz-amber);
+
+  --color-border: var(--gmz-rule);
+  --color-border-strong: rgb(34 34 34 / 34%);
+  /* Hairlines drawn on the teal chrome. */
+  --color-border-inverse: rgb(255 255 255 / 30%);
+
+  /* Blue reads on white; amber reads on teal. Both clear 3:1 against their
+     own ground, so a keyboard ring is never the thing that disappears. */
+  --color-focus: var(--gmz-blue);
+  --color-focus-inverse: var(--gmz-amber);
+
+  /* ---- Type ---------------------------------------------------------- */
+  /* Gabarito, self-hosted from /public/fonts. One family, weights 400-800. */
+  --font-heading: Gabarito, 'Helvetica Neue', Arial, sans-serif;
+  --font-body: Gabarito, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Fixed steps match the design's small type exactly. */
+  --text-xs: 0.8125rem; /* 13px  kickers, table labels */
+  --text-sm: 0.9375rem; /* 15px  captions, notes */
+  --text-base: 1.0625rem; /* 17px  body */
+  --text-lg: 1.1875rem; /* 19px  lead paragraphs */
+  --text-xl: 1.625rem; /* 26px  project names in the index */
+
+  /* Fluid steps mirror the design's inline clamp() headings. */
+  --text-2xl: clamp(1.3125rem, 2.2vw, 1.625rem); /* 21 -> 26 */
+  --text-3xl: clamp(1.5rem, 2.8vw, 2rem); /* 24 -> 32 */
+  --text-4xl: clamp(2rem, 4.4vw, 3rem); /* 32 -> 48  page h1 */
+  --text-hero: clamp(2rem, 4.6vw, 3.25rem); /* 32 -> 52  home h1 */
+
+  --leading-tight: 1.1;
+  --leading-snug: 1.3;
+  --leading-normal: 1.65;
+
+  /* The design tracks display type tight and kickers wide. */
+  --tracking-display: -0.025em;
+  --tracking-heading: -0.015em;
+  --tracking-kicker: 0.12em;
+  --tracking-label: 0.1em;
+
+  /* ---- Space --------------------------------------------------------- */
+  --space-2xs: 0.25rem; /* 4px  */
+  --space-xs: 0.5rem; /* 8px  */
+  --space-sm: 0.8125rem; /* 13px */
+  --space-md: 1.125rem; /* 18px */
+  --space-lg: 1.5rem; /* 24px */
+  --space-xl: 2.25rem; /* 36px */
+  --space-2xl: 3.5rem; /* 56px */
+  --space-3xl: 4rem; /* 64px */
+
+  /* ---- Layout -------------------------------------------------------- */
+  --width-content: 80rem; /* 1280px */
+  --width-prose: 58ch;
+  --gutter: clamp(1.25rem, 5vw, 1.75rem); /* 28px on anything roomy */
+
+  /* ---- Surface ------------------------------------------------------- */
+  /* The design is square-cornered throughout. The names stay so a component
+     that asks for a radius still resolves; the answer is just zero. */
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --shadow-sm: 0 1px 2px rgb(0 43 55 / 8%);
+  --shadow-md: 0 4px 18px rgb(0 43 55 / 40%);
+
+  /* ---- Motion -------------------------------------------------------- */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --transition: 220ms var(--ease);
+  --transition-slow: 620ms var(--ease);
+
+  /* The amber rule that sits under images, headings and buttons. */
+  --rule-accent: 3px;
+  --rule-structure: 2px;
+}
+
+/**
+ * Dark mode.
+ *
+ * The design commits to a light page with teal chrome and specifies no dark
+ * palette, so this is a deliberate derivation rather than a guess: the teal
+ * chrome becomes the page, and green and amber are lifted until they clear
+ * 4.5:1 on it. It exists because leaving the block half-updated ships
+ * unreadable text to anyone with a dark preference, which the accessibility
+ * floor in DESIGN-HANDOFF.md rules out.
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #04171d;
+    --color-bg-subtle: #082630;
+    --color-bg-tint: #0d3038;
+    --color-bg-inverse: #002028;
+
+    --color-text: #eef2f2;
+    --color-text-muted: #a8b6b9;
+
+    --color-accent: #3fc47c;
+    --color-accent-hover: var(--gmz-amber);
+    --color-accent-contrast: #04171d;
+
+    --color-structure: #5aa9ea;
+    --color-highlight: #ffb524;
+
+    --color-border: rgb(238 242 242 / 20%);
+    --color-border-strong: rgb(238 242 242 / 38%);
+
+    --color-focus: #ffb524;
+
+    --gmz-well: #0d3038;
+    --gmz-rule: rgb(238 242 242 / 20%);
+  }
+}

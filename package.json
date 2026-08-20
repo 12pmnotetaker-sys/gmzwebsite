@@ -1,0 +1,37 @@
+{
+  "name": "gmzwebsite",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Marketing website for GMZ Landscaping Inc.",
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro check && astro build && npm run lint:content && npm run lint:photos",
+    "build:fast": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "lint:content": "node scripts/content-lint.mjs",
+    "lint:photos": "node scripts/photo-intake.mjs scan",
+    "photo:audit": "node scripts/photo-intake.mjs audit",
+    "photo:clean": "node scripts/photo-intake.mjs clean",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.4",
+    "@astrojs/sitemap": "^3.2.1",
+    "astro": "^5.1.1",
+    "sharp": "^0.33.5",
+    "typescript": "^5.7.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "prettier": "^3.4.2",
+    "prettier-plugin-astro": "^0.14.1"
+  }
+}

@@ -1,0 +1,44 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import HeroVideo from '@components/HeroVideo.astro';
+import Placeholder from '@components/Placeholder.astro';
+import { company, foundedLine, serviceRegionInline } from '@data/site';
+---
+
+<BaseLayout>
+  <HeroVideo>
+    <p class="kicker kicker--hero">{company.tagline}</p>
+    <h1 class="page-title hero__title">{company.summary}</h1>
+    <div class="rule-accent rule-accent--short"></div>
+    <p class="lead hero__lede">
+      {company.legalName}, a family company working across {serviceRegionInline}
+      {foundedLine}.
+    </p>
+  </HeroVideo>
+
+  <Placeholder
+    phase="Phase 2"
+    what="The home page leads with real project photography, the three service pillars, selected work, and the route to the intake form."
+  />
+</BaseLayout>
+
+<style>
+  /* The hero now sits on the film, so its type is inverted. The kicker's
+     structural blue does not survive on the teal scrim; amber does, and it is
+     the same accent the masthead rule uses. */
+  .kicker--hero {
+    color: var(--gmz-amber);
+  }
+
+  .hero__title {
+    margin-block-start: 0.875rem;
+    max-width: 20ch;
+    color: #fff;
+  }
+
+  .hero__lede {
+    margin-block-start: 1.375rem;
+    color: color-mix(in srgb, #fff 88%, transparent);
+    max-width: 46ch;
+  }
+</style>

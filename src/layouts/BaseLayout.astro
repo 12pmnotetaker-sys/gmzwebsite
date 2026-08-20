@@ -1,0 +1,77 @@
+---
+import '@styles/global.css';
+import SEO from '@components/SEO.astro';
+import Header from '@components/Header.astro';
+import Footer from '@components/Footer.astro';
+import Gate from '@components/Gate.astro';
+import GateFlag from '@components/GateFlag.astro';
+import { searchIndexing, isGatedPath } from '@data/publication';
+
+interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  type?: 'website' | 'article';
+  /** Force a page out of search independently of everything below. */
+  noindex?: boolean;
+  /** Set false on a page that supplies its own full-bleed chrome. */
+  chrome?: boolean;
+}
+
+const { title, description, image, type, noindex = false, chrome = true } = Astro.props;
+
+/**
+ * Whether this page sits behind the veil is derived from its route, not passed
+ * in as a prop.
+ *
+ * A prop can be forgotten. Adding a page under a gated prefix and omitting
+ * `gated` would publish private client work with no error anywhere, and the
+ * mistake would be invisible in review. Deriving it from the path means a new
+ * page under /portfolio is gated because of where it lives.
+ *
+ * Changing that set is a deliberate edit to `gatedPrefixes` in
+ * src/data/publication.ts, which is one line in a diff somebody reads.
+ */
+const gated = isGatedPath(Astro.url.pathname);
+
+/**
+ * A gated page is never indexable, and neither is anything else while the
+ * marketing site is still a scaffold. The veil cannot enforce this on its own,
+ * because a crawler runs no JavaScript and would read straight past it, so
+ * noindex is what actually keeps these pages out of a search result.
+ */
+const hideFromSearch = noindex || gated || !searchIndexing.enabled;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <meta name="generator" content={Astro.generator} />
+
+    <link
+      rel="preload"
+      href="/fonts/gabarito-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
+    <SEO {title} {description} {image} {type} noindex={hideFromSearch} />
+    <slot name="head" />
+
+    {gated && <GateFlag />}
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    {chrome && <Header />}
+    <main id="main">
+      <slot />
+    </main>
+    {chrome && <Footer />}
+    {gated && <Gate />}
+  </body>
+</html>

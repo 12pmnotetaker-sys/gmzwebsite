@@ -1,0 +1,205 @@
+---
+import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  project: CollectionEntry<'portfolio'>;
+}
+
+const { project } = Astro.props;
+const drawings = project.data.drawings;
+const base = `${project.id}-stage`;
+---
+
+{
+  drawings.length > 0 && (
+    <section class="drawings">
+      <div class="section-head drawings__head">
+        <div>
+          <p class="kicker">Drawings</p>
+          <h2 class="section-title">The design as it was drawn</h2>
+        </div>
+      </div>
+
+      <div class="drawings__tabs" role="tablist" aria-label="Drawing stages">
+        {drawings.map((drawing, i) => (
+          <button
+            type="button"
+            role="tab"
+            id={`${base}-tab-${i}`}
+            aria-controls={`${base}-panel-${i}`}
+            aria-selected={i === 0 ? 'true' : 'false'}
+            tabindex={i === 0 ? 0 : -1}
+            data-stage-tab={i}
+          >
+            {drawing.label}
+          </button>
+        ))}
+      </div>
+
+      {drawings.map((drawing, i) => (
+        <div
+          role="tabpanel"
+          id={`${base}-panel-${i}`}
+          aria-labelledby={`${base}-tab-${i}`}
+          hidden={i !== 0}
+          data-stage-panel={i}
+        >
+          <div class="drawings__viewer">
+            <button
+              type="button"
+              class="zoom drawings__zoom"
+              aria-label={`View ${drawing.label} full screen`}
+              data-lb-set="drawings"
+              data-lb-index={i}
+            >
+              <Image
+                src={drawing.src}
+                alt={drawing.alt}
+                widths={[640, 1024, 1600]}
+                loading={i === 0 ? 'eager' : 'lazy'}
+              />
+            </button>
+            <div
+              class="drawings__progress"
+              style={`width:${(((i + 1) / drawings.length) * 100).toFixed(2)}%`}
+            />
+          </div>
+
+          <div class="drawings__caption">
+            <h2 class="drawings__label">{drawing.label}</h2>
+            {drawing.note && <p class="drawings__note">{drawing.note}</p>}
+            <button
+              type="button"
+              class="link-accent drawings__full"
+              data-lb-set="drawings"
+              data-lb-index={i}
+            >
+              View full screen
+            </button>
+          </div>
+        </div>
+      ))}
+    </section>
+  )
+}
+
+<script>
+  /*
+   * The stage tabs.
+   *
+   * Every panel is in the document and only the active one is shown, so with
+   * JavaScript off the first drawing and its note are still readable, and a
+   * screen reader gets a real tablist rather than a row of buttons that do
+   * nothing. Arrow keys move between tabs, which is what the tab role promises.
+   */
+  const strip = document.querySelector<HTMLElement>('[role="tablist"]');
+
+  if (strip) {
+    const tabs = [...strip.querySelectorAll<HTMLButtonElement>('[data-stage-tab]')];
+    const panels = [...document.querySelectorAll<HTMLElement>('[data-stage-panel]')];
+
+    const select = (index: number, moveFocus = false) => {
+      tabs.forEach((tab, i) => {
+        tab.setAttribute('aria-selected', String(i === index));
+        tab.tabIndex = i === index ? 0 : -1;
+      });
+      panels.forEach((panel, i) => {
+        panel.hidden = i !== index;
+      });
+      if (moveFocus) tabs[index]?.focus();
+    };
+
+    tabs.forEach((tab, i) => {
+      tab.addEventListener('click', () => select(i));
+      tab.addEventListener('keydown', (event) => {
+        const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+        if (!step) return;
+        event.preventDefault();
+        select((i + step + tabs.length) % tabs.length, true);
+      });
+    });
+  }
+</script>
+
+<style>
+  .drawings {
+    margin-block-start: var(--space-2xl);
+  }
+
+  .drawings__head {
+    margin-block-end: 0.875rem;
+  }
+
+  .drawings__tabs {
+    display: flex;
+    border-block-end: 1px solid var(--color-border);
+    overflow-x: auto;
+  }
+
+  .drawings__tabs button {
+    flex: 1 1 0;
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    letter-spacing: 0.03em;
+    font-weight: 600;
+    padding: 1rem 0.875rem;
+    background: transparent;
+    border: none;
+    border-inline-end: 1px solid var(--color-border);
+    color: var(--color-text);
+    cursor: pointer;
+    text-align: start;
+    white-space: nowrap;
+    transition:
+      background var(--transition),
+      color var(--transition);
+  }
+
+  .drawings__tabs button[aria-selected='true'] {
+    background: var(--color-structure);
+    color: #fff;
+  }
+
+  .drawings__viewer {
+    position: relative;
+    overflow: hidden;
+    background: var(--gmz-ink);
+  }
+
+  .drawings__zoom :global(img) {
+    aspect-ratio: 16 / 9;
+  }
+
+  .drawings__progress {
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-end: 0;
+    height: var(--rule-accent);
+    background: var(--color-highlight);
+    transition: width var(--transition-slow);
+  }
+
+  .drawings__caption {
+    padding-block-start: 1.875rem;
+    max-width: 58ch;
+  }
+
+  .drawings__label {
+    font-size: var(--text-2xl);
+    font-weight: 600;
+    color: var(--color-text);
+    line-height: 1.35;
+  }
+
+  .drawings__note {
+    margin-block-start: 0.8125rem;
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    color: var(--color-text);
+  }
+
+  .drawings__full {
+    margin-block-start: 1.125rem;
+  }
+</style>

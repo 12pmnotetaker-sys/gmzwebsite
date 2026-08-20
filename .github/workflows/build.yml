@@ -1,0 +1,43 @@
+name: Build
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # Type errors, schema violations, broken image paths and broken content
+      # references all surface here rather than on the live site.
+      - name: Type-check and validate content
+        run: npm run check
+
+      - name: Build
+        run: npm run build:fast
+
+      # Reads the built HTML rather than the source: internal figures, em-dashes
+      # in prose, manufacturer names, missing alt text, and whether robots.txt,
+      # the noindex tags and the sitemap agree with each other.
+      - name: Lint content
+        run: npm run lint:content
+
+      - name: Check formatting
+        run: npm run format:check
