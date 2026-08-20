@@ -18,7 +18,7 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
 <header class="masthead on-dark">
   <div class="masthead__inner">
     <a class="masthead__logo" href="/" aria-label="GMZ Landscaping, home">
-      <Logo height={49} />
+      <Logo height={56} />
     </a>
 
     <nav class="masthead__nav" aria-label="Primary">
@@ -52,7 +52,7 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
 
 <div class="drawer on-dark" id="mobile-menu" hidden data-menu>
   <div class="drawer__top">
-    <Logo height={42} />
+    <Logo height={44} />
     <button type="button" class="drawer__close" aria-label="Close menu" data-menu-close
       >&times;</button
     >
@@ -199,9 +199,16 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
   }
 
   @media (width < 760px) {
-    .masthead__logo :global(img) {
-      height: 38px;
-      width: auto;
+    /*
+     * Shrink the lockup by its own custom property rather than by sizing the
+     * images. Setting `img { height }` here would flatten the mark and the
+     * wordmark to the same height and leave the gap at its desktop value.
+     *
+     * 40px is the floor measured on the scale test: below it the word
+     * Landscaping stops reading and the mark should stand alone instead.
+     */
+    .masthead__logo :global(.logo) {
+      --logo-h: 40px;
     }
   }
 

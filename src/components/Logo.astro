@@ -1,39 +1,103 @@
 ---
 import { Image } from 'astro:assets';
 import { company } from '@data/site';
-import logo from '@/assets/brand/gmz-logo.png';
+import mark from '@/assets/brand/gmz-mark.png';
+import wordmark from '@/assets/brand/gmz-wordmark.png';
 
 interface Props {
   /**
-   * Rendered height in px. The mark is portrait (627 x 850), so the width
-   * follows from it; never set both.
+   * Height of the tree mark in px. Everything else in the lockup is derived
+   * from it, so this is the only size any caller sets.
    */
   height: number;
+  /**
+   * `lockup` is the mark and the wordmark side by side, and is what the
+   * chrome uses. `mark` is the tree panel on its own, for the one place that
+   * already sets the company name in live type beside it and would otherwise
+   * say it twice.
+   */
+  variant?: 'lockup' | 'mark';
   class?: string;
 }
 
-const { height, class: className } = Astro.props;
+const { height, variant = 'lockup', class: className } = Astro.props;
 
 /**
- * The GMZ mark.
+ * The GMZ lockup: the tree mark, then the wordmark stacked beside it.
+ *
+ * Why this rather than the badge as Órale drew it. The badge stacks the tree
+ * above its own `GMZ / Landscaping` wordmark inside one frame, so at masthead
+ * size that wordmark renders about four pixels tall. The header carried the
+ * company's name and nobody could read it. Set horizontally, the same words
+ * hold down to roughly a 40px mark.
+ *
+ * The two files are cut from `gmz-logo.png`, which stays in the repo as the
+ * master. If they ever need regenerating, the boxes are the tree panel at
+ * (73, 65) 481 square, and the wordmark block at (78, 589) 471 x 199. The
+ * letterforms are therefore the logo's own, not Gabarito standing in for them.
  *
  * White artwork on transparent, so it is only legible on the teal chrome.
- * Every place this site uses it (masthead, drawer, footer) is teal. Do not put
- * it on a light ground without a dark plate behind it.
+ * Every place this site uses it (masthead, drawer, footer, veil) is teal. Do
+ * not put it on a light ground without a dark plate behind it. There is a
+ * green colourway for white grounds; it is not in the repo because nothing
+ * here has a white ground for it yet.
  *
- * This is a raster export. The vector master is `GMZ_Logo.pdf` in Drive; an
- * SVG traced from it should replace this file, at which point the ratio below
- * comes from the artwork rather than from a measurement.
+ * Sizing runs through `--logo-h` so a caller can shrink the whole lockup in a
+ * media query and keep the proportions. The width and height attributes still
+ * carry the intrinsic ratio, which is what stops the masthead shifting as the
+ * images decode.
  */
-const RATIO = 627 / 850;
-const width = Math.round(height * RATIO);
+const MARK_RATIO = 1; // 481 x 481
+const WORD_RATIO = 471 / 199;
+
+/** Option A, chosen 2026-08-20: wordmark just under mark height. */
+const WORD_SCALE = 0.95;
+
+const wordHeight = Math.round(height * WORD_SCALE);
 ---
 
-<Image
-  src={logo}
-  alt={company.name}
-  width={width}
-  height={height}
-  densities={[1, 2]}
-  class={className}
-/>
+<span class:list={['logo', className]} style={`--logo-h: ${height}px`}>
+  <Image
+    src={mark}
+    alt=""
+    role="presentation"
+    width={Math.round(height * MARK_RATIO)}
+    height={height}
+    densities={[1, 2]}
+    class="logo__mark"
+  />
+  {
+    variant === 'lockup' && (
+      <Image
+        src={wordmark}
+        alt={company.name}
+        width={Math.round(wordHeight * WORD_RATIO)}
+        height={wordHeight}
+        densities={[1, 2]}
+        class="logo__word"
+      />
+    )
+  }
+</span>
+
+<style>
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--logo-h) * 0.3);
+  }
+
+  .logo__mark,
+  .logo__word {
+    display: block;
+    width: auto;
+  }
+
+  .logo__mark {
+    height: var(--logo-h);
+  }
+
+  .logo__word {
+    height: calc(var(--logo-h) * 0.95);
+  }
+</style>

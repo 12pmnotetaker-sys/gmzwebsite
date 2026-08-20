@@ -155,8 +155,21 @@ function checkDocument(file, html) {
   // Every image needs alt text. The content schema enforces this for images
   // that come from Markdown; this catches the ones written by hand.
   for (const tag of body.matchAll(/<img\b[^>]*>/gi)) {
-    const alt = tag[0].match(/\salt\s*=\s*(?:"([^"]*)"|'([^']*)')/i);
-    const value = alt?.[1] ?? alt?.[2];
+    /*
+     * Three forms mean three different things, and the difference matters:
+     *
+     *   alt="a dry-stacked wall"   named
+     *   alt="" / alt               deliberately not named, ie decorative
+     *   (no alt at all)            an oversight, and the only real failure
+     *
+     * The bare form is the one that bites. An HTML attribute written without
+     * a value has the empty string as its value, so `<img alt>` IS `alt=""`,
+     * and Astro's Image component serialises it that way. Matching only the
+     * quoted form reported every decorative image on the site as missing its
+     * alt text, which is both wrong and the more severe of the two findings.
+     */
+    const alt = tag[0].match(/\salt(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+)))?(?=[\s>])/i);
+    const value = alt ? (alt[1] ?? alt[2] ?? alt[3] ?? '') : undefined;
     if (value === undefined)
       report(file, 'missing-alt', `<img> with no alt attribute: ${tag[0].slice(0, 90)}`);
     else if (

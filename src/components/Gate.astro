@@ -19,7 +19,7 @@ import Logo from '@components/Logo.astro';
 
 <div class="veil on-dark" data-gate-veil>
   <div class="veil__lockup">
-    <Logo height={88} class="veil__mark" />
+    <Logo height={88} variant="mark" class="veil__mark" />
     <p class="veil__name">
       {company.name}<br /><span>Design Portfolio</span>
     </p>
@@ -161,8 +161,7 @@ import Logo from '@components/Logo.astro';
   }
 
   .veil__lockup :global(.veil__mark) {
-    height: clamp(66px, 7.1vw, 88px);
-    width: auto;
+    --logo-h: clamp(66px, 7.1vw, 88px);
     flex: none;
   }
 
