@@ -483,4 +483,75 @@ const articles = defineCollection({
   }),
 });
 
-export const collections = { projects, services, reviews, faqs, portfolio, articles };
+/**
+ * One page per town in the service area.
+ *
+ * These are the pages that go wrong most easily. The standard version of this
+ * across the field is the same paragraph ten times with the town name swapped,
+ * which is thin content: it ages badly, it says nothing a reader could not
+ * guess, and it dilutes a site that is otherwise deliberately small.
+ *
+ * So a town page cannot publish on enthusiasm alone. `localNote` has to say
+ * something that is actually true of this town and not the next one, it has a
+ * length floor so a fragment cannot pass for one, and it must cite where the
+ * fact came from. `content-lint` additionally fails the build if two town
+ * pages ship the same local text, which is the failure this collection exists
+ * to prevent and the one a schema cannot catch on its own.
+ *
+ * A town nobody has verified stays unpublished with the reason recorded, which
+ * is better than a page that pads.
+ */
+const towns = defineCollection({
+  loader: glob({ base: './src/content/towns', pattern: '**/*.md' }),
+  schema: z
+    .object({
+      name: z.string(),
+      county: z.enum(['San Mateo', 'Santa Clara']),
+      /**
+       * What is genuinely different about working here: which department
+       * reviews it, what the town publishes, how its rules differ. Not a
+       * description of the town, and not a description of GMZ.
+       */
+      localNote: z
+        .string()
+        .min(80, 'Too short to be worth a page. Say what is actually different about this town.'),
+      updated: z.coerce.date(),
+      sources: z
+        .array(
+          z.object({
+            label: z.string().min(1),
+            href: z.string().url('A source needs a real URL a reader can follow.'),
+          }),
+        )
+        .default([]),
+      published: z.boolean().default(false),
+      /** Why this town has no page yet. Required when it is not published. */
+      unpublishedReason: z.string().optional(),
+      order: z.number().default(0),
+    })
+    .superRefine((town, ctx) => {
+      /*
+       * The requirements apply to what ships, not to what sits in the folder.
+       * An unpublished town is a placeholder and should not have to invent a
+       * citation to satisfy a schema: a borrowed URL that looks like evidence is
+       * worse than an empty list, because the next person assumes it was checked.
+       */
+      if (town.published && town.sources.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['sources'],
+          message:
+            'A published town page states local rules, so it must name where they came from.',
+        });
+      }
+      if (!town.published && !town.unpublishedReason) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['unpublishedReason'],
+          message: 'Say why this town has no page yet, so nobody has to guess later.',
+        });
+      }
+    }),
+});
+
+export const collections = { projects, services, reviews, faqs, portfolio, articles, towns };
