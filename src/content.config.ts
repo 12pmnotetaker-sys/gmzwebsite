@@ -153,25 +153,48 @@ const services = defineCollection({
   }),
 });
 
-const testimonials = defineCollection({
-  loader: glob({ base: './src/content/testimonials', pattern: '**/*.md' }),
-  schema: z.object({
-    /** Client name as they have agreed to be credited. */
-    author: z.string(),
-    /** Town, matching the project's location field. Never a street. */
-    location: townOnly.optional(),
-    /** The quote itself. The file body holds the long form, if any. */
-    quote: z.string(),
-    /**
-     * Only publish quotes the client has given permission to publish. Leave
-     * false and the entry stays out of every listing. If you do not know that
-     * a client agreed, it is not approved.
-     */
-    approved: z.boolean().default(false),
-    project: reference('projects').optional(),
-    featured: z.boolean().default(false),
-    order: z.number().default(0),
-  }),
+/**
+ * Reviews, which are not testimonials, and the difference is the whole point.
+ *
+ * A testimonial is a quote GMZ chose. A review is somebody else's words on
+ * somebody else's platform, and a reader can go and check it. That is what
+ * makes it worth publishing, so the schema refuses to let it become the other
+ * thing by accident: anything not written directly to GMZ must carry a link
+ * back to the original. You cannot claim a Google review here without saying
+ * where it is.
+ *
+ * `approved` still gates everything, because a client agreeing to leave a
+ * public review is not the same as agreeing to be quoted on a marketing page.
+ * If you do not know that they agreed, it is not approved.
+ */
+const REVIEW_PLATFORMS = ['Google', 'Yelp', 'Houzz', 'Direct'] as const;
+
+const reviews = defineCollection({
+  loader: glob({ base: './src/content/reviews', pattern: '**/*.md' }),
+  schema: z
+    .object({
+      /** As they have agreed to be credited, which on most platforms is a first name and an initial. */
+      author: z.string(),
+      /** Town, never a street. Same rule as everywhere else public. */
+      location: townOnly.optional(),
+      quote: z.string(),
+      platform: z.enum(REVIEW_PLATFORMS),
+      /** The original, so a reader can verify it. Required unless Direct. */
+      sourceUrl: z.string().url('A review needs a link a reader can actually follow.').optional(),
+      /** When it was written. A five year old review presented as current is a small lie. */
+      reviewed: z.coerce.date(),
+      rating: z.number().min(1).max(5).optional(),
+      approved: z.boolean().default(false),
+      project: reference('projects').optional(),
+      featured: z.boolean().default(false),
+      order: z.number().default(0),
+    })
+    .refine((review) => review.platform === 'Direct' || Boolean(review.sourceUrl), {
+      message:
+        'A review from a public platform must link to the original. Without it this is a ' +
+        'quote GMZ chose, not a review, and it should be marked Direct instead.',
+      path: ['sourceUrl'],
+    }),
 });
 
 /* ---------------------------------------------------------------------- */
@@ -420,4 +443,115 @@ const faqs = defineCollection({
   }),
 });
 
-export const collections = { projects, services, testimonials, faqs, portfolio };
+/**
+ * Long-form answers: the pieces that are too big to sit in the FAQ list.
+ *
+ * These carry a rule the other collections do not need. An article that states
+ * what a town's ordinance requires is making a claim a client may act on, and
+ * a wrong one is worse than silence. So `sources` is required and must not be
+ * empty: nothing publishes here without naming where its facts came from, and
+ * `updated` is required because regulation goes stale and a reader deserves to
+ * know when this was last checked.
+ */
+const articles = defineCollection({
+  loader: glob({ base: './src/content/articles', pattern: '**/*.md' }),
+  schema: z.object({
+    title: z.string(),
+    /** Three to six words, for compact navigation. */
+    short: z.string(),
+    lede: z.string(),
+    /** When the facts were last verified against the sources below. */
+    updated: z.coerce.date(),
+    sources: z
+      .array(
+        z.object({
+          label: z.string().min(1),
+          href: z.string().url('A source needs a real URL a reader can follow.'),
+        }),
+      )
+      .min(1, 'An article that states a rule must name where the rule came from.'),
+    /**
+     * Renders the standing note that this is general information and that the
+     * town, not GMZ, is the authority. True for anything describing a code,
+     * an ordinance or a permit.
+     */
+    advisory: z.boolean().default(false),
+    /** Same gate as an FAQ answer: nothing renders in production until true. */
+    published: z.boolean().default(false),
+    order: z.number().default(0),
+    seo: seo.optional(),
+  }),
+});
+
+/**
+ * One page per town in the service area.
+ *
+ * These are the pages that go wrong most easily. The standard version of this
+ * across the field is the same paragraph ten times with the town name swapped,
+ * which is thin content: it ages badly, it says nothing a reader could not
+ * guess, and it dilutes a site that is otherwise deliberately small.
+ *
+ * So a town page cannot publish on enthusiasm alone. `localNote` has to say
+ * something that is actually true of this town and not the next one, it has a
+ * length floor so a fragment cannot pass for one, and it must cite where the
+ * fact came from. `content-lint` additionally fails the build if two town
+ * pages ship the same local text, which is the failure this collection exists
+ * to prevent and the one a schema cannot catch on its own.
+ *
+ * A town nobody has verified stays unpublished with the reason recorded, which
+ * is better than a page that pads.
+ */
+const towns = defineCollection({
+  loader: glob({ base: './src/content/towns', pattern: '**/*.md' }),
+  schema: z
+    .object({
+      name: z.string(),
+      county: z.enum(['San Mateo', 'Santa Clara']),
+      /**
+       * What is genuinely different about working here: which department
+       * reviews it, what the town publishes, how its rules differ. Not a
+       * description of the town, and not a description of GMZ.
+       */
+      localNote: z
+        .string()
+        .min(80, 'Too short to be worth a page. Say what is actually different about this town.'),
+      updated: z.coerce.date(),
+      sources: z
+        .array(
+          z.object({
+            label: z.string().min(1),
+            href: z.string().url('A source needs a real URL a reader can follow.'),
+          }),
+        )
+        .default([]),
+      published: z.boolean().default(false),
+      /** Why this town has no page yet. Required when it is not published. */
+      unpublishedReason: z.string().optional(),
+      order: z.number().default(0),
+    })
+    .superRefine((town, ctx) => {
+      /*
+       * The requirements apply to what ships, not to what sits in the folder.
+       * An unpublished town is a placeholder and should not have to invent a
+       * citation to satisfy a schema: a borrowed URL that looks like evidence is
+       * worse than an empty list, because the next person assumes it was checked.
+       */
+      if (town.published && town.sources.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['sources'],
+          message:
+            'A published town page states local rules, so it must name where they came from.',
+        });
+      }
+      if (!town.published && !town.unpublishedReason) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['unpublishedReason'],
+          message: 'Say why this town has no page yet, so nobody has to guess later.',
+        });
+      }
+    }),
+});
+
+export const collections = { projects, services, reviews, faqs, portfolio, articles, towns };

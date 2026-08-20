@@ -1,0 +1,125 @@
+---
+import type { GetStaticPaths } from 'astro';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import PageHeader from '@components/PageHeader.astro';
+import { company, fees } from '@data/site';
+import { getPublishedTowns } from '@data/towns';
+
+export const getStaticPaths = (async () => {
+  const towns = await getPublishedTowns();
+  return towns.map((town) => ({ params: { slug: town.id }, props: { town } }));
+}) satisfies GetStaticPaths;
+
+const { town } = Astro.props;
+const updated = town.data.updated.toLocaleDateString('en-GB', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+});
+---
+
+<BaseLayout
+  title={`Landscaping in ${town.data.name}`}
+  description={`Landscape design, build and maintenance in ${town.data.name}, ${town.data.county} County, from the Redwood City yard.`}
+>
+  <PageHeader
+    eyebrow="Where we work"
+    title={`Landscaping in ${town.data.name}`}
+    lede={`${town.data.county} County, worked from the Redwood City yard.`}
+  />
+
+  <div class="container town">
+    <section class="town__local">
+      <div class="section-head">
+        <p class="kicker">Before design starts</p>
+        <h2 class="section-head__title">What is different here.</h2>
+      </div>
+      <p class="town__note" data-town-note>{town.data.localNote}</p>
+    </section>
+
+    <section class="town__general">
+      <div class="section-head">
+        <p class="kicker">The same everywhere</p>
+        <h2 class="section-head__title">How a job runs.</h2>
+      </div>
+      <p>
+        Design, build and maintenance are one company here, so the drawing is made by people who
+        will have to build it and the garden is looked after by people who know why it was built
+        that way. The first visit is {fees.consultation.display}, which covers {
+          fees.consultation.covers
+        }.
+      </p>
+      <p>
+        {town.data.name} is inside the service area, so no travel charge applies. Outside these towns
+        it is {fees.travel.display}.
+      </p>
+    </section>
+
+    <footer class="town__meta">
+      <p class="town__updated">Local requirements checked on {updated}.</p>
+      <h2 class="town__sources-title">Sources</h2>
+      <ul class="town__sources">
+        {
+          town.data.sources.map((source) => (
+            <li>
+              <a href={source.href} rel="noopener noreferrer" target="_blank">
+                {source.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+      <p class="town__advisory">
+        General information, not advice for a specific property. The authority on your project is
+        the department that will review it, not {company.name}.
+      </p>
+    </footer>
+  </div>
+</BaseLayout>
+
+<style>
+  .town > * + * {
+    margin-block-start: var(--space-xl);
+  }
+
+  .town__note,
+  .town__general p {
+    max-inline-size: var(--width-prose);
+  }
+
+  .town__general p + p {
+    margin-block-start: 1rem;
+  }
+
+  .town__meta {
+    max-inline-size: var(--width-prose);
+    border-block-start: 2px solid var(--color-structure);
+    padding-block-start: 0.875rem;
+  }
+
+  .town__updated {
+    color: var(--color-text-muted);
+  }
+
+  .town__sources-title {
+    margin-block-start: var(--space-md);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: var(--tracking-kicker);
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .town__sources {
+    margin-block-start: 0.5rem;
+    padding-inline-start: 1.125rem;
+    color: var(--color-text-muted);
+  }
+
+  .town__advisory {
+    margin-block-start: var(--space-md);
+    border-inline-start: 4px solid var(--color-highlight);
+    padding-inline-start: 1rem;
+    color: var(--color-text-muted);
+  }
+</style>

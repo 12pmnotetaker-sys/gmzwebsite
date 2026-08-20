@@ -200,6 +200,44 @@ function checkDocument(file, html) {
  * path, so a gated page that somehow lost its veil is caught here rather than
  * assumed safe.
  */
+/**
+ * Ten town pages carrying the same paragraph with the name swapped is the
+ * standard way this idea fails, and it is the reason the rest of the field's
+ * location pages are worthless. A schema can insist the local note is long
+ * enough; only a pass over the built site can tell whether two of them are the
+ * same words.
+ *
+ * The note is marked in the markup rather than inferred from position, so this
+ * keeps working when the page layout changes.
+ */
+function checkTownPagesDiffer(pages, bodies) {
+  const seen = new Map();
+
+  for (const file of pages) {
+    const match = bodies.get(file)?.match(/<p\b[^>]*\bdata-town-note\b[^>]*>([\s\S]*?)<\/p>/i);
+    if (!match) continue;
+
+    const note = match[1]
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+    if (!note) continue;
+
+    if (seen.has(note)) {
+      report(
+        file,
+        'duplicate-town-note',
+        `the same local note already ships on ${path.relative(process.cwd(), seen.get(note))}. ` +
+          `A town page has to say ` +
+          `something true of this town and not the next one, or it should not exist.`,
+      );
+      continue;
+    }
+    seen.set(note, file);
+  }
+}
+
 async function checkIndexingConsistency(files) {
   const robotsPath = path.join(DIST, 'robots.txt');
   if (!existsSync(robotsPath)) {
@@ -313,9 +351,13 @@ if (!existsSync(DIST)) {
 const files = await walk(DIST);
 const pages = files.filter((f) => f.endsWith('.html'));
 
+const bodies = new Map();
 for (const file of pages) {
-  checkDocument(file, await readFile(file, 'utf8'));
+  const html = await readFile(file, 'utf8');
+  bodies.set(file, html);
+  checkDocument(file, html);
 }
+checkTownPagesDiffer(pages, bodies);
 await checkIndexingConsistency(files);
 
 if (problems.length === 0) {
