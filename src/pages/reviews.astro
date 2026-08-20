@@ -1,0 +1,97 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import PageHeader from '@components/PageHeader.astro';
+import Placeholder from '@components/Placeholder.astro';
+import { formatReviewed, getApprovedReviews } from '@data/reviews';
+
+const reviews = await getApprovedReviews();
+---
+
+<BaseLayout
+  title="Reviews"
+  description="What clients have said in public, with a link to the original in every case."
+>
+  <PageHeader
+    eyebrow="In their words"
+    title="Reviews"
+    lede="What clients have written in public, linked back to the original so you can read it in full where it was posted."
+  />
+
+  {
+    reviews.length > 0 ? (
+      <div class="container">
+        <ul class="reviews">
+          {reviews.map((review) => (
+            <li class="review">
+              <blockquote class="review__quote">
+                <p>{review.data.quote}</p>
+              </blockquote>
+              <p class="review__by">
+                <span class="review__author">{review.data.author}</span>
+                {review.data.location && <span>, {review.data.location}</span>}
+                <span class="review__meta">
+                  {review.data.platform === 'Direct' ? (
+                    <>Written to GMZ, {formatReviewed(review.data.reviewed)}</>
+                  ) : (
+                    <>
+                      <a href={review.data.sourceUrl} rel="noopener noreferrer" target="_blank">
+                        {review.data.platform}
+                      </a>
+                      , {formatReviewed(review.data.reviewed)}
+                    </>
+                  )}
+                </span>
+              </p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ) : (
+      <Placeholder
+        phase="Phase 2"
+        what="Reviews appear here once clients have posted them and agreed to being quoted. Nothing renders until both are true."
+      />
+    )
+  }
+</BaseLayout>
+
+<style>
+  .reviews {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    max-inline-size: var(--width-prose);
+  }
+
+  .review {
+    border-block-start: 2px solid var(--color-structure);
+    padding-block-start: 1rem;
+  }
+
+  .review__quote {
+    margin: 0;
+    font-size: var(--text-lg);
+    line-height: 1.6;
+  }
+
+  .review__by {
+    margin-block-start: 0.75rem;
+    color: var(--color-text-muted);
+  }
+
+  .review__author {
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .review__meta {
+    display: block;
+    margin-block-start: 0.25rem;
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-kicker);
+    text-transform: uppercase;
+  }
+</style>

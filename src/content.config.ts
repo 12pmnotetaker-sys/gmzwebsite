@@ -153,25 +153,48 @@ const services = defineCollection({
   }),
 });
 
-const testimonials = defineCollection({
-  loader: glob({ base: './src/content/testimonials', pattern: '**/*.md' }),
-  schema: z.object({
-    /** Client name as they have agreed to be credited. */
-    author: z.string(),
-    /** Town, matching the project's location field. Never a street. */
-    location: townOnly.optional(),
-    /** The quote itself. The file body holds the long form, if any. */
-    quote: z.string(),
-    /**
-     * Only publish quotes the client has given permission to publish. Leave
-     * false and the entry stays out of every listing. If you do not know that
-     * a client agreed, it is not approved.
-     */
-    approved: z.boolean().default(false),
-    project: reference('projects').optional(),
-    featured: z.boolean().default(false),
-    order: z.number().default(0),
-  }),
+/**
+ * Reviews, which are not testimonials, and the difference is the whole point.
+ *
+ * A testimonial is a quote GMZ chose. A review is somebody else's words on
+ * somebody else's platform, and a reader can go and check it. That is what
+ * makes it worth publishing, so the schema refuses to let it become the other
+ * thing by accident: anything not written directly to GMZ must carry a link
+ * back to the original. You cannot claim a Google review here without saying
+ * where it is.
+ *
+ * `approved` still gates everything, because a client agreeing to leave a
+ * public review is not the same as agreeing to be quoted on a marketing page.
+ * If you do not know that they agreed, it is not approved.
+ */
+const REVIEW_PLATFORMS = ['Google', 'Yelp', 'Houzz', 'Direct'] as const;
+
+const reviews = defineCollection({
+  loader: glob({ base: './src/content/reviews', pattern: '**/*.md' }),
+  schema: z
+    .object({
+      /** As they have agreed to be credited, which on most platforms is a first name and an initial. */
+      author: z.string(),
+      /** Town, never a street. Same rule as everywhere else public. */
+      location: townOnly.optional(),
+      quote: z.string(),
+      platform: z.enum(REVIEW_PLATFORMS),
+      /** The original, so a reader can verify it. Required unless Direct. */
+      sourceUrl: z.string().url('A review needs a link a reader can actually follow.').optional(),
+      /** When it was written. A five year old review presented as current is a small lie. */
+      reviewed: z.coerce.date(),
+      rating: z.number().min(1).max(5).optional(),
+      approved: z.boolean().default(false),
+      project: reference('projects').optional(),
+      featured: z.boolean().default(false),
+      order: z.number().default(0),
+    })
+    .refine((review) => review.platform === 'Direct' || Boolean(review.sourceUrl), {
+      message:
+        'A review from a public platform must link to the original. Without it this is a ' +
+        'quote GMZ chose, not a review, and it should be marked Direct instead.',
+      path: ['sourceUrl'],
+    }),
 });
 
 /* ---------------------------------------------------------------------- */
@@ -460,4 +483,4 @@ const articles = defineCollection({
   }),
 });
 
-export const collections = { projects, services, testimonials, faqs, portfolio, articles };
+export const collections = { projects, services, reviews, faqs, portfolio, articles };
