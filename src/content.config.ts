@@ -420,4 +420,44 @@ const faqs = defineCollection({
   }),
 });
 
-export const collections = { projects, services, testimonials, faqs, portfolio };
+/**
+ * Long-form answers: the pieces that are too big to sit in the FAQ list.
+ *
+ * These carry a rule the other collections do not need. An article that states
+ * what a town's ordinance requires is making a claim a client may act on, and
+ * a wrong one is worse than silence. So `sources` is required and must not be
+ * empty: nothing publishes here without naming where its facts came from, and
+ * `updated` is required because regulation goes stale and a reader deserves to
+ * know when this was last checked.
+ */
+const articles = defineCollection({
+  loader: glob({ base: './src/content/articles', pattern: '**/*.md' }),
+  schema: z.object({
+    title: z.string(),
+    /** Three to six words, for compact navigation. */
+    short: z.string(),
+    lede: z.string(),
+    /** When the facts were last verified against the sources below. */
+    updated: z.coerce.date(),
+    sources: z
+      .array(
+        z.object({
+          label: z.string().min(1),
+          href: z.string().url('A source needs a real URL a reader can follow.'),
+        }),
+      )
+      .min(1, 'An article that states a rule must name where the rule came from.'),
+    /**
+     * Renders the standing note that this is general information and that the
+     * town, not GMZ, is the authority. True for anything describing a code,
+     * an ordinance or a permit.
+     */
+    advisory: z.boolean().default(false),
+    /** Same gate as an FAQ answer: nothing renders in production until true. */
+    published: z.boolean().default(false),
+    order: z.number().default(0),
+    seo: seo.optional(),
+  }),
+});
+
+export const collections = { projects, services, testimonials, faqs, portfolio, articles };
