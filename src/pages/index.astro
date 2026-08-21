@@ -4,29 +4,16 @@ import HeroVideo from '@components/HeroVideo.astro';
 import { company, fees, foundedLine, serviceRegionInline } from '@data/site';
 import { getPublishedArticles } from '@data/articles';
 import { getPublishedTowns, townHref } from '@data/towns';
+import { getServices, serviceHref } from '@data/services';
 
 const towns = await getPublishedTowns();
 const articles = await getPublishedArticles();
-
-/**
- * The three stages, taken from the tagline GMZ set rather than invented here.
- * The five service names in the brand manual are still undecided, so this uses
- * the split the company already describes itself by.
+/*
+ * The three service lines come from the collection rather than a second list
+ * kept in step by hand. One fact, one home: renaming a service should not mean
+ * remembering to edit the home page too.
  */
-const stages = [
-  {
-    name: 'Design',
-    what: 'Drawings, planting plans and a scope you can price, before anything is dug.',
-  },
-  {
-    name: 'Build',
-    what: 'Grading, hardscape, irrigation and planting, by the crew that drew it.',
-  },
-  {
-    name: 'Maintenance',
-    what: 'Coming back to look after it, so the garden that was built is the garden you keep.',
-  },
-];
+const services = await getServices();
 ---
 
 <BaseLayout>
@@ -54,10 +41,12 @@ const stages = [
 
       <ul class="stages">
         {
-          stages.map((stage) => (
+          services.map((service) => (
             <li class="stage">
-              <h3 class="stage__name">{stage.name}</h3>
-              <p class="stage__what">{stage.what}</p>
+              <h3 class="stage__name">
+                <a href={serviceHref(service)}>{service.data.title}</a>
+              </h3>
+              <p class="stage__what">{service.data.summary}</p>
             </li>
           ))
         }
