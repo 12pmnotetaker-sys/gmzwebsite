@@ -43,8 +43,10 @@ const stages = [
   <section class="section">
     <div class="container">
       <div class="section-head">
-        <p class="kicker">What we do</p>
-        <h2 class="section-title">Three stages, one company.</h2>
+        <div>
+          <p class="kicker">What we do</p>
+          <h2 class="section-title">Three stages, one company.</h2>
+        </div>
         <p class="section-head__note">
           The same people carry a garden from the first sketch to the fiftieth visit.
         </p>
@@ -67,8 +69,10 @@ const stages = [
   <section class="section section--tint">
     <div class="container">
       <div class="section-head">
-        <p class="kicker">Where we work</p>
-        <h2 class="section-title">The Peninsula, from the Redwood City yard.</h2>
+        <div>
+          <p class="kicker">Where we work</p>
+          <h2 class="section-title">The Peninsula, from the Redwood City yard.</h2>
+        </div>
         <p class="section-head__note">
           If you are outside the service area, an accommodation can be made upon request. A
           {' '}{fees.travel.display} travel charge applies {fees.travel.note}.
@@ -98,8 +102,10 @@ const stages = [
       <section class="section">
         <div class="container">
           <div class="section-head">
-            <p class="kicker">Answers</p>
-            <h2 class="section-title">The questions worth settling early.</h2>
+            <div>
+              <p class="kicker">Answers</p>
+              <h2 class="section-title">The questions worth settling early.</h2>
+            </div>
           </div>
           <ul class="answers">
             {articles.map((article) => (
@@ -119,14 +125,16 @@ const stages = [
   <section class="section section--tint">
     <div class="container">
       <div class="section-head">
-        <p class="kicker">The work</p>
-        <h2 class="section-title">The portfolio sits behind a code.</h2>
+        <div>
+          <p class="kicker">The work</p>
+          <h2 class="section-title">The portfolio sits behind a code.</h2>
+        </div>
         <p class="section-head__note">
           Finished gardens, the drawings behind them and walkthrough film, shown to clients after a
           consultation rather than published. The code comes with the visit.
         </p>
       </div>
-      <p>
+      <p class="portfolio-link">
         <a class="link-accent" href="/portfolio">Open the portfolio</a>
       </p>
     </div>
@@ -135,8 +143,10 @@ const stages = [
   <section class="section">
     <div class="container">
       <div class="section-head">
-        <p class="kicker">What it costs to start</p>
-        <h2 class="section-title">The first visit is a fixed price.</h2>
+        <div>
+          <p class="kicker">What it costs to start</p>
+          <h2 class="section-title">The first visit is a fixed price.</h2>
+        </div>
       </div>
       <dl class="fees">
         <div class="fee">
@@ -173,13 +183,17 @@ const stages = [
     max-width: 46ch;
   }
 
+  .portfolio-link {
+    margin-block-start: var(--space-lg);
+  }
+
   .section--tint {
     background: var(--color-bg-subtle);
   }
 
   .stages {
     list-style: none;
-    margin: 0;
+    margin: var(--space-lg) 0 0;
     padding: 0;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -209,7 +223,7 @@ const stages = [
 
   .towns {
     list-style: none;
-    margin: 0;
+    margin: var(--space-lg) 0 0;
     padding: 0;
     display: flex;
     flex-wrap: wrap;
@@ -235,7 +249,7 @@ const stages = [
 
   .answers {
     list-style: none;
-    margin: 0;
+    margin: var(--space-lg) 0 0;
     padding: 0;
     display: flex;
     flex-direction: column;
@@ -260,7 +274,7 @@ const stages = [
   }
 
   .fees {
-    margin: 0;
+    margin: var(--space-lg) 0 0;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--space-lg);

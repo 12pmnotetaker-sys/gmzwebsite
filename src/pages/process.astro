@@ -1,20 +1,191 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
 import PageHeader from '@components/PageHeader.astro';
-import Placeholder from '@components/Placeholder.astro';
+import { fees } from '@data/site';
+import { processPhases } from '@data/process';
 ---
 
 <BaseLayout
-  title="Process"
-  description="The visit, the drawings, the build, and what happens after."
+  title="The Process"
+  description="How a GMZ job runs, from the first visit to the crew coming back: four stages, seventeen steps, nothing hidden."
 >
   <PageHeader
     eyebrow="How a job runs"
-    title="Process"
-    lede="The visit, the drawings, the build, and what happens after."
+    title="The Process"
+    lede="Four stages, from the first hour on the property to the visit after the garden has grown in."
   />
-  <Placeholder
-    phase="Phase 2"
-    what="The twelve-step design process and ten-step construction process already written in GMZ's working document."
-  />
+
+  <div class="container">
+    <p class="lead intro">
+      Most of what goes wrong on a landscape project goes wrong before anyone digs. So the order
+      below front-loads the deciding: the ground gets read, the drawings get resolved, and the
+      permits get pulled while changing your mind still costs nothing.
+    </p>
+  </div>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <p class="kicker">The four main steps</p>
+          <h2 class="section-title">What you actually experience.</h2>
+        </div>
+      </div>
+
+      <ol class="spine">
+        {
+          processPhases.map((phase) => (
+            <li class="spine__item">
+              <a class="spine__link" href={`#${phase.name.toLowerCase().replace(/\s+/g, '-')}`}>
+                {phase.name}
+              </a>
+              <p class="spine__purpose">{phase.purpose}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  {
+    processPhases.map((phase) => (
+      <section class="section phase" id={phase.name.toLowerCase().replace(/\s+/g, '-')}>
+        <div class="container">
+          <div class="section-head">
+            <div>
+              <p class="kicker">{phase.name}</p>
+              <h2 class="section-title">{phase.purpose}</h2>
+            </div>
+          </div>
+
+          <ol class="steps">
+            {phase.steps.map((step) => (
+              <li class="step">
+                <h3 class="step__name">{step.name}</h3>
+                <p class="step__what">{step.what}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+    ))
+  }
+
+  <section class="section section--tint">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <p class="kicker">Starting</p>
+          <h2 class="section-title">The first stage has a fixed price.</h2>
+        </div>
+      </div>
+      <p class="closing">
+        The consultation is {fees.consultation.display} and covers {fees.consultation.covers}. A
+        maintenance walk, to price looking after a garden that already exists, is
+        {' '}{fees.maintenanceWalk.display}. Neither is credited toward a later stage, so what you
+        pay for is the visit itself rather than a deposit on work you have not agreed to.
+      </p>
+      <p class="closing">
+        <a class="link-accent" href="/start">Start a project</a>
+      </p>
+    </div>
+  </section>
 </BaseLayout>
+
+<style>
+  .intro {
+    max-inline-size: var(--width-prose);
+  }
+
+  .spine {
+    list-style: none;
+    margin: var(--space-lg) 0 0;
+    padding: 0;
+    counter-reset: spine;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-lg);
+  }
+
+  /*
+   * Numbers earn their place here: this is a sequence, and the order is the
+   * argument the page is making. They are not decoration on an unordered list.
+   */
+  .spine__item {
+    counter-increment: spine;
+    border-block-start: 2px solid var(--color-structure);
+    padding-block-start: 0.875rem;
+  }
+
+  .spine__item::before {
+    content: counter(spine);
+    display: block;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: var(--tracking-kicker);
+    color: var(--color-highlight);
+  }
+
+  .spine__link {
+    display: inline-block;
+    margin-block-start: 0.25rem;
+    font-size: var(--text-xl);
+    font-weight: 700;
+    letter-spacing: var(--tracking-heading);
+  }
+
+  .spine__purpose {
+    margin-block-start: 0.375rem;
+    color: var(--color-text-muted);
+  }
+
+  .phase {
+    scroll-margin-block-start: 6rem;
+  }
+
+  .steps {
+    list-style: none;
+    margin: var(--space-lg) 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    max-inline-size: var(--width-prose);
+  }
+
+  .step {
+    border-block-start: 1px solid var(--color-border);
+    padding-block-start: 0.875rem;
+  }
+
+  .step__name {
+    margin: 0;
+    font-size: var(--text-lg);
+    letter-spacing: var(--tracking-heading);
+  }
+
+  .step__what {
+    margin-block-start: 0.375rem;
+    color: var(--color-text-muted);
+  }
+
+  .section--tint {
+    background: var(--color-bg-subtle);
+  }
+
+  .closing {
+    margin-block-start: var(--space-lg);
+    max-inline-size: var(--width-prose);
+  }
+
+  .closing + .closing {
+    margin-block-start: var(--space-md);
+  }
+
+  @media (width < 760px) {
+    .spine {
+      grid-template-columns: 1fr;
+      gap: var(--space-md);
+    }
+  }
+</style>
