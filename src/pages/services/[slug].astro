@@ -1,0 +1,105 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { render } from 'astro:content';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import PageHeader from '@components/PageHeader.astro';
+import { getServices, serviceHref } from '@data/services';
+
+export const getStaticPaths = (async () => {
+  const services = await getServices();
+  return services.map((service) => ({
+    params: { slug: service.id },
+    props: { service, others: services.filter((entry) => entry.id !== service.id) },
+  }));
+}) satisfies GetStaticPaths;
+
+const { service, others } = Astro.props;
+const { Content } = await render(service);
+---
+
+<BaseLayout
+  title={service.data.title}
+  description={service.data.seo?.description ?? service.data.summary}
+>
+  <PageHeader eyebrow="Services" title={service.data.title} lede={service.data.summary} />
+
+  <div class="container">
+    {service.data.pullQuote && <p class="pull">{service.data.pullQuote}</p>}
+
+    <article class="prose service-body">
+      <Content />
+    </article>
+
+    {
+      service.data.highlights.length > 0 && (
+        <section class="section">
+          <div class="section-head">
+            <div>
+              <p class="kicker">In short</p>
+              <h2 class="section-title">What this covers.</h2>
+            </div>
+          </div>
+          <ul class="points">
+            {service.data.highlights.map((point) => (
+              <li>{point}</li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <p class="kicker">Also</p>
+          <h2 class="section-title">The other two.</h2>
+        </div>
+      </div>
+      <ul class="others">
+        {
+          others.map((other) => (
+            <li>
+              <a class="link-accent" href={serviceHref(other)}>
+                {other.data.title}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .pull {
+    margin-block-end: var(--space-lg);
+    border-inline-start: 4px solid var(--color-highlight);
+    padding-inline-start: 1rem;
+    font-size: var(--text-xl);
+    font-weight: 600;
+    letter-spacing: var(--tracking-heading);
+    max-inline-size: var(--width-prose);
+  }
+
+  .service-body {
+    max-inline-size: var(--width-prose);
+  }
+
+  .points,
+  .others {
+    margin: var(--space-lg) 0 0;
+    padding-inline-start: 1.125rem;
+    max-inline-size: var(--width-prose);
+    color: var(--color-text-muted);
+  }
+
+  .points li,
+  .others li {
+    margin-block-end: 0.5rem;
+  }
+
+  .others {
+    list-style: none;
+    padding-inline-start: 0;
+  }
+</style>
