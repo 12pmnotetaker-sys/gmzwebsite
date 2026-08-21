@@ -1,8 +1,32 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
 import HeroVideo from '@components/HeroVideo.astro';
-import Placeholder from '@components/Placeholder.astro';
-import { company, foundedLine, serviceRegionInline } from '@data/site';
+import { company, fees, foundedLine, serviceRegionInline } from '@data/site';
+import { getPublishedArticles } from '@data/articles';
+import { getPublishedTowns, townHref } from '@data/towns';
+
+const towns = await getPublishedTowns();
+const articles = await getPublishedArticles();
+
+/**
+ * The three stages, taken from the tagline GMZ set rather than invented here.
+ * The five service names in the brand manual are still undecided, so this uses
+ * the split the company already describes itself by.
+ */
+const stages = [
+  {
+    name: 'Design',
+    what: 'Drawings, planting plans and a scope you can price, before anything is dug.',
+  },
+  {
+    name: 'Build',
+    what: 'Grading, hardscape, irrigation and planting, by the crew that drew it.',
+  },
+  {
+    name: 'Maintenance',
+    what: 'Coming back to look after it, so the garden that was built is the garden you keep.',
+  },
+];
 ---
 
 <BaseLayout>
@@ -16,10 +40,117 @@ import { company, foundedLine, serviceRegionInline } from '@data/site';
     </p>
   </HeroVideo>
 
-  <Placeholder
-    phase="Phase 2"
-    what="The home page leads with real project photography, the three service pillars, selected work, and the route to the intake form."
-  />
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <p class="kicker">What we do</p>
+        <h2 class="section-title">Three stages, one company.</h2>
+        <p class="section-head__note">
+          The same people carry a garden from the first sketch to the fiftieth visit.
+        </p>
+      </div>
+
+      <ul class="stages">
+        {
+          stages.map((stage) => (
+            <li class="stage">
+              <h3 class="stage__name">{stage.name}</h3>
+              <p class="stage__what">{stage.what}</p>
+            </li>
+          ))
+        }
+      </ul>
+      <p class="stages__more">More services upon request.</p>
+    </div>
+  </section>
+
+  <section class="section section--tint">
+    <div class="container">
+      <div class="section-head">
+        <p class="kicker">Where we work</p>
+        <h2 class="section-title">The Peninsula, from the Redwood City yard.</h2>
+        <p class="section-head__note">
+          If you are outside the service area, an accommodation can be made upon request. A
+          {' '}{fees.travel.display} travel charge applies {fees.travel.note}.
+        </p>
+      </div>
+
+      <ul class="towns">
+        {
+          company.serviceArea.map((name) => {
+            const town = towns.find((entry) => entry.data.name === name);
+            return (
+              <li class="town">
+                {town ? <a href={townHref(town)}>{name}</a> : <span>{name}</span>}
+              </li>
+            );
+          })
+        }
+      </ul>
+      <p class="towns__note">
+        The linked towns have a page on what their own rules require before design starts.
+      </p>
+    </div>
+  </section>
+
+  {
+    articles.length > 0 && (
+      <section class="section">
+        <div class="container">
+          <div class="section-head">
+            <p class="kicker">Answers</p>
+            <h2 class="section-title">The questions worth settling early.</h2>
+          </div>
+          <ul class="answers">
+            {articles.map((article) => (
+              <li class="answer">
+                <a class="answer__link" href={`/faq/${article.id}`}>
+                  {article.data.title}
+                </a>
+                <p class="answer__lede">{article.data.lede}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    )
+  }
+
+  <section class="section section--tint">
+    <div class="container">
+      <div class="section-head">
+        <p class="kicker">The work</p>
+        <h2 class="section-title">The portfolio sits behind a code.</h2>
+        <p class="section-head__note">
+          Finished gardens, the drawings behind them and walkthrough film, shown to clients after a
+          consultation rather than published. The code comes with the visit.
+        </p>
+      </div>
+      <p>
+        <a class="link-accent" href="/portfolio">Open the portfolio</a>
+      </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <p class="kicker">What it costs to start</p>
+        <h2 class="section-title">The first visit is a fixed price.</h2>
+      </div>
+      <dl class="fees">
+        <div class="fee">
+          <dt>{fees.consultation.display}</dt>
+          <dd>Design consultation, covering {fees.consultation.covers}.</dd>
+        </div>
+        <div class="fee">
+          <dt>{fees.maintenanceWalk.display}</dt>
+          <dd>Maintenance walk, to price looking after a garden that already exists.</dd>
+        </div>
+      </dl>
+      <p class="fees__note">Neither fee is credited toward a later stage.</p>
+    </div>
+  </section>
 </BaseLayout>
 
 <style>
@@ -40,5 +171,127 @@ import { company, foundedLine, serviceRegionInline } from '@data/site';
     margin-block-start: 1.375rem;
     color: color-mix(in srgb, #fff 88%, transparent);
     max-width: 46ch;
+  }
+
+  .section--tint {
+    background: var(--color-bg-subtle);
+  }
+
+  .stages {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-lg);
+  }
+
+  .stage {
+    border-block-start: 2px solid var(--color-structure);
+    padding-block-start: 0.875rem;
+  }
+
+  .stage__name {
+    margin: 0;
+    font-size: var(--text-xl);
+    letter-spacing: var(--tracking-heading);
+  }
+
+  .stage__what {
+    margin-block-start: 0.5rem;
+    color: var(--color-text-muted);
+  }
+
+  .stages__more {
+    margin-block-start: var(--space-md);
+    color: var(--color-text-muted);
+  }
+
+  .towns {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .town a,
+  .town span {
+    display: block;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg);
+    padding: 0.5rem 0.875rem;
+  }
+
+  .town span {
+    color: var(--color-text-muted);
+  }
+
+  .towns__note {
+    margin-block-start: var(--space-md);
+    color: var(--color-text-muted);
+  }
+
+  .answers {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .answer {
+    border-block-start: 1px solid var(--color-border);
+    padding-block-start: 0.875rem;
+  }
+
+  .answer__link {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    letter-spacing: var(--tracking-heading);
+  }
+
+  .answer__lede {
+    margin-block-start: 0.375rem;
+    color: var(--color-text-muted);
+    max-inline-size: var(--width-prose);
+  }
+
+  .fees {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-lg);
+    max-inline-size: var(--width-prose);
+  }
+
+  .fee {
+    border-block-start: 2px solid var(--color-structure);
+    padding-block-start: 0.875rem;
+  }
+
+  .fee dt {
+    font-size: var(--text-2xl);
+    font-weight: 800;
+    letter-spacing: var(--tracking-heading);
+  }
+
+  .fee dd {
+    margin: 0.375rem 0 0;
+    color: var(--color-text-muted);
+  }
+
+  .fees__note {
+    margin-block-start: var(--space-md);
+    color: var(--color-text-muted);
+  }
+
+  @media (width < 760px) {
+    .stages,
+    .fees {
+      grid-template-columns: 1fr;
+    }
   }
 </style>

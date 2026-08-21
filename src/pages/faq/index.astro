@@ -1,7 +1,6 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
 import PageHeader from '@components/PageHeader.astro';
-import Placeholder from '@components/Placeholder.astro';
 import { getPublishedArticles } from '@data/articles';
 
 const articles = await getPublishedArticles();
@@ -42,11 +41,6 @@ const articles = await getPublishedArticles();
       </div>
     )
   }
-
-  <Placeholder
-    phase="Phase 2"
-    what="Fifty-four published answers already exist in the portfolio repo, grouped by phase and by the four objections that lose deals."
-  />
 </BaseLayout>
 
 <style>

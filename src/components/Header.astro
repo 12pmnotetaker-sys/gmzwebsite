@@ -121,7 +121,7 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: var(--space-lg);
+    gap: clamp(1rem, 2.2vw, var(--space-lg));
   }
 
   .masthead__logo {
@@ -131,14 +131,24 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
     text-decoration: none;
   }
 
+  /*
+   * Seven items plus the call to action is a lot for one bar. The gap and the
+   * type scale continuously with the viewport rather than stepping at a new
+   * breakpoint, so 760px stays the only structural switch in the site. Without
+   * this the nav wraps at around 1024px and the masthead doubles in height.
+   */
   .masthead__nav {
     display: flex;
-    gap: 1.625rem;
-    font-size: 1rem;
+    gap: clamp(0.8125rem, 1.55vw, 1.625rem);
+    font-size: clamp(0.9375rem, 1.05vw, 1rem);
     font-weight: 500;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: flex-end;
+  }
+
+  .masthead__nav .masthead__link {
+    white-space: nowrap;
   }
 
   .masthead__link {

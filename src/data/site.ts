@@ -316,6 +316,7 @@ export const primaryNav: NavItem[] = [
   { label: 'Process', href: '/process' },
   { label: 'About', href: '/about' },
   { label: 'Answers', href: '/faq' },
+  { label: 'Where we work', href: '/where-we-work' },
   { label: 'Contact', href: '/contact' },
 ];
 
