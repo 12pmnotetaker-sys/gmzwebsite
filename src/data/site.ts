@@ -57,6 +57,29 @@ export const company = {
    */
   founder: 'Rafael Gomez Sr.',
 
+  /**
+   * Who does what, from the Business Profile of 2025-08-21, which is the only
+   * document that states roles at all.
+   *
+   * Full names here, short labels in `phones` above: the contact panel wants
+   * "Xavier" beside a number and the About page wants "Xavier Gomez, Principal
+   * and Director". Same people, two presentations, still one file.
+   *
+   * The 2026 Master Brand Manual names a "Samuel Gomez" who does not appear in
+   * any other document. It is wrong about the founder and is not a source for
+   * this list. Order is the order the Business Profile gives.
+   *
+   * This is a claim about real people. Drop or correct an entry the day a role
+   * changes rather than letting the site introduce someone by a job they no
+   * longer do.
+   */
+  people: [
+    { name: 'Xavier Gomez', role: 'Principal and Director' },
+    { name: 'Liliana Gomez', role: 'Head Designer' },
+    { name: 'Rafael Gomez Jr.', role: 'Maintenance Manager' },
+    { name: 'Rafael Gomez Sr.', role: 'Design Consultant, and the founder' },
+  ],
+
   address: {
     mailing: 'P.O. Box 3718, Redwood City, CA 94064',
     /** Split form, for the footer and contact panel which stack the lines. */
