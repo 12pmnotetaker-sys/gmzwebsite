@@ -19,12 +19,9 @@ const services = await getServices();
 <BaseLayout>
   <HeroVideo>
     <p class="kicker kicker--hero">{company.tagline}</p>
-    <h1 class="page-title hero__title">{company.summary}</h1>
+    <h1 class="page-title hero__title">Gardens for {serviceRegionInline}, {foundedLine}.</h1>
     <div class="rule-accent rule-accent--short"></div>
-    <p class="lead hero__lede">
-      {company.legalName}, a family company working across {serviceRegionInline}
-      {foundedLine}.
-    </p>
+    <p class="hero__lede">A family company, working from {company.address.locality}.</p>
   </HeroVideo>
 
   <section class="section">
@@ -81,7 +78,7 @@ const services = await getServices();
         }
       </ul>
       <p class="towns__note">
-        The linked towns have a page on what their own rules require before design starts.
+        Each town has a page on what its own rules require before design starts.
       </p>
     </div>
   </section>
@@ -160,16 +157,23 @@ const services = await getServices();
     color: var(--gmz-amber);
   }
 
+  /*
+   * Smaller than `.page-title` sets it, on purpose. The hero sits over a
+   * photograph, and a headline scaled for a white page covers the picture it
+   * is meant to sit on. The line is short enough now that the smaller step
+   * still reads as the loudest thing on the screen.
+   */
   .hero__title {
-    margin-block-start: 0.875rem;
-    max-width: 20ch;
+    margin-block-start: 0.75rem;
+    font-size: var(--text-3xl);
+    max-width: 34ch;
     color: #fff;
   }
 
   .hero__lede {
-    margin-block-start: 1.375rem;
+    margin-block-start: 1rem;
     color: color-mix(in srgb, #fff 88%, transparent);
-    max-width: 46ch;
+    max-width: 40ch;
   }
 
   .portfolio-link {
