@@ -12,8 +12,12 @@ the harness could fail at all: an em-dash in a `<p>`, an internal term in a
 caught, correctly. The fixtures used invented placeholder values, never GMZ
 figures, and none of them remain in the tree.
 
-State at the time of the audit: `npm run build` passes, 30 pages, 84 images
-scanned, nothing to report.
+State at the time of the audit: `npm run build` passes, 33 pages, 84 images
+scanned, nothing to report. The findings were first taken against `243d5b9`,
+then re-verified after merging `e21e358` ("Towns, hero, Contact, and an intake
+form that cannot lie"), which landed the enquiry form and endpoint. Every
+finding below still holds on the merged head, and the intake form added one
+more, recorded in section 3.
 
 ## What holds
 
@@ -148,6 +152,29 @@ prose element and two of them are attributes. The single source of truth is
 breaking the no-em-dash rule, and the check written to catch that rule cannot
 see it.
 
+### The intake form's copy is never linted
+
+The enquiry form that arrived with `e21e358` puts real client-facing prose in
+the one place content-lint cannot reach. The messages a visitor reads after
+submitting, the success line and both failure lines among them, live in
+`EnquiryForm.astro`'s client script. Astro bundles that to
+`dist/_astro/EnquiryForm.astro_astro_type_script_index_0_lang.*.js`, and
+content-lint filters to `.html`, so the copy is never read at all. Neither the
+house style rules nor the internal-terms scan apply to it.
+
+The copy as written is clean; it was checked by hand and carries no em-dash, no
+brand name and no internal term. The point is that nothing keeps it that way,
+and this is now the largest body of client-facing prose on the site sitting
+outside the gate. It is the "script bodies are stripped" blind spot above, no
+longer hypothetical.
+
+`api/enquiry.ts` is in better shape. It is type-checked, since `tsconfig.json`
+includes `**/*.ts`, and it returns machine-readable error codes rather than
+prose, so there is no client-facing wording in it to lint. It is not in `dist/`
+and therefore outside content-lint, which matters only if prose is added to it
+later. Neither it nor `src/data/enquiry.ts` nor `EnquiryForm.astro` retypes a
+company fact.
+
 ## 4. CLAUDE.md rules with no check at all
 
 **One fact, one home.** Nothing prevents a phone number, the CSLB number, the
@@ -251,8 +278,8 @@ silently becomes a no-op. Not a risk today with seven live entries.
 5. Fix `site.title`, and lint `<title>` and the meta description for house
    style. The rule is being broken by the file that exists to prevent that.
 6. Register `testimonials` or drop the reference.
-7. Lint the JSON-LD block and image alt text for internal terms and brand
-   names.
+7. Lint the JSON-LD block, image alt text, and the bundled client scripts for
+   internal terms and brand names. The intake form's copy is the live case.
 8. Decide whether the unenforced CLAUDE.md rules should be checks or should be
    marked in the document as held by review. Either is defensible. What is not
    is a document that reads as if they are all enforced.
