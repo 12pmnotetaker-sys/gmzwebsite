@@ -48,8 +48,8 @@ import {
   timelines,
   validate,
   type Enquiry,
-} from '../src/data/enquiry.ts';
-import { company } from '../src/data/site.ts';
+} from '../src/data/enquiry.js';
+import { company } from '../src/data/site.js';
 
 /** Largest body we will read. A person's enquiry is nowhere near this. */
 const MAX_BODY_BYTES = 64 * 1024;
