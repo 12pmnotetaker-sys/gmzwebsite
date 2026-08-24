@@ -1,17 +1,244 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
 import PageHeader from '@components/PageHeader.astro';
-import Placeholder from '@components/Placeholder.astro';
+import { company, fees, hoursInline, primaryPhone, secondaryPhone } from '@data/site';
+
+/**
+ * Every fact on this page is read from `site.ts`. Nothing is retyped, which is
+ * the whole point: a page of contact details is exactly where a stale phone
+ * number hides longest, because it looks right until somebody dials it.
+ *
+ * Note what this page does not say. There is no reply time, because nobody has
+ * agreed to one, and a client will hold GMZ to whatever the website said.
+ */
+const phones = [primaryPhone, secondaryPhone];
 ---
 
-<BaseLayout title="Contact" description="Call, or send a note and we will come back to you.">
+<BaseLayout
+  title="Contact"
+  description={`Call GMZ Landscaping on ${primaryPhone.display}, ${hoursInline}, or send the details of your project and we will come back to you.`}
+>
   <PageHeader
     eyebrow="Get in touch"
     title="Contact"
-    lede="Call, or send a note and we will come back to you."
+    lede="Two ways in. Call, if it is quicker said than typed, or write the project down and we will come back to you."
   />
-  <Placeholder
-    phase="Phase 2"
-    what="The direct route for people who would rather call than fill in a form. Contact details already render in the footer on every page."
-  />
+
+  <div class="container">
+    <div class="routes">
+      <section class="route" aria-labelledby="call-title">
+        <p class="kicker">The quickest way</p>
+        <h2 class="route__title" id="call-title">Call.</h2>
+        <p class="route__what">
+          Someone in the family answers. If nobody picks up, the crew is on a property and the call
+          will be returned.
+        </p>
+
+        <ul class="phones">
+          {
+            phones.map((phone) => (
+              <li class="phone">
+                <a class="phone__number" href={`tel:${phone.tel}`}>
+                  {phone.display}
+                </a>
+                <span class="phone__who">{phone.name}</span>
+              </li>
+            ))
+          }
+        </ul>
+
+        <p class="route__note">{company.hours.days}, {company.hours.time}.</p>
+      </section>
+
+      <section class="route" aria-labelledby="write-title">
+        <p class="kicker">If there is a lot to explain</p>
+        <h2 class="route__title" id="write-title">Write it down.</h2>
+        <p class="route__what">
+          The intake form asks the handful of things that decide whether GMZ is right for the job:
+          the town, what sort of property it is, what you are thinking of, and when. It takes a few
+          minutes and it saves a phone call spent establishing the same facts.
+        </p>
+        <p class="route__cta">
+          <a class="btn btn--primary" href="/start">Start a project</a>
+        </p>
+        <p class="route__note">
+          Or email <a class="link-accent" href={`mailto:${company.email}`}>{company.email}</a> if you
+          would rather just send a note.
+        </p>
+      </section>
+    </div>
+
+    <section class="section details" aria-labelledby="details-title">
+      <h2 class="visually-hidden" id="details-title">Company details</h2>
+      <dl class="facts">
+        <div class="facts__row facts__row--inline">
+          <dt>Post</dt>
+          <dd>
+            <span class="facts__stack">
+              {company.address.mailingLines.map((line) => <span>{line}</span>)}
+            </span>
+          </dd>
+        </div>
+        <div class="facts__row facts__row--inline">
+          <dt>Hours</dt>
+          <dd>{company.hours.days}, {company.hours.time}</dd>
+        </div>
+        <div class="facts__row facts__row--inline">
+          <dt>Where</dt>
+          <dd>
+            {company.serviceRegion}, worked from the {company.address.locality} yard.
+            <a href="/where-we-work">The towns, and what each one requires</a>.
+          </dd>
+        </div>
+        <div class="facts__row facts__row--inline">
+          <dt>Drawings</dt>
+          <dd>{company.drawings}</dd>
+        </div>
+      </dl>
+
+      <p class="details__note">
+        The mailing address is a post office box. GMZ is a landscape contractor rather than a shop,
+        so there is nothing to visit: the useful meeting happens on your property, not at ours.
+      </p>
+    </section>
+
+    <section class="section costs" aria-labelledby="costs-title">
+      <div class="section-head">
+        <div>
+          <p class="kicker">Before you call</p>
+          <h2 class="section-title" id="costs-title">Two things worth knowing.</h2>
+        </div>
+      </div>
+
+      <div class="notes">
+        <div class="note">
+          <h3 class="note__name">The first visit has a price</h3>
+          <p class="note__what">
+            A design consultation is {fees.consultation.display} and covers
+            {fees.consultation.covers}. Pricing the upkeep of a garden that already exists is a
+            separate {fees.maintenanceWalk.display} walk. Neither is credited toward a later stage, so
+            what you pay for is the visit itself. Outside the towns listed, a
+            {' '}{fees.travel.display} travel charge applies.
+          </p>
+        </div>
+        <div class="note">
+          <h3 class="note__name">The portfolio opens after the consultation</h3>
+          <p class="note__what">
+            Finished gardens, the drawings behind them and walkthrough film sit behind a code rather
+            than on the public site, because they are clients' homes. The code comes with the visit.
+            You can ask for it on the <a href="/start">intake form</a>.
+          </p>
+        </div>
+      </div>
+    </section>
+  </div>
 </BaseLayout>
+
+<style>
+  .routes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2xl);
+  }
+
+  .route {
+    border-block-start: var(--rule-structure) solid var(--color-structure);
+    padding-block-start: var(--space-md);
+  }
+
+  .route__title {
+    margin: 0.375rem 0 0;
+    font-size: var(--text-3xl);
+    letter-spacing: var(--tracking-display);
+  }
+
+  .route__what {
+    margin-block-start: 0.625rem;
+    color: var(--color-text-muted);
+  }
+
+  .phones {
+    list-style: none;
+    margin: var(--space-md) 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+
+  .phone {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .phone__number {
+    font-size: var(--text-xl);
+    font-weight: 700;
+    letter-spacing: var(--tracking-heading);
+  }
+
+  .phone__who {
+    font-size: var(--text-sm);
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--color-text-muted);
+  }
+
+  .route__cta {
+    margin-block-start: var(--space-md);
+  }
+
+  .route__note {
+    margin-block-start: var(--space-md);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .details {
+    padding-block: var(--space-2xl) var(--space-xl);
+  }
+
+  .details .facts {
+    max-inline-size: var(--width-prose);
+  }
+
+  .details__note {
+    margin-block-start: var(--space-md);
+    max-inline-size: var(--width-prose);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .notes {
+    margin-block-start: var(--space-lg);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-lg);
+  }
+
+  .note {
+    border-block-start: 2px solid var(--color-structure);
+    padding-block-start: 0.875rem;
+  }
+
+  .note__name {
+    margin: 0;
+    font-size: var(--text-lg);
+    letter-spacing: var(--tracking-heading);
+  }
+
+  .note__what {
+    margin-block-start: 0.375rem;
+    color: var(--color-text-muted);
+  }
+
+  @media (width < 760px) {
+    .routes,
+    .notes {
+      grid-template-columns: 1fr;
+      gap: var(--space-xl);
+    }
+  }
+</style>

@@ -122,6 +122,8 @@ stay. A redesign that drops one is a regression, not a style change.
 | Content schemas            | `src/content.config.ts`                          |
 | The last check before live | `scripts/content-lint.mjs`                       |
 | Photograph intake          | `scripts/photo-intake.mjs`                       |
+| The intake form's fields   | `src/data/enquiry.ts`                            |
+| The intake endpoint        | `api/enquiry.ts`                                 |
 | The veil                   | `gate` in `src/data/site.ts`, `Gate.astro`       |
 | Which routes are gated     | `gatedPrefixes` in `src/data/publication.ts`     |
 | Gated content              | `src/content/portfolio/`, `src/pages/portfolio/` |

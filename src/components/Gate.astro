@@ -47,6 +47,21 @@ import Logo from '@components/Logo.astro';
 
   <p class="veil__message" role="status" aria-live="polite" data-gate-message></p>
 
+  {
+    /*
+     * Without this the veil is a dead end for the one visitor it is most
+     * worth helping: someone who found the portfolio, wants to see it, and has
+     * no code because they have not spoken to GMZ yet. The code comes with the
+     * consultation, so the honest next step is the intake form, not a
+     * different password.
+     */
+  }
+  <p class="veil__route">
+    No code yet? The portfolio opens after a consultation.
+    {' '}<a href="/start">Start a project</a>, or read
+    {' '}<a href="/">more about the company</a> first.
+  </p>
+
   <p class="veil__legal">{licenseShort} · {company.address.locality}, California</p>
 </div>
 
@@ -252,6 +267,21 @@ import Logo from '@components/Logo.astro';
 
   .veil[data-tone] .veil__message {
     opacity: 1;
+  }
+
+  .veil__route {
+    margin-block-start: 1.375rem;
+    font-size: var(--text-sm);
+    line-height: var(--leading-normal);
+    color: #fff;
+    opacity: 0.8;
+    max-width: 40ch;
+    animation: gmzRise 700ms var(--ease) 780ms both;
+  }
+
+  .veil__route a {
+    color: var(--gmz-amber);
+    font-weight: 600;
   }
 
   .veil__legal {

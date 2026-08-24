@@ -1,20 +1,164 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
 import PageHeader from '@components/PageHeader.astro';
-import Placeholder from '@components/Placeholder.astro';
+import EnquiryForm from '@components/EnquiryForm.astro';
+import { fees, primaryPhone } from '@data/site';
 ---
 
 <BaseLayout
   title="Start a project"
-  description="Tell us about the property and we will tell you whether we are the right fit."
+  description="Tell us about the property and we will tell you whether we are the right fit. The first visit is a fixed price and nothing is charged before you agree to it."
 >
   <PageHeader
     eyebrow="The first step"
     title="Start a project"
-    lede="Tell us about the property and we will tell you whether we are the right fit."
+    lede="Tell us about the property. The point of this form is to work out whether GMZ is the right company for the job, which is better settled now than after a visit."
   />
-  <Placeholder
-    phase="Phase 2"
-    what="The qualifying intake form. It posts to a Vercel function that emails GMZ and writes the lead to the website_leads table, so nothing depends on a form service."
-  />
+
+  <div class="container">
+    <div class="layout">
+      <div class="layout__form">
+        <EnquiryForm />
+      </div>
+
+      <aside class="aside">
+        <section aria-labelledby="next-title">
+          <h2 class="aside__title" id="next-title">What happens after this</h2>
+          <ol class="steps">
+            <li class="step">
+              <h3 class="step__name">Someone reads it</h3>
+              <p class="step__what">
+                A person, not a queue. What you write here is what they will have in front of them
+                when they call.
+              </p>
+            </li>
+            <li class="step">
+              <h3 class="step__name">A call, before anything is booked</h3>
+              <p class="step__what">
+                To fill in what a form cannot: access, what is already failing, whether the work
+                needs a permit and how the town handles it.
+              </p>
+            </li>
+            <li class="step">
+              <h3 class="step__name">Then the consultation</h3>
+              <p class="step__what">
+                {fees.consultation.display}, covering {fees.consultation.covers}, agreed before it
+                is booked. It is not credited toward a later stage, so what you pay for is the visit
+                itself rather than a deposit on work you have not agreed to.
+              </p>
+            </li>
+          </ol>
+
+          <p class="aside__note">
+            The <a class="link-accent" href="/process">full process</a> is written out step by step, from
+            the first hour on the property to the visit after the garden has grown in.
+          </p>
+        </section>
+
+        <section class="aside__call" aria-labelledby="talk-title">
+          <h2 class="aside__title" id="talk-title">Would rather talk</h2>
+          <p class="aside__what">
+            Some things are quicker said than typed. <a
+              class="link-accent"
+              href={`tel:${primaryPhone.tel}`}>{primaryPhone.display}</a
+            >, or the <a class="link-accent" href="/contact">other ways to reach us</a>.
+          </p>
+        </section>
+      </aside>
+    </div>
+  </div>
 </BaseLayout>
+
+<style>
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    gap: var(--space-2xl);
+    align-items: start;
+    padding-block-end: var(--space-3xl);
+  }
+
+  .aside {
+    border-block-start: var(--rule-structure) solid var(--color-structure);
+    padding-block-start: var(--space-md);
+    position: sticky;
+    inset-block-start: var(--space-lg);
+  }
+
+  .aside__title {
+    margin: 0;
+    font-size: var(--text-lg);
+    letter-spacing: var(--tracking-heading);
+  }
+
+  .steps {
+    list-style: none;
+    margin: var(--space-md) 0 0;
+    padding: 0;
+    counter-reset: step;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .step {
+    counter-increment: step;
+    border-block-start: 1px solid var(--color-border);
+    padding-block-start: 0.75rem;
+  }
+
+  .step::before {
+    content: counter(step);
+    display: block;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: var(--tracking-kicker);
+    color: var(--color-highlight);
+  }
+
+  .step__name {
+    margin: 0.125rem 0 0;
+    font-size: var(--text-base);
+    letter-spacing: var(--tracking-heading);
+  }
+
+  .step__what {
+    margin-block-start: 0.25rem;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .aside__note {
+    margin-block-start: var(--space-md);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .aside__call {
+    margin-block-start: var(--space-xl);
+    border-block-start: var(--rule-structure) solid var(--color-structure);
+    padding-block-start: var(--space-md);
+  }
+
+  .aside__what {
+    margin-block-start: 0.5rem;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  @media (width < 980px) {
+    .layout {
+      grid-template-columns: 1fr;
+      gap: var(--space-xl);
+    }
+
+    /*
+     * The sidebar becomes a footer on a narrow screen, so it must not stick:
+     * a sticky element in a single column follows the reader down the page
+     * and covers the thing they are trying to read.
+     */
+    .aside {
+      position: static;
+    }
+  }
+</style>

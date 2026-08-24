@@ -47,6 +47,37 @@ npm run photo:clean -- original.jpg src/assets/projects/<slug>/<name>.webp
 Commit the cleaned output, not the original. Git history is permanent, so a file
 committed with coordinates in it stays that way even after it is deleted.
 
+## The intake form
+
+`/start` posts to `api/enquiry.ts`, a Vercel Function. It is the one part of
+this site that can fail silently, so it is built not to.
+
+**A static host answers `200` to a form POST whether or not anything is
+listening.** The thank-you panel would report success, the client would believe
+GMZ had their enquiry, and nobody would find out for weeks. No client-side check
+can tell the difference. So the endpoint returns `200` **only when a delivery
+channel accepted the enquiry** — not when it validated, not when it parsed — and
+the form shows a thank-you only on that `200`. With nothing configured it
+answers `503` and the page offers the phone number instead.
+
+That means **the form is deliberately inert until these are set** on the Vercel
+project. Set at least one channel:
+
+| Variable                    | What it is                                                 |
+| --------------------------- | ---------------------------------------------------------- |
+| `RESEND_API_KEY`            | API key for the email provider                             |
+| `ENQUIRY_FROM`              | sender on a domain verified with that provider             |
+| `ENQUIRY_TO`                | where enquiries land; defaults to the address in `site.ts` |
+| `SUPABASE_URL`              | `https://<ref>.supabase.co`                                |
+| `SUPABASE_SERVICE_ROLE_KEY` | server-side key; never goes near a browser                 |
+
+Then **send one real submission and confirm it arrives** in an inbox somebody
+opens. A `200` in the network tab is not the test; an email someone reads is.
+
+The field lists and the validation live in `src/data/enquiry.ts` and are
+imported by both the form and the function, so the browser and the server cannot
+disagree about what a valid answer is.
+
 ## What is where
 
 ```
@@ -61,8 +92,10 @@ src/
   content/portfolio/     the seven gated project entries
   pages/portfolio/       the gated index, project pages and walkthroughs
   layouts/               BaseLayout
-  components/            Header, Footer, Logo, SEO, PageHeader, Placeholder
-  pages/                 the route skeleton, all placeholders
+  data/enquiry.ts        the intake form's fields, and the shared validation
+  components/            Header, Footer, Logo, SEO, PageHeader, EnquiryForm, Gate
+  pages/                 the routes
+api/enquiry.ts           the intake endpoint; see "The intake form" above
 scripts/content-lint.mjs the written rules, checked against built HTML
 ```
 
