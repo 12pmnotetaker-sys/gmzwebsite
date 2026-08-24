@@ -19,6 +19,13 @@ form that cannot lie"), which landed the enquiry form and endpoint. Every
 finding below still holds on the merged head, and the intake form added one
 more, recorded in section 3.
 
+**Three of these have since been fixed**, in the follow-up that accompanies
+this document: `lint:photos` now runs in CI, `site.title` no longer carries an
+em-dash, and content-lint now reads the writing that ships inside a script.
+The findings are left as they were written, because the record of what the gate
+did and did not catch is the point of the document; each is marked below and in
+the closing list. Everything else stands open.
+
 ## What holds
 
 Worth stating first, because it is the load-bearing half and it is sound.
@@ -47,6 +54,9 @@ accessors, with a deliberate absence of a dev bypass for towns and reviews.
 something a schema structurally cannot.
 
 ## 1. The photo scan does not run in CI
+
+**Fixed.** A `lint:photos` step now runs in the workflow, ahead of the build,
+since it reads committed source and needs nothing built.
 
 The highest-impact finding.
 
@@ -142,6 +152,8 @@ after it in that item goes unread.
 
 ### A house style violation shipping today
 
+**Fixed.** `site.title` now uses a colon. What follows is what was found.
+
 `site.title` in `src/data/site.ts` is:
 
     GMZ Landscaping — Design · Build · Maintenance
@@ -153,6 +165,9 @@ breaking the no-em-dash rule, and the check written to catch that rule cannot
 see it.
 
 ### The intake form's copy is never linted
+
+**Fixed.** content-lint now reads string literals out of bundled and inline
+scripts, the JSON-LD block included, and applies the prose rules to them.
 
 The enquiry form that arrived with `e21e358` puts real client-facing prose in
 the one place content-lint cannot reach. The messages a visitor reads after
@@ -268,18 +283,20 @@ silently becomes a no-op. Not a risk today with seven live entries.
 
 ## Suggested order
 
-1. Add `lint:photos` to CI. One line, and it closes the gap between a rule
-   described as automatic and a rule that is still manual.
+1. ~~Add `lint:photos` to CI.~~ Done. One line, and it closed the gap between a
+   rule described as automatic and a rule that was still manual.
 2. Fail `scan` on unreadable files and unparsed EXIF, and add XMP geotag
    detection. Small changes inside logic that already exists.
 3. Scan video, or state in CLAUDE.md that video intake is manual and give it a
    route. Fifteen files are currently outside the net.
 4. Tighten `townOnly` past the leading-digit test, before `/work` ships.
-5. Fix `site.title`, and lint `<title>` and the meta description for house
-   style. The rule is being broken by the file that exists to prevent that.
+5. ~~Fix `site.title`.~~ Done. Linting `<title>` and the meta description for
+   house style is still open: attributes are still outside every rule, so the
+   next em-dash written into one ships the same way.
 6. Register `testimonials` or drop the reference.
-7. Lint the JSON-LD block, image alt text, and the bundled client scripts for
-   internal terms and brand names. The intake form's copy is the live case.
+7. ~~Lint the JSON-LD block and the bundled client scripts.~~ Done, and inline
+   scripts with them. Image alt text is still unlinted, along with every other
+   attribute.
 8. Decide whether the unenforced CLAUDE.md rules should be checks or should be
    marked in the document as held by review. Either is defensible. What is not
    is a document that reads as if they are all enforced.
