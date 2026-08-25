@@ -58,8 +58,13 @@ export const company = {
   founder: 'Rafael Gomez Sr.',
 
   /**
-   * Who does what, from the Business Profile of 2025-08-21, which is the only
-   * document that states roles at all.
+   * Who does what.
+   *
+   * The Business Profile of 2025-08-21 is the only document that states roles,
+   * and it is wrong about two of them. Xavier confirmed on 2026-08-25 that he
+   * is Project Manager, not "Principal and Director", and that Rafael Sr. is
+   * Owner and Founder rather than a design consultant. Those two corrections
+   * win; the other two entries are the Business Profile's.
    *
    * Full names here, short labels in `phones` above: the contact panel wants
    * "Xavier" beside a number and the About page wants "Xavier Gomez, Principal
@@ -74,10 +79,10 @@ export const company = {
    * longer do.
    */
   people: [
-    { name: 'Xavier Gomez', role: 'Principal and Director' },
+    { name: 'Xavier Gomez', role: 'Project Manager' },
     { name: 'Liliana Gomez', role: 'Head Designer' },
     { name: 'Rafael Gomez Jr.', role: 'Maintenance Manager' },
-    { name: 'Rafael Gomez Sr.', role: 'Design Consultant, and the founder' },
+    { name: 'Rafael Gomez Sr.', role: 'Owner and Founder' },
   ],
 
   address: {
