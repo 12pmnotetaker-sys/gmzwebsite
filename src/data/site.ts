@@ -246,7 +246,14 @@ export const site = {
    * and never has. Confirmed 2026-08-17.
    */
   url: 'https://www.gmzlandscape.com',
-  title: `${company.name} — ${company.tagline}`,
+  /**
+   * House style keeps em-dashes out of client-facing prose, and a page title
+   * is the most client-facing line on the site: it is what a search result and
+   * a browser tab show. A colon does the same work here. The separator is the
+   * only thing that changed; the tagline itself is Xavier's and is not ours to
+   * edit.
+   */
+  title: `${company.name}: ${company.tagline}`,
   titleTemplate: `%s | ${company.name}`,
   description: company.summary,
   locale: 'en_US',

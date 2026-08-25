@@ -186,6 +186,49 @@ function checkDocument(file, html) {
 }
 
 /**
+ * Prose that ships inside a script.
+ *
+ * The rules above read the built HTML, and for nearly everything that is the
+ * right place. It is not where all of the writing lives. A component's client
+ * script is bundled to a .js asset, so the lines the intake form shows a
+ * visitor after they press send never appear in a page at all. An `is:inline`
+ * script keeps its text in the HTML, where `stripCode` drops it before any
+ * rule runs. Either way the words reach a reader and nothing reads them back.
+ *
+ * A script is mostly code, and running the prose rules over code invents
+ * problems rather than finding them: `markup` is an ordinary identifier, and
+ * an em-dash never appears outside a string anyway. So only string literals
+ * are read, and only the ones shaped like something a person reads.
+ */
+const STRING_LITERAL = /"((?:[^"\\\n]|\\.)*)"|'((?:[^'\\\n]|\\.)*)'|`((?:[^`\\]|\\.)*)`/g;
+
+/** Two words or more. A selector, a path, a MIME type or a key is not prose. */
+const READS_AS_PROSE = /[A-Za-z]{2,}[ ,.;:] ?[A-Za-z]/;
+
+/** The rules that follow the writing wherever it ships. */
+const SCRIPT_RULES = [
+  ['internal-figures-in-script', INTERNAL_TERMS],
+  ['hourly-rate-in-script', HOURLY_RATE],
+  ['em-dash-in-script', EM_DASH],
+  ['manufacturer-in-script', MANUFACTURERS],
+];
+
+function checkScriptProse(file, code) {
+  for (const literal of code.matchAll(STRING_LITERAL)) {
+    const value = (literal[1] ?? literal[2] ?? literal[3] ?? '').replace(/\\(.)/g, '$1').trim();
+    if (value.length < 24 || !READS_AS_PROSE.test(value)) continue;
+    if (value.includes('://') || /^[\w./-]+$/.test(value)) continue;
+
+    for (const [rule, pattern] of SCRIPT_RULES) {
+      pattern.lastIndex = 0;
+      for (const match of value.matchAll(pattern)) {
+        report(file, rule, `"${match[0]}" in: ...${excerpt(value, match.index)}...`);
+      }
+    }
+  }
+}
+
+/**
  * The search signals have to agree, and the site now has two kinds of page.
  *
  * PUBLIC pages follow the phase switch: noindex and disallowed while the
@@ -356,6 +399,16 @@ for (const file of pages) {
   const html = await readFile(file, 'utf8');
   bodies.set(file, html);
   checkDocument(file, html);
+  // Inline scripts and the JSON-LD block, both of which stripCode removes
+  // before the document rules run.
+  for (const script of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)) {
+    checkScriptProse(file, script[1]);
+  }
+}
+
+// Bundled client scripts, which are not pages and so are not read above.
+for (const file of files.filter((f) => f.endsWith('.js'))) {
+  checkScriptProse(file, await readFile(file, 'utf8'));
 }
 checkTownPagesDiffer(pages, bodies);
 await checkIndexingConsistency(files);

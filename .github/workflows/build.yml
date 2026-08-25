@@ -25,6 +25,15 @@ jobs:
 
       - run: npm ci
 
+      # First, because it reads committed source rather than anything built,
+      # and because it is the check that must not be reached too late. A
+      # photograph carrying GPS has to fail here, before the commit is merged:
+      # git history is permanent, so deleting the file afterwards does not
+      # remove what it carried. Vercel runs `npm run build`, which chains this,
+      # but a deploy failure comes after the merge and is therefore no use.
+      - name: Scan photographs for location metadata
+        run: npm run lint:photos
+
       # Type errors, schema violations, broken image paths and broken content
       # references all surface here rather than on the live site.
       - name: Type-check and validate content
@@ -33,9 +42,10 @@ jobs:
       - name: Build
         run: npm run build:fast
 
-      # Reads the built HTML rather than the source: internal figures, em-dashes
-      # in prose, manufacturer names, missing alt text, and whether robots.txt,
-      # the noindex tags and the sitemap agree with each other.
+      # Reads the built output rather than the source: internal figures,
+      # em-dashes in prose, manufacturer names, missing alt text, the same
+      # rules again over the writing that ships inside a script, and whether
+      # robots.txt, the noindex tags and the sitemap agree with each other.
       - name: Lint content
         run: npm run lint:content
 
