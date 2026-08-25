@@ -1,20 +1,214 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
 import PageHeader from '@components/PageHeader.astro';
-import Placeholder from '@components/Placeholder.astro';
+import { company, serviceRegionInline } from '@data/site';
+
+/**
+ * Note what this page does not say, because the omissions are the decisions.
+ *
+ * There is no "licensed and insured". `claims.licensedAndInsured` is false: the
+ * CSLB number is settled and publishable on its own, the insurance half is not,
+ * and no GMZ document states a carrier, a coverage amount or a bond. The
+ * Working Document has a whole safety section citing workers compensation and
+ * liability cover; none of it ships until someone who can be held to it says so.
+ *
+ * There are no biographies either. The Business Profile states four names and
+ * four roles and nothing more, so this page states four names and four roles.
+ * Inventing a paragraph of warmth about a real person is the easiest thing on
+ * this site to do and the hardest to take back.
+ */
+const { people, license, memberships, drawings, address } = company;
 ---
 
 <BaseLayout
   title="About"
-  description="A family company on the Peninsula, third generation, working here since 1994."
+  description="A third generation family company on the San Francisco Peninsula, landscaping from a Redwood City yard since 1994."
 >
   <PageHeader
     eyebrow="Who we are"
     title="About"
-    lede="A family company on the Peninsula, third generation, working here since 1994."
+    lede="A family company, working one region, with the same people carrying a garden from the first sketch to the fiftieth visit."
   />
-  <Placeholder
-    phase="Phase 2"
-    what="The company story, the people, and the facts a client checks. Written once the licensed-and-insured claim is settled."
-  />
+
+  <div class="container">
+    <section class="section story" aria-labelledby="story-title">
+      <div class="section-head">
+        <div>
+          <p class="kicker">The company</p>
+          <h2 class="section-title" id="story-title">More than 30 years on the ground.</h2>
+        </div>
+      </div>
+
+      <div class="prose story__body">
+        <p>
+          {company.founder} started {company.name} in {company.founded} and still owns it. Three generations
+          of the family work in it now.
+        </p>
+        <p>
+          Family owned is a line most landscape companies use, so it is worth saying what it means
+          here rather than leaving it as a feeling. Four people are named below with the job each of
+          them does. The numbers on the contact page are theirs. There is no division to be handed
+          off to, and nobody stands between the person who drew your garden and the person who comes
+          back to look after it.
+        </p>
+        <p>
+          The company works one region, {serviceRegionInline}, from a yard in {address.locality}.
+          That is a limit, and a deliberate one. Soil, exposure and what a town will approve change
+          from one of these towns to the next, and knowing that is worth more than being able to
+          drive further.
+        </p>
+      </div>
+    </section>
+
+    <section class="section people" aria-labelledby="people-title">
+      <div class="section-head">
+        <div>
+          <p class="kicker">Who you deal with</p>
+          <h2 class="section-title" id="people-title">Four names, and what each one does.</h2>
+        </div>
+        <p class="section-head__note">
+          A small company is only an advantage if you can tell who is responsible for what. This is
+          who.
+        </p>
+      </div>
+
+      <ul class="roster">
+        {
+          people.map((person) => (
+            <li class="person">
+              <h3 class="person__name">{person.name}</h3>
+              <p class="person__role">{person.role}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+
+    <section class="section how" aria-labelledby="how-title">
+      <div class="section-head">
+        <div>
+          <p class="kicker">How it is put together</p>
+          <h2 class="section-title" id="how-title">Design, build and care are one company.</h2>
+        </div>
+      </div>
+
+      <div class="prose how__body">
+        <p>
+          Drawings are made {drawings.toLowerCase()} rather than bought in, which is the reason the design
+          and the build agree with each other. A plan drawn by someone who will never have to set the
+          grade tends to be a plan that changes on site, and a plan that changes on site is how a budget
+          moves.
+        </p>
+        <p>
+          The same company then comes back. That is the part that decides whether a garden still
+          looks like the drawing in five years, and it is why maintenance is a service here rather
+          than a handover.
+        </p>
+        <p>
+          <a class="link-accent" href="/process">How a job actually runs</a>, step by step, is
+          written out in full.
+        </p>
+      </div>
+    </section>
+
+    <section class="section checks" aria-labelledby="checks-title">
+      <div class="section-head">
+        <div>
+          <p class="kicker">The things worth checking</p>
+          <h2 class="section-title" id="checks-title">On the record.</h2>
+        </div>
+      </div>
+
+      <dl class="facts">
+        <div class="facts__row facts__row--inline">
+          <dt>Trading</dt>
+          <dd>Since {company.founded}, as {company.legalName}</dd>
+        </div>
+        <div class="facts__row facts__row--inline">
+          <dt>Based</dt>
+          <dd>{address.locality}, California</dd>
+        </div>
+        <div class="facts__row facts__row--inline">
+          <dt>Working</dt>
+          <dd>
+            {company.serviceRegion}. <a href="/where-we-work">The towns, and what each requires</a>.
+          </dd>
+        </div>
+        <div class="facts__row facts__row--inline">
+          <dt>{license.label}</dt>
+          <dd>
+            #{license.number}. Verifiable on the California State License Board's public register.
+          </dd>
+        </div>
+        <div class="facts__row facts__row--inline">
+          <dt>Drawings</dt>
+          <dd>{drawings}</dd>
+        </div>
+        {
+          memberships.map((body) => (
+            <div class="facts__row facts__row--inline">
+              <dt>Member</dt>
+              <dd>
+                {body.name} ({body.abbr})
+              </dd>
+            </div>
+          ))
+        }
+      </dl>
+    </section>
+  </div>
 </BaseLayout>
+
+<style>
+  .story__body,
+  .how__body {
+    margin-block-start: var(--space-lg);
+  }
+
+  .roster {
+    list-style: none;
+    margin: var(--space-lg) 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-lg);
+  }
+
+  .person {
+    border-block-start: 2px solid var(--color-structure);
+    padding-block-start: 0.875rem;
+  }
+
+  .person__name {
+    margin: 0;
+    font-size: var(--text-lg);
+    letter-spacing: var(--tracking-heading);
+  }
+
+  .person__role {
+    margin-block-start: 0.25rem;
+    color: var(--color-text-muted);
+  }
+
+  .checks {
+    padding-block-end: var(--space-3xl);
+  }
+
+  .checks .facts {
+    margin-block-start: var(--space-lg);
+    max-inline-size: var(--width-prose);
+  }
+
+  @media (width < 980px) {
+    .roster {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (width < 560px) {
+    .roster {
+      grid-template-columns: 1fr;
+      gap: var(--space-md);
+    }
+  }
+</style>
