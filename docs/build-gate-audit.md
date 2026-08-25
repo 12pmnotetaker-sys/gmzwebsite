@@ -19,12 +19,14 @@ form that cannot lie"), which landed the enquiry form and endpoint. Every
 finding below still holds on the merged head, and the intake form added one
 more, recorded in section 3.
 
-**Three of these have since been fixed**, in the follow-up that accompanies
-this document: `lint:photos` now runs in CI, `site.title` no longer carries an
+**Five of these have since been fixed.** Three went in the follow-up that
+accompanied this document: `lint:photos` now runs in CI, `site.title` no longer carries an
 em-dash, and content-lint now reads the writing that ships inside a script.
-The findings are left as they were written, because the record of what the gate
-did and did not catch is the point of the document; each is marked below and in
-the closing list. Everything else stands open.
+Two more followed, before the `/work` split: `townOnly` no longer accepts a
+street name, and the `testimonials` reference is gone. The findings are left as
+they were written, because the record of what the gate did and did not catch is
+the point of the document; each is marked below and in the closing list.
+Everything else stands open.
 
 ## What holds
 
@@ -220,6 +222,10 @@ is inherent to the approach and worth knowing rather than fixing.
 
 ## 5. Schema gaps
 
+**Fixed.** `townOnly` now tests the shape of the name, and a public project's
+location must additionally be a town from `serviceArea`. What follows is what
+was found.
+
 **`townOnly` rejects only a leading digit.** The refinement is
 `!/^\s*\d/.test(value)`.
 
@@ -236,6 +242,9 @@ says this refinement is what stops one being copied across into `projects`; in
 practice it stops the house-number form and nothing else. A `projects` entry
 with `location: 'Marlowe Road, Atherton, CA'` passes `astro check` and a full
 `npm run build` with zero errors.
+
+**Fixed.** The field is gone; the relationship it wanted already exists as
+`project` on a review, and is read through `getReviewsForProject`.
 
 **`reference('testimonials')` points at a collection that does not exist.** The
 `collections` export is `projects, services, reviews, faqs, portfolio, articles,
@@ -289,11 +298,14 @@ silently becomes a no-op. Not a risk today with seven live entries.
    detection. Small changes inside logic that already exists.
 3. Scan video, or state in CLAUDE.md that video intake is manual and give it a
    route. Fifteen files are currently outside the net.
-4. Tighten `townOnly` past the leading-digit test, before `/work` ships.
+4. ~~Tighten `townOnly` past the leading-digit test, before `/work` ships.~~
+   Done. Shape tests catch an address that announces itself; a public project's
+   town must also be one of the ten in `serviceArea`, which is what stops a
+   gated entry named "Marlowe" being copied across.
 5. ~~Fix `site.title`.~~ Done. Linting `<title>` and the meta description for
    house style is still open: attributes are still outside every rule, so the
    next em-dash written into one ships the same way.
-6. Register `testimonials` or drop the reference.
+6. ~~Register `testimonials` or drop the reference.~~ Dropped.
 7. ~~Lint the JSON-LD block and the bundled client scripts.~~ Done, and inline
    scripts with them. Image alt text is still unlinted, along with every other
    attribute.

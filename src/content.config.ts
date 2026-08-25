@@ -2,6 +2,9 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { defineCollection, reference, z, type SchemaContext } from 'astro:content';
 import { glob } from 'astro/loaders';
+// Relative rather than aliased: this file is loaded before the app is, and a
+// path alias is one more thing that has to be working for the build to start.
+import { company } from './data/site';
 
 /**
  * Content schemas for the public GMZ marketing site.
@@ -46,13 +49,134 @@ export const DISCIPLINES = [
  * address onto the public site is to delete this refinement on purpose, in a
  * diff somebody reviews.
  */
+/**
+ * Street types, tested against the last word of a name and nothing else.
+ *
+ * Whole words only, and only in final position, because both halves of that
+ * matter: "Hill" is a street type and "Hillsborough" is a town, and "St" is a
+ * street at the end of "Main St" but a saint at the start of "St. Helena".
+ */
+const STREET_TYPES = new Set([
+  'street',
+  'st',
+  'road',
+  'rd',
+  'lane',
+  'ln',
+  'avenue',
+  'ave',
+  'drive',
+  'dr',
+  'court',
+  'ct',
+  'place',
+  'pl',
+  'way',
+  'terrace',
+  'ter',
+  'circle',
+  'cir',
+  'boulevard',
+  'blvd',
+  'highway',
+  'hwy',
+  'trail',
+  'alley',
+  'crescent',
+  'parkway',
+  'pkwy',
+  'loop',
+  'row',
+  'walk',
+  'mews',
+  'close',
+  'hill',
+  'ridge',
+]);
+
+/** The published form carries the state: "Atherton, CA". Drop it to get the town. */
+const withoutState = (value: string) => value.replace(/,\s*(?:CA|California)\s*$/i, '').trim();
+
+/**
+ * What is wrong with this as the name of a town, or null if nothing is.
+ *
+ * Three tests, because a street address fails at least one of them: it carries
+ * a house number, or it names both a street and a town so it still has a comma
+ * once the state is off, or it ends in a street type.
+ */
+function townProblem(value: string): string | null {
+  const say = (what: string) =>
+    `${what} Public pages say "Atherton, CA"; the street name and number stay in ` +
+    `the estimating system and the gated portfolio.`;
+
+  if (/\d/.test(value)) return say('A town has no digits in its name.');
+
+  const town = withoutState(value);
+  if (town.includes(',')) return say('Name one town, optionally with its state, and nothing else.');
+
+  const last = town.split(/\s+/).pop()?.replace(/\.$/, '').toLowerCase() ?? '';
+  if (STREET_TYPES.has(last)) return say(`"${last}" is a street type, not part of a town name.`);
+
+  return null;
+}
+
+/**
+ * Town, never a street address.
+ *
+ * This is the rule that separates the public site from the gated portfolio.
+ * The portfolio indexes projects by street name, which GMZ agreed to
+ * explicitly, and which is conditioned on that site being behind a veil: a
+ * street name plus a photograph of the house often identifies whose garden it
+ * is. Nothing public may carry that.
+ *
+ * It is enforced here rather than left to care, so the way to get a street
+ * address onto the public site is to delete this refinement on purpose, in a
+ * diff somebody reviews.
+ *
+ * This is the loose form, for a value that names somewhere GMZ does not
+ * necessarily work: a reviewer's own town. Public project pages use
+ * `serviceAreaTown` below, which is stricter, and the reason is written there.
+ */
 const townOnly = z
   .string()
   .min(1)
-  .refine((value) => !/^\s*\d/.test(value), {
-    message:
-      'Location must be a town, not a street address. Public pages say "Atherton, CA"; ' +
-      'the street name and number stay in the estimating system and the gated portfolio.',
+  .superRefine((value, ctx) => {
+    const problem = townProblem(value);
+    if (problem) ctx.addIssue({ code: z.ZodIssueCode.custom, message: problem });
+  });
+
+/**
+ * A town GMZ actually works in, named exactly as `serviceArea` names it.
+ *
+ * The shape tests above catch a street address that announces itself, and they
+ * are not enough on their own. Every project in the gated portfolio is indexed
+ * by a street name, and half of those names carry no street type at all:
+ * "Marlowe", "Viewridge", "Hamilton", "Fox Hill". Copy one of those across into
+ * a public project and no test of shape would object, which is precisely the
+ * mistake the two collections exist to keep apart.
+ *
+ * So a public project may only claim a town from the list in `site.ts`, which
+ * is short, deliberate and already the single home for that fact. "Marlowe" is
+ * not on it and never will be.
+ *
+ * A genuine project in an eleventh town fails this, and should: GMZ adding a
+ * town to `serviceArea` is a claim about where it works, and belongs in a diff
+ * somebody reads rather than arriving as a side effect of a content file.
+ */
+const SERVICE_AREA = new Set(company.serviceArea.map((town) => town.toLowerCase()));
+
+const serviceAreaTown = z
+  .string()
+  .min(1)
+  .superRefine((value, ctx) => {
+    const problem =
+      townProblem(value) ??
+      (SERVICE_AREA.has(withoutState(value).toLowerCase())
+        ? null
+        : `"${withoutState(value)}" is not a town in the service area. A public project ` +
+          `is identified by town, and the towns are the ones listed in serviceArea in ` +
+          `src/data/site.ts. If GMZ genuinely works here, add the town there first.`);
+    if (problem) ctx.addIssue({ code: z.ZodIssueCode.custom, message: problem });
   });
 
 const seo = z
@@ -93,8 +217,11 @@ const projects = defineCollection({
       title: z.string(),
       /** One or two sentences for cards and the project header. */
       summary: z.string().max(300),
-      /** Town only. See `townOnly` above; this is a client-privacy boundary. */
-      location: townOnly,
+      /**
+       * Town only, and only a town GMZ works in. See `serviceAreaTown` above;
+       * this is the client-privacy boundary between the two collections.
+       */
+      location: serviceAreaTown,
       /** Completion date. Drives default ordering, newest first. */
       completed: z.coerce.date(),
       serviceLine: z.enum(SERVICE_LINES),
@@ -102,8 +229,18 @@ const projects = defineCollection({
       /** Card and social image. Lives in src/assets/projects/. */
       hero: photoSchema(image),
       gallery: z.array(photoSchema(image)).default([]),
-      /** Pull-quote from the client, if one has been given in writing. */
-      testimonial: reference('testimonials').optional(),
+      /*
+       * A project does not name its own pull-quote.
+       *
+       * This field used to be `testimonial: reference('testimonials')`, naming
+       * a collection that does not exist and never did, so it would have failed
+       * the first time a project used it. The relationship it wanted is already
+       * modelled the other way round, by `project` on a review, and one
+       * direction is the right number: a project naming one review while that
+       * review named a different project would be two answers to one question.
+       *
+       * `getReviewsForProject` in src/data/reviews.ts reads it from that side.
+       */
       /** Show on the homepage. Keep this to a handful. */
       featured: z.boolean().default(false),
       /** Sort weight within featured items; lower sorts first. */
