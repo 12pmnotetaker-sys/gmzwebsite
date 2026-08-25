@@ -19,5 +19,22 @@ export async function getApprovedReviews(): Promise<Review[]> {
   );
 }
 
+/**
+ * The approved reviews for one project, newest first.
+ *
+ * The link between the two lives on the review and only there. A project could
+ * have carried a field naming its own pull-quote, and for a while the schema
+ * said it did, pointing at a collection that did not exist. Modelling it once,
+ * from the side that already has `project`, means the two can never disagree
+ * about which review belongs to which job.
+ *
+ * Approval still gates it, through `getApprovedReviews`: a review reaching a
+ * project page is the same publication as a review reaching /reviews.
+ */
+export async function getReviewsForProject(projectId: string): Promise<Review[]> {
+  const reviews = await getApprovedReviews();
+  return reviews.filter((review) => review.data.project?.id === projectId);
+}
+
 export const formatReviewed = (date: Date) =>
   date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
