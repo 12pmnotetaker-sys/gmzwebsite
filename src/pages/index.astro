@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
 import HeroVideo from '@components/HeroVideo.astro';
+import SupplierStrip from '@components/SupplierStrip.astro';
 import { company, fees, foundedLine, serviceRegionInline } from '@data/site';
 import { getPublishedArticles } from '@data/articles';
 import { getPublishedTowns, townHref } from '@data/towns';
@@ -145,6 +146,21 @@ const services = await getServices();
         </div>
       </dl>
       <p class="fees__note">Neither fee is credited toward a later stage.</p>
+    </div>
+  </section>
+
+  <section class="section section--tint">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <p class="kicker">Materials and equipment</p>
+          <h2 class="section-title">What we install.</h2>
+        </div>
+        <p class="section-head__note">
+          The irrigation, lighting, controllers and paving that go into a GMZ garden.
+        </p>
+      </div>
+      <SupplierStrip />
     </div>
   </section>
 </BaseLayout>

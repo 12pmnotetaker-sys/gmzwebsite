@@ -1,0 +1,108 @@
+---
+import { Image } from 'astro:assets';
+import { company } from '@data/site';
+
+/**
+ * The supplier logo strip.
+ *
+ * House style keeps manufacturer names out of prose: describe the thing, not
+ * the SKU. This row is the deliberate exception CLAUDE.md carves out, and the
+ * exception only holds because of how it is built. Each name is carried as alt
+ * text on a logo, never as visible words, so `content-lint`'s
+ * `manufacturer-in-prose` rule is satisfied by construction rather than by
+ * anyone remembering. Put a name in a `<span>` here and the build goes red,
+ * which is the correct outcome.
+ *
+ * The logos are resolved by glob rather than by ten import lines so that
+ * adding a supplier is one entry in site.ts plus one file. A missing file
+ * throws at build time instead of rendering a hole.
+ */
+const files = import.meta.glob<{ default: ImageMetadata }>('/src/assets/brand/suppliers/*.webp', {
+  eager: true,
+});
+
+const suppliers = company.suppliers.map((supplier) => {
+  const module = files[`/src/assets/brand/suppliers/${supplier.file}`];
+  if (!module) {
+    throw new Error(
+      `Supplier logo not found: src/assets/brand/suppliers/${supplier.file}, listed in site.ts as "${supplier.name}".`,
+    );
+  }
+  return { name: supplier.name, image: module.default };
+});
+---
+
+<ul class="suppliers">
+  {
+    suppliers.map((supplier) => (
+      <li class="supplier">
+        <Image src={supplier.image} alt={supplier.name} />
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .suppliers {
+    list-style: none;
+    margin: var(--space-lg) 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 1px;
+    background: var(--color-border);
+    border: 1px solid var(--color-border);
+  }
+
+  /*
+   * The plate is white in both themes on purpose, and it is not a theme
+   * colour. Every one of these logos is supplied as artwork with a white
+   * background baked into the pixels, so the plate is part of the image
+   * rather than part of the palette: letting it follow the dark theme would
+   * put a white square on a dark ground instead of a tidy chip. The footer's
+   * membership mark is plated the same way for the same reason.
+   */
+  .supplier {
+    background: var(--color-text-inverse);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-md);
+    min-height: 5.5rem;
+  }
+
+  /*
+   * Each mark keeps its own aspect ratio and is capped on both axes, rather
+   * than every mark being letterboxed into one canvas. A wide mark then takes
+   * the width of its cell and a tall one takes the height, which is what keeps
+   * their optical weight comparable: normalising the bounding box instead
+   * shrinks a long wordmark to a third of the height of a square one.
+   */
+  .supplier img {
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 3.25rem;
+    object-fit: contain;
+  }
+
+  @media (max-width: 60rem) {
+    .suppliers {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 34rem) {
+    .suppliers {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .supplier {
+      min-height: 4.5rem;
+    }
+
+    .supplier img {
+      max-height: 2.5rem;
+    }
+  }
+</style>
