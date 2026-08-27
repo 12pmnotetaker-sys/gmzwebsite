@@ -342,11 +342,22 @@ export interface NavItem {
  * and Contact comes last because the site's real conversion is /start, which
  * sits in the header as a button rather than a nav link.
  *
+ * `/portfolio` is in the list on purpose, and it lands on the veil rather than
+ * on the work itself. A visitor who clicks it meets the code prompt, which
+ * explains what it is and routes anyone without a code to /start. Showing
+ * prospects that a private body of work exists is the reason the veil is a
+ * courtesy screen and not a hidden URL.
+ *
+ * Being in the nav changes nothing about how that half is treated. BaseLayout
+ * derives `noindex` from `isGatedPath`, robots.txt disallows the prefix, and
+ * the sitemap excludes it, all from the route rather than from this list.
+ *
  * `/portal` is deliberately absent. The route is reserved for the client
  * portal and the nav slot goes in when there is something behind it.
  */
 export const primaryNav: NavItem[] = [
   { label: 'The Work', href: '/work' },
+  { label: 'Portfolio', href: '/portfolio' },
   { label: 'Services', href: '/services' },
   { label: 'Process', href: '/process' },
   { label: 'About', href: '/about' },
