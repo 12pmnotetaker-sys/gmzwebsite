@@ -17,12 +17,12 @@ import { company, serviceRegionInline } from '@data/site';
  * Inventing a paragraph of warmth about a real person is the easiest thing on
  * this site to do and the hardest to take back.
  */
-const { people, license, memberships, drawings, address } = company;
+const { people, license, memberships, drawings, address, heritage } = company;
 ---
 
 <BaseLayout
   title="About"
-  description="A third generation family company on the San Francisco Peninsula, landscaping from a Redwood City yard since 1994."
+  description={`A ${heritage.ordinal} generation family company on the San Francisco Peninsula, landscaping from a ${address.locality} yard since ${company.founded}.`}
 >
   <PageHeader
     eyebrow="Who we are"
@@ -35,14 +35,17 @@ const { people, license, memberships, drawings, address } = company;
       <div class="section-head">
         <div>
           <p class="kicker">The company</p>
-          <h2 class="section-title" id="story-title">More than 30 years on the ground.</h2>
+          <h2 class="section-title" id="story-title">
+            The company since {company.founded}, the family for longer.
+          </h2>
         </div>
       </div>
 
       <div class="prose story__body">
         <p>
-          {company.founder} started {company.name} in {company.founded} and still owns it. Three generations
-          of the family work in it now.
+          {company.founder} started {company.name} in {company.founded} and still owns it. The family
+          had been working in landscaping since {heritage.tradeSince}, so the company is younger
+          than the trade behind it, and {heritage.generations} generations of the family work in it now.
         </p>
         <p>
           Family owned is a line most landscape companies use, so it is worth saying what it means

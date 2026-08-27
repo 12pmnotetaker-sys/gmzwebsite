@@ -74,6 +74,25 @@ const year = new Date().getFullYear();
       <div>
         <p class="footer__label">More</p>
         <a class="footer__value" href="/reviews">Reviews</a>
+        {
+          /*
+           * Houzz is the only social profile GMZ actually has, so it is the
+           * only one rendered. The others stay empty in site.ts and this
+           * renders nothing for them rather than linking somewhere dead.
+           */
+        }
+        {
+          company.social.houzz && (
+            <a
+              class="footer__value"
+              href={company.social.houzz}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              Houzz
+            </a>
+          )
+        }
       </div>
     </div>
 

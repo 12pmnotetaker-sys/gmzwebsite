@@ -48,6 +48,30 @@ export const company = {
   founded: 1994,
 
   /**
+   * The family's history in the trade, which is older than the company.
+   *
+   * Two different subjects, and the site has to keep them apart. `founded` is
+   * when GMZ Landscaping Inc. started trading. `tradeSince` is when the family
+   * started doing this work, two generations before that. Collapsing them into
+   * one number is how a site ends up claiming to have been a company since the
+   * 1960s, which is not what anybody said.
+   *
+   * SOURCE, and it is weaker than everything above it: the live Wix site is the
+   * only place this is written down. Nobody has confirmed it the way the
+   * license, the email and the phone were confirmed, and that same site is
+   * wrong about the phone number. Put it to Xavier; if the answer differs, this
+   * file wins from then on.
+   */
+  heritage: {
+    /** Cardinal, for "three generations of the family". */
+    generations: 'three',
+    /** Ordinal, for "a third generation family company". */
+    ordinal: 'third',
+    /** When the family started in the trade, not when the company did. */
+    tradeSince: 'the 1960s',
+  },
+
+  /**
    * The founder. Confirmed 2026-08-19: Gomez with a z, no accent.
    *
    * Three documents disagreed. The 2025 brand PDF and the Business Profile
@@ -185,12 +209,52 @@ export const company = {
     },
   ],
 
-  /** Public social profiles. Leave a value empty to hide the link. */
+  /**
+   * Manufacturers whose equipment and materials GMZ installs.
+   *
+   * This is the one place brand names are allowed, and it is the reason the
+   * rule in CLAUDE.md says a supplier strip lives in markup rather than in a
+   * sentence. `content-lint` fails a manufacturer name found inside a
+   * paragraph or a list item's text, so these are carried as alt text on a
+   * logo, where the rule does not reach and where a screen reader still gets
+   * the name.
+   *
+   * Note what this does not claim. The live Wix site heads the same row "Our
+   * Valued Partners", which asserts a relationship. Installing a
+   * manufacturer's equipment is not a partnership, a dealership or an
+   * endorsement by them, so the site says only the part that is true.
+   *
+   * `name` is the alt text. `file` sits under src/assets/brand/suppliers/.
+   * Order is the order the live site used, which is GMZ's own.
+   */
+  suppliers: [
+    { name: 'Toro', file: 'toro.webp' },
+    { name: 'Hunter', file: 'hunter.webp' },
+    { name: 'Rain Bird', file: 'rain-bird.webp' },
+    { name: 'Netafim', file: 'netafim.webp' },
+    { name: 'Smart Rain', file: 'smart-rain.webp' },
+    { name: 'Calstone', file: 'calstone.webp' },
+    { name: 'Rachio', file: 'rachio.webp' },
+    { name: 'Irritrol', file: 'irritrol.webp' },
+    { name: 'Belgard', file: 'belgard.webp' },
+    { name: 'FX Luminaire', file: 'fx-luminaire.webp' },
+  ],
+
+  /**
+   * Public social profiles. Leave a value empty to hide the link.
+   *
+   * Houzz is the only one that exists. The live Wix site shows Instagram and
+   * Facebook icons, and both point at Wix's own accounts rather than GMZ's:
+   * they are template placeholders nobody replaced, so there is nothing to
+   * bring across. Fill these in when GMZ has the profiles, not before.
+   */
   social: {
     instagram: '',
     facebook: '',
     yelp: '',
     google: '',
+    houzz:
+      'https://www.houzz.com/professionals/landscape-contractors/gmz-landscaping-inc-pfvwus-pf~1764086887',
   },
 } as const;
 
@@ -342,11 +406,22 @@ export interface NavItem {
  * and Contact comes last because the site's real conversion is /start, which
  * sits in the header as a button rather than a nav link.
  *
+ * `/portfolio` is in the list on purpose, and it lands on the veil rather than
+ * on the work itself. A visitor who clicks it meets the code prompt, which
+ * explains what it is and routes anyone without a code to /start. Showing
+ * prospects that a private body of work exists is the reason the veil is a
+ * courtesy screen and not a hidden URL.
+ *
+ * Being in the nav changes nothing about how that half is treated. BaseLayout
+ * derives `noindex` from `isGatedPath`, robots.txt disallows the prefix, and
+ * the sitemap excludes it, all from the route rather than from this list.
+ *
  * `/portal` is deliberately absent. The route is reserved for the client
  * portal and the nav slot goes in when there is something behind it.
  */
 export const primaryNav: NavItem[] = [
   { label: 'The Work', href: '/work' },
+  { label: 'Portfolio', href: '/portfolio' },
   { label: 'Services', href: '/services' },
   { label: 'Process', href: '/process' },
   { label: 'About', href: '/about' },
