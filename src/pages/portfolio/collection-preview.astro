@@ -1,0 +1,53 @@
+---
+import { Image } from 'astro:assets';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import woodside from '@/assets/portfolio-preview/woodside.webp';
+import hillsborough from '@/assets/portfolio-preview/hillsborough.webp';
+import menlo from '@/assets/portfolio-preview/menlo.webp';
+import paloAlto from '@/assets/portfolio-preview/palo-alto.webp';
+import redwood from '@/assets/portfolio-preview/redwood.webp';
+
+const collections = [
+  { title: 'South African Woodside', town: 'Woodside', image: woodside, count: 25, alt: 'Roses and layered planting beneath mature trees in a Woodside garden.', copy: 'Layered planting, mature trees and garden paths.', credits: 'Landscape installation: Rafael Gomez. Redesign: Chris Jacobson. Collection photography: Marion Brenner, Caitlin Atkinson and Chris Jacobson.' },
+  { title: 'Tudor in Hillsborough', town: 'Hillsborough', image: hillsborough, count: 17, alt: 'Stone terrace and steps with sculpted container planting beside a Tudor home.', copy: 'Stone terraces, garden steps and formal planting.', credits: 'Landscape installation: Rafael Gomez. Design, consultation and photography: Chris Jacobson. Landscape architecture: Beverly Sergeant. General contractor: Per Alftin.' },
+  { title: 'Menlo Park Backyard Dining', town: 'Menlo Park', image: menlo, count: 4, alt: 'Outdoor seating surrounded by a curved concrete wall and ornamental grasses.', copy: 'An outdoor gathering space with seating and planting.', credits: 'Contractor: Rafael Gomez Landscaping. Design: Sycamore Design. Photography: Megan Keely.' },
+  { title: 'Palo Alto Watershed', town: 'Palo Alto', image: paloAlto, count: 10, alt: 'A planted garden path beneath a pergola surrounded by ornamental grasses.', copy: 'Garden paths, gathering spaces and planted borders.', credits: 'GMZ project participation confirmed by the team. Design: Sycamore Design. Images supplied from the Houzz project collection; photographer credit to confirm.' },
+  { title: 'Redwood City Mediterranean', town: 'Redwood City', image: redwood, count: 4, alt: 'Gravel courtyard with stone edging, an olive tree and surrounding planting.', copy: 'A courtyard with gravel, stone and Mediterranean planting.', credits: 'GMZ project participation confirmed by the team. Design: Sycamore Design. Images supplied from the Houzz project collection; photographer credit to confirm.' },
+];
+---
+<BaseLayout title="Portfolio collection preview" description="Preview of five proposed additions to the GMZ portfolio.">
+  <section class="section">
+    <div class="container">
+      <p class="kicker">Portfolio preview</p>
+      <h1>Five more gardens to explore.</h1>
+      <p class="intro">A first look at the new photo collections. These proposed additions are here for review before joining the main portfolio.</p>
+      <div class="collections">
+        {collections.map((item) => (
+          <article>
+            <Image src={item.image} alt={item.alt} widths={[480, 800, 1200]} sizes="(min-width: 800px) 50vw, 100vw" loading="lazy" />
+            <div class="details">
+              <p class="kicker">{item.town} · {item.count} photos in collection</p>
+              <h2>{item.title}</h2>
+              <p>{item.copy}</p>
+              <details><summary>Project credits</summary><p>{item.credits}</p></details>
+            </div>
+          </article>
+        ))}
+      </div>
+      <p class="return"><a href="/portfolio">Back to the current portfolio</a></p>
+    </div>
+  </section>
+</BaseLayout>
+<style>
+  h1 { max-width: 18ch; }
+  .intro { max-width: 65ch; margin-block: var(--space-lg); color: var(--color-text-muted); }
+  .collections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-xl); }
+  article { min-width: 0; background: var(--color-bg-subtle); border-block-end: var(--rule-accent) solid var(--gmz-amber); }
+  article img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; }
+  .details { padding: var(--space-lg); }
+  h2 { margin-block: var(--space-sm); }
+  details { margin-block-start: var(--space-md); color: var(--color-text-muted); font-size: var(--text-sm); }
+  summary { cursor: pointer; }
+  .return { margin-block-start: var(--space-xl); }
+  @media (max-width: 799px) { .collections { grid-template-columns: 1fr; } }
+</style>
