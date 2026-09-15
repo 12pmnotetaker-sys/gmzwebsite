@@ -1,0 +1,205 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import PageHeader from '@components/PageHeader.astro';
+import { company, primaryPhone } from '@data/site';
+import { interests, validateAccess, requestPortfolioAccess } from '../server/portfolio-access';
+import { mailConfigured } from '../server/env';
+export const prerender = false;
+Astro.response.headers.set('Cache-Control', 'no-store');
+const receipt = 'gmz-portfolio-request';
+let sent = Astro.request.method === 'GET' && Astro.cookies.get(receipt)?.value === 'sent';
+if (sent) Astro.cookies.delete(receipt, { path: '/portfolio-access' });
+let error = '';
+let values = { name: '', email: '', town: '', interest: '' };
+if (Astro.request.method === 'POST') {
+  sent = false;
+  try {
+    if (Astro.request.headers.get('origin') !== Astro.url.origin) throw new Error('origin');
+    const raw = await Astro.request.text();
+    if (raw.length > 8192) throw new Error('size');
+    const form = new URLSearchParams(raw);
+    values = {
+      name: form.get('name') ?? '',
+      email: form.get('email') ?? '',
+      town: form.get('town') ?? '',
+      interest: form.get('interest') ?? '',
+    };
+    const data = validateAccess(values);
+    if (form.get('website')) throw new Error('trap');
+    if (!data) {
+      error = 'Please enter your name, a valid email, project town and service interest.';
+      Astro.response.status = 422;
+    } else if (await requestPortfolioAccess(data)) {
+      Astro.cookies.set(receipt, 'sent', {
+        path: '/portfolio-access',
+        httpOnly: true,
+        secure: Astro.url.protocol === 'https:',
+        sameSite: 'lax',
+        maxAge: 120,
+      });
+      return Astro.redirect('/portfolio-access', 303);
+    } else {
+      error = "We couldn't send your request. Please try again or call us below.";
+      Astro.response.status = 503;
+    }
+  } catch {
+    error = 'We could not process your request. Please reload this page and try again.';
+    Astro.response.status = 400;
+  }
+}
+---
+
+<BaseLayout
+  title="Request portfolio access"
+  description="Tell GMZ about your garden and request access to the private portfolio."
+>
+  <PageHeader
+    eyebrow="Private portfolio"
+    title="Want a closer look at our work?"
+    lede="Tell us a little about your garden. We review each request and email a portfolio access code when approved."
+  />
+  <section class="container access">
+    {
+      sent ? (
+        <div role="status">
+          <>
+            <h2>Thank you. Your request has been sent.</h2>
+            <p>
+              GMZ will review your request and reply by email. Access is not automatic, and no
+              consultation has been booked.
+            </p>
+            <a class="btn btn--primary" href="/portfolio">
+              Back to the portfolio
+            </a>
+          </>
+        </div>
+      ) : (
+        <>
+          {error && (
+            <p class="access__error" role="alert">
+              {error}
+            </p>
+          )}
+          {!mailConfigured() && (
+            <p role="status">
+              Online requests are temporarily unavailable. Please call us to request portfolio
+              access.
+            </p>
+          )}
+          <form method="post" action="/portfolio-access">
+            <>
+              <label for="access-name">Name</label>
+              <input
+                id="access-name"
+                name="name"
+                autocomplete="name"
+                maxlength="100"
+                value={values.name}
+                required
+              />
+            </>
+            <>
+              <label for="access-email">Email</label>
+              <input
+                id="access-email"
+                name="email"
+                type="email"
+                autocomplete="email"
+                maxlength="254"
+                value={values.email}
+                required
+              />
+            </>
+            <>
+              <label for="access-town">Project town</label>
+              <input
+                id="access-town"
+                name="town"
+                autocomplete="address-level2"
+                list="access-towns"
+                maxlength="100"
+                value={values.town}
+                required
+              />
+            </>
+            <datalist id="access-towns">
+              {company.serviceArea.map((town) => (
+                <option value={town} />
+              ))}
+            </datalist>
+            <>
+              <label for="access-interest">I'm interested in</label>
+              <select id="access-interest" name="interest" required>
+                <option value="" selected={!values.interest}>
+                  Select a service
+                </option>
+                {interests.map((interest) => (
+                  <option value={interest} selected={values.interest === interest}>
+                    {interest}
+                  </option>
+                ))}
+              </select>
+            </>
+            <div class="access__trap" aria-hidden="true">
+              <>
+                <label for="access-website">Leave this field empty</label>
+                <input id="access-website" name="website" tabindex="-1" autocomplete="off" />
+              </>
+            </div>
+            <p class="access__note">We'll use these details to respond to your request. </p>
+            <button class="btn btn--primary" type="submit" disabled={!mailConfigured()}>
+              Request portfolio access
+            </button>
+          </form>
+        </>
+      )
+    }
+    <p class="access__phone">
+      Prefer to call? <a href={`tel:${primaryPhone.tel}`}>{primaryPhone.display}</a>
+    </p>
+  </section>
+</BaseLayout>
+<style>
+  .access {
+    max-width: 42rem;
+    padding-block-end: var(--space-3xl);
+  }
+  .access form {
+    display: grid;
+    gap: var(--space-xs);
+  }
+  .access label {
+    font-weight: 600;
+    margin-block-start: var(--space-md);
+  }
+  .access input,
+  .access select {
+    width: 100%;
+    padding: var(--space-sm);
+    font: inherit;
+    color: var(--color-text);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-strong);
+  }
+  .access__note,
+  .access__phone,
+  .access .btn {
+    margin-block-start: var(--space-lg);
+  }
+  .access__error {
+    border-inline-start: 4px solid var(--gmz-amber);
+    padding: var(--space-md);
+    background: var(--color-bg-subtle);
+  }
+  .access__trap {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .access button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+</style>

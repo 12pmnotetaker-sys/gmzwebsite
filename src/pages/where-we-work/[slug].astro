@@ -2,7 +2,7 @@
 import type { GetStaticPaths } from 'astro';
 import BaseLayout from '@layouts/BaseLayout.astro';
 import PageHeader from '@components/PageHeader.astro';
-import { company, fees } from '@data/site';
+import { company, fees, primaryCta, primaryPhone } from '@data/site';
 import { getPublishedTowns } from '@data/towns';
 
 export const getStaticPaths = (async () => {
@@ -20,15 +20,43 @@ const updated = town.data.updated.toLocaleDateString('en-GB', {
 
 <BaseLayout
   title={`Landscaping in ${town.data.name}`}
-  description={`Landscape design, build and maintenance in ${town.data.name}, ${town.data.county} County, from the Redwood City yard.`}
+  description={`Landscape design, build and maintenance in ${town.data.name}, ${town.data.county} County, from ${company.address.locality}.`}
 >
   <PageHeader
     eyebrow="Where we work"
     title={`Landscaping in ${town.data.name}`}
-    lede={`${town.data.county} County, worked from the Redwood City yard.`}
+    lede={`${town.data.county} County, worked from ${company.address.locality}.`}
   />
 
   <div class="container town">
+    <section aria-labelledby="town-services-title">
+      <div class="section-head">
+        <div>
+          <p class="kicker">Your garden in {town.data.name}</p>
+          <h2 class="section-title" id="town-services-title">Help at every stage.</h2>
+        </div>
+      </div>
+      <ul class="town__services">
+        <li>
+          <h3><a href="/services/landscape-design">Landscape design</a></h3><p>
+            Plan planting, paths and outdoor living around your property, your priorities and the
+            way you want to use the space.
+          </p>
+        </li>
+        <li>
+          <h3><a href="/services/landscape-construction">Landscape construction</a></h3><p>
+            Bring the plan to life with site preparation, drainage, stonework, irrigation, lighting
+            and planting.
+          </p>
+        </li>
+        <li>
+          <h3><a href="/services/landscape-maintenance">Garden maintenance</a></h3><p>
+            Keep an established garden growing well with pruning, seasonal care and irrigation
+            attention, whether we built it or someone else did.
+          </p>
+        </li>
+      </ul>
+    </section>
     <section class="town__local">
       <div class="section-head">
         <p class="kicker">Before design starts</p>
@@ -45,14 +73,30 @@ const updated = town.data.updated.toLocaleDateString('en-GB', {
       <p>
         Design, build and maintenance are one company here, so the drawing is made by people who
         will have to build it and the garden is looked after by people who know why it was built
-        that way. The first visit is {fees.consultation.display}, which covers {
-          fees.consultation.covers
-        }.
+        that way. <a href="/process"
+          >See how we take a project from first visit to finished garden.</a
+        >
       </p>
       <p>
         {town.data.name} is inside the service area, so no travel charge applies. Outside these towns
         it is {fees.travel.display}.
       </p>
+    </section>
+
+    <section class="town__start" aria-labelledby="town-start-title">
+      <h2 class="section-title" id="town-start-title">Let's talk about your garden.</h2>
+      <p>
+        For a new design or garden project, the consultation is {fees.consultation.display} and covers
+        {fees.consultation.covers}. For ongoing care, the maintenance walk is {
+          fees.maintenanceWalk.display
+        } so we can see the garden and price the work.
+      </p>
+      <p>Visits are prepaid. Neither fee is credited toward later work.</p>
+      <div class="town__actions">
+        <a class="btn btn--primary" href={primaryCta.href}>{primaryCta.label}</a>
+        <a class="btn" href="/contact">Ask about maintenance</a>
+      </div>
+      <p>Prefer to call? <a href={`tel:${primaryPhone.tel}`}>{primaryPhone.display}</a></p>
     </section>
 
     <footer class="town__meta">
@@ -78,6 +122,44 @@ const updated = town.data.updated.toLocaleDateString('en-GB', {
 </BaseLayout>
 
 <style>
+  .town__services {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-lg);
+  }
+  .town__services li {
+    padding: var(--space-lg);
+    background: var(--color-bg-subtle);
+    border-block-start: var(--rule-accent) solid var(--gmz-amber);
+  }
+  .town__services h3 {
+    font-size: var(--text-xl);
+  }
+  .town__services p {
+    margin-block-start: var(--space-sm);
+  }
+  .town__start {
+    padding: var(--space-xl);
+    background: var(--color-bg-subtle);
+  }
+  .town__start p {
+    margin-block-start: var(--space-md);
+    max-width: var(--width-prose);
+  }
+  .town__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-block-start: var(--space-lg);
+  }
+  @media (width < 760px) {
+    .town__services {
+      grid-template-columns: 1fr;
+    }
+  }
+
   .town > * + * {
     margin-block-start: var(--space-xl);
   }

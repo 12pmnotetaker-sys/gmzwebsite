@@ -135,9 +135,13 @@ const workDetails = [
       <div class="work-footer">
         <p>
           See more finished spaces, design drawings and before-and-after views in our private
-          portfolio. Consultation code required.
+          portfolio. Portfolio access code required.
         </p>
-        <a class="btn btn--primary" href="/portfolio">Open the private portfolio</a>
+        <div class="hero__actions">
+          <a class="btn btn--primary" href="/portfolio">Open the private portfolio</a><a
+            class="btn"
+            href="/portfolio-access">Request portfolio access</a>
+        </div>
       </div>
     </div>
   </section>
@@ -160,9 +164,7 @@ const workDetails = [
             const choice = serviceChoices[service.id];
             return (
               <li class="stage">
-                <span class="stage__number" aria-hidden="true">
-                  0{index + 1}
-                </span>
+                <span class="stage__number">Step {index + 1}</span>
                 <h3 class="stage__name">
                   <a href={serviceHref(service)}>{choice?.label ?? service.data.title}</a>
                 </h3>
