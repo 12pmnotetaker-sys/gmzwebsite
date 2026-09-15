@@ -4,6 +4,7 @@ import { Image } from 'astro:assets';
 import finishedGarden from '@/assets/portfolio/hamilton/hamilton-after-1.webp';
 import stoneStairs from '@/assets/portfolio/fox-hill/foxhill-stair-lit.webp';
 import plantingDetail from '@/assets/portfolio/fox-hill/foxhill-stump.webp';
+import designPreview from '@/assets/portfolio/los-charros/loscharros-render.webp';
 import HomeHero from '@components/HomeHero.astro';
 import SupplierStrip from '@components/SupplierStrip.astro';
 import {
@@ -50,6 +51,20 @@ const serviceChoices: Record<
     copy: 'Keep your garden growing well with pruning, seasonal care and irrigation attention.',
     action: 'Ask about garden care',
     href: '/maintenance-request',
+  },
+};
+const stepPictures = {
+  'landscape-design': {
+    src: designPreview,
+    alt: 'Landscape design rendering with hillside steps and planting.',
+  },
+  'landscape-construction': {
+    src: stoneStairs,
+    alt: 'Completed stone steps with integrated lighting.',
+  },
+  'landscape-maintenance': {
+    src: plantingDetail,
+    alt: 'Flower beds with mulch and seasonal planting.',
   },
 };
 const workDetails = [
@@ -162,7 +177,22 @@ const workDetails = [
             const choice = serviceChoices[service.id];
             return (
               <li class="stage">
-                <span class="stage__number">Step {index + 1}</span>
+                <div class="stage__top">
+                  <span class="stage__number">Step {index + 1}</span>
+                  {stepPictures[service.id as keyof typeof stepPictures] && (
+                    <Image
+                      class="stage__picture"
+                      src={stepPictures[service.id as keyof typeof stepPictures].src}
+                      alt={stepPictures[service.id as keyof typeof stepPictures].alt}
+                      width={112}
+                      height={84}
+                      widths={[112, 224]}
+                      sizes="112px"
+                      fit="cover"
+                      loading="lazy"
+                    />
+                  )}
+                </div>
                 <h3 class="stage__name">
                   <a href={serviceHref(service)}>{choice?.label ?? service.data.title}</a>
                 </h3>
@@ -494,9 +524,28 @@ const workDetails = [
     background: var(--color-bg-subtle);
   }
 
+  .stage__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    margin-block-end: var(--space-lg);
+  }
+
+  .stage__picture {
+    display: block;
+    width: 7rem;
+    max-width: 42%;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid var(--color-border);
+  }
+
   .stage__number {
     display: block;
-    margin-block-end: var(--space-lg);
+    margin-block-end: 0;
     font-size: var(--text-3xl);
     font-weight: 800;
     color: var(--color-structure);
