@@ -132,7 +132,7 @@ const hasError = state === 'mismatch' || state === 'empty' || state === 'nomail'
 
   {
     showForm && (
-      <form class="block stack--lg signin" action={routes.signIn} method="post" novalidate>
+      <form class="block stack--lg signin" action={routes.signIn} method="post" data-astro-reload>
         {state === 'mismatch' && (
           <p class="field__error" role="alert" id="signin-error">
             That email and password do not match what we have, or there have been too many tries in
