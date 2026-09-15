@@ -469,6 +469,7 @@ const portfolio = defineCollection({
       phase: z.string().min(1),
       /** The paragraph under the project header, and the index card blurb. */
       summary: z.string().min(1),
+      credits: z.string().optional(),
       /** Index order. The design sets this by hand, so it is explicit. */
       order: z.number(),
       /** Index card image. Falls back to the first drawing when absent. */

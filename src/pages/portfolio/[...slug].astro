@@ -199,6 +199,17 @@ const { name, kicker, meta, scope, phase, summary, built, photos, walkthrough, a
 
     <Drawings {project} />
 
+    {
+      project.data.credits && (
+        <section class="block">
+          <>
+            <h2 class="section-title">Project credits</h2>
+            <p>{project.data.credits}</p>
+          </>
+        </section>
+      )
+    }
+
     <div class="facts-row">
       <div class="facts-row__panel">
         <dl class="facts">
@@ -214,10 +225,14 @@ const { name, kicker, meta, scope, phase, summary, built, photos, walkthrough, a
             <dt>Stage</dt>
             <dd>{phase}</dd>
           </div>
-          <div class="facts__row facts__row--inline">
-            <dt>Drawings</dt>
-            <dd>{company.drawings}</dd>
-          </div>
+          {
+            project.data.drawings.length > 0 && (
+              <div class="facts__row facts__row--inline">
+                <dt>Drawings</dt>
+                <dd>{company.drawings}</dd>
+              </div>
+            )
+          }
         </dl>
         <a class="btn btn--primary btn--block facts-row__cta" href="/contact">
           Start your transformation
