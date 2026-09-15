@@ -25,38 +25,25 @@ const reviews = await getApprovedReviews();
       </div>
     ) : (
       <section class="container empty">
-        <div class="section-head">
-          <div>
-            <p class="kicker">Nothing quoted yet</p>
-            <h2 class="section-title">This page lists no reviews for now.</h2>
-          </div>
-        </div>
         <div class="empty__body">
+          <h2 class="section-title">Read client reviews on Houzz.</h2>
           <p>
-            Reviews shown here are gathered from public platforms and linked back to the original,
-            so every quote is one you can go and read where it was written. A client leaving a
-            public review is not the same as agreeing to be quoted on this site, and until{' '}
-            {company.name} has confirmed with each reviewer that their words may be repeated here,
-            the page stays empty rather than showing words nobody agreed to.
+            Visit our profile to read what clients have shared about working with {company.name}.
           </p>
           {company.social.houzz && (
-            <p>
-              Reviews that already exist in public can be read on{' '}
+            <p class="empty__cta">
               <a
-                class="link-accent"
+                class="btn btn--primary"
                 href={company.social.houzz}
-                rel="noopener noreferrer"
                 target="_blank"
+                rel="noopener noreferrer"
               >
-                the {company.name} profile on Houzz
+                Read reviews on Houzz
               </a>
-              .
             </p>
           )}
-          <p class="empty__cta">
-            <a class="btn btn--primary" href={primaryCta.href}>
-              {primaryCta.label}
-            </a>
+          <p>
+            <a href={primaryCta.href}>Tell us about your project</a>
           </p>
         </div>
       </section>
