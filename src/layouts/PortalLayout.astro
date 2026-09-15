@@ -89,7 +89,14 @@ const hasRail = rail.length > 0;
     <TopBar {property} {backHref} {backLabel} />
     <main class="screen" id="main" transition:name="portal-screen">
       <div class="screen__column">
-        {isDemoClient(Astro.locals.client) && <p class="demo-notice"><strong>Demo account.</strong> Sample information for exploring the portal. Submissions are saved to this demo only and do not email the office.</p>}
+        {
+          isDemoClient(Astro.locals.client) && (
+            <p class="demo-notice">
+              <strong>Demo account.</strong> Sample information for exploring the portal.
+              Submissions are saved to this demo only and do not email the office.
+            </p>
+          )
+        }
         <slot />
       </div>
       {hasRail && <aside class="screen__rail" aria-label="Also on this screen" set:html={rail} />}
@@ -104,5 +111,10 @@ const hasRail = rail.length > 0;
 </html>
 
 <style>
-.demo-notice { padding: var(--space-md); margin-block-end: var(--space-lg); border: 1px solid var(--color-border); background: var(--color-bg-subtle); }
+  .demo-notice {
+    padding: var(--space-md);
+    margin-block-end: var(--space-lg);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-subtle);
+  }
 </style>
