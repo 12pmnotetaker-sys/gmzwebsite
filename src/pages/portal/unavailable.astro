@@ -1,0 +1,34 @@
+---
+/**
+ * The screen a client sees when their record cannot be read.
+ *
+ * Reached by a rewrite from a screen helper, never by a link, when a record
+ * exists but does not fit its shape or breaks house style. The server log
+ * has the reason; the client gets the phone number and a promise that nothing
+ * about their garden or project has changed.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import ScreenHead from '@components/portal/ScreenHead.astro';
+import { primaryPhone, portalHoursLine } from '@data/site';
+
+export const prerender = false;
+
+Astro.response.status = 500;
+---
+
+<PortalLayout title="Not available just now" footerTagline>
+  <ScreenHead kicker="Your portal" title="This screen is not available just now" long>
+    <p class="body">
+      Something on our side, not yours. Nothing about your garden or your project has changed. We
+      have been told, and it will be back.
+    </p>
+  </ScreenHead>
+
+  <section class="block panel panel--calm" aria-labelledby="call-office">
+    <span class="kicker kicker--muted" id="call-office">In the meantime, call the office</span>
+    <a class="link-phone link-phone--answer" href={`tel:${primaryPhone.tel}`}>
+      {primaryPhone.display}
+    </a>
+    <p class="note">{portalHoursLine}</p>
+  </section>
+</PortalLayout>

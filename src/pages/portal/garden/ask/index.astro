@@ -2,28 +2,69 @@
 /**
  * Ask for something, from the garden.
  *
- * The form is AskForm; this page only says who is asking and where the
- * confirmation is. On desktop the send block moves to the rail, so AskForm
- * renders a second time there with `rail`, and its button submits the form in
- * the column.
+ * The form posts here. The request is kept, the office is told, and the
+ * client is sent to the receipt for the reference they were given. If the
+ * request could not be kept, the form comes back with what they typed and
+ * the reason, and the phone number is right there.
  */
 import PortalLayout from '@layouts/PortalLayout.astro';
 import AskForm from '@components/portal/AskForm.astro';
 import { company } from '@data/site';
 import { routes } from '@data/portal/routes';
-import { client } from '@data/portal/garden';
+import { RequestRejected, createRequest } from '../../../../server/requests';
+import { chosen, field, files, gardenScreen } from '../../../../server/screen';
+
+export const prerender = false;
+
+const screen = await gardenScreen(Astro, {});
+if (screen instanceof Response) return screen;
+const { client, garden } = screen;
+
+let error: string | undefined;
+let previous: { about?: string; what?: string } | undefined;
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const about = field(form, 'about', 60);
+  const what = field(form, 'what');
+  previous = { about, what };
+  try {
+    const { reference } = await createRequest(client, {
+      kind: 'ask',
+      about: chosen(garden.request.categories, about),
+      body: what,
+      photos: files(form, 'photos'),
+    });
+    return Astro.redirect(routes.asked(reference), 303);
+  } catch (cause) {
+    if (!(cause instanceof RequestRejected)) throw cause;
+    console.error(cause.message);
+    error =
+      cause.reason === 'photo-too-large'
+        ? 'One of the photos is too large to send. Two megabytes is the most each can be; a photo straight from the phone is shrunk to fit when scripting is on.'
+        : cause.reason === 'photo-unreadable'
+          ? 'One of the files attached is not a photo we can read. Try another, or send without it.'
+          : 'This did not reach us. Try once more, or call the office; nothing you typed is lost.';
+  }
+}
 ---
 
 <PortalLayout
   title="Ask for something"
-  property={client.property}
+  property={garden.display.property}
   backHref={routes.garden}
   backLabel="Back"
   footerKicker={company.legalName}
 >
-  <AskForm kicker={`${client.name}, ${client.town}`} sentHref={routes.asked} />
+  <AskForm
+    kicker={`${garden.display.name}, ${garden.display.town}`}
+    action={routes.ask}
+    copy={garden.request}
+    error={error}
+    previous={previous}
+  />
 
   <Fragment slot="rail">
-    <AskForm rail />
+    <AskForm rail copy={garden.request} />
   </Fragment>
 </PortalLayout>

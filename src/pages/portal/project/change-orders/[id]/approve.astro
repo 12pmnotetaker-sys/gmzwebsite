@@ -1,0 +1,202 @@
+---
+/**
+ * Review and approve a change order: the same sheet as the proposal's, with
+ * the change's own amounts. Recording it tells the office and lands on the
+ * change's own approved screen.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import Money from '@components/portal/Money.astro';
+import { routes } from '@data/portal/routes';
+import { loadApproval } from '../../../../../server/records';
+import { RequestRejected, recordApproval } from '../../../../../server/requests';
+import { field, projectScreen } from '../../../../../server/screen';
+
+export const prerender = false;
+
+const screen = await projectScreen(Astro, {});
+if (screen instanceof Response) return screen;
+const { client, project } = screen;
+
+const id = Number(Astro.params.id);
+const changeOrder = project.changeOrders.find((entry) => entry.id === id);
+if (!changeOrder) return Astro.redirect(routes.project, 302);
+const subject = `change-order:${changeOrder.id}`;
+if (await loadApproval(client, subject))
+  return Astro.redirect(routes.changeApproved(changeOrder.id), 302);
+
+const { approval } = changeOrder;
+let error: string | undefined;
+let typed = '';
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  typed = field(form, 'signer', 120);
+  if (typed.length < 2) {
+    error = 'Type your full name to approve.';
+  } else {
+    try {
+      await recordApproval(client, {
+        subject,
+        typedName: typed,
+        amount: changeOrder.amount,
+        summary: `${changeOrder.kicker}: ${changeOrder.title}`,
+      });
+      return Astro.redirect(routes.changeApproved(changeOrder.id), 303);
+    } catch (cause) {
+      if (!(cause instanceof RequestRejected)) throw cause;
+      console.error(cause.message);
+      error = 'Your approval did not reach us. Try once more, or call the office.';
+    }
+  }
+}
+---
+
+<PortalLayout
+  title="Review and approve"
+  property={project.display.property}
+  backHref={routes.change(changeOrder.id)}
+  backLabel="Back"
+  footerKicker="Questions before you approve"
+>
+  <div class="confirm">
+    <div class="faded" aria-hidden="true">
+      <span class="kicker">{changeOrder.kicker}</span>
+      <p class="answer">{changeOrder.title}</p>
+      <div class="faded__line"></div>
+      <div class="faded__line"></div>
+      <div class="faded__line faded__line--short"></div>
+    </div>
+
+    <div class="backdrop">
+      <form
+        class="sheet"
+        action={routes.changeConfirm(changeOrder.id)}
+        method="post"
+        aria-labelledby="agreeing"
+      >
+        <header class="stack">
+          <span class="kicker">{approval.kicker}</span>
+          <h1 class="answer" id="agreeing">{approval.headline}</h1>
+        </header>
+        <Money lines={approval.lines} closed />
+        <p class="body">{approval.body}</p>
+        {
+          error && (
+            <p class="field__error" role="alert" id="signer-error">
+              {error}
+            </p>
+          )
+        }
+        <div class="field">
+          <label class="label" for="signer">Type your full name</label>
+          <input
+            id="signer"
+            name="signer"
+            type="text"
+            autocomplete="name"
+            placeholder={client.name}
+            value={typed}
+            required
+            aria-describedby={error ? 'signer-error' : undefined}
+          />
+        </div>
+        <div class="actions">
+          <button class="btn btn--primary" type="submit">Approve this change</button>
+          <a class="btn btn--secondary" href={routes.change(changeOrder.id)}>Back to the change</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</PortalLayout>
+
+<style>
+  /* The faded proposal and the backdrop share one cell, so the cell is as
+     tall as the sheet needs and the backdrop covers all of it. On a phone the
+     block bleeds to the screen's edges and down to the footer, as the sheet
+     does in the design; the tablet column is already inset, so it stops. */
+  .confirm {
+    flex: 1 0 auto;
+    display: grid;
+    grid-template-rows: 1fr;
+    min-height: 46rem;
+    margin-inline: calc(-1 * var(--portal-gutter));
+    margin-block-end: calc(-1 * var(--space-xl));
+  }
+
+  .faded,
+  .backdrop {
+    grid-area: 1 / 1;
+  }
+
+  /* Opacity below 1 makes this a stacking context that paints above its
+     in-flow sibling, and it stretches to the whole cell, so without these two
+     lines it would sit over the sheet and swallow every tap on it. It is a
+     picture; it takes no pointer. */
+  .faded {
+    padding: var(--space-lg) var(--portal-gutter);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  .faded__line {
+    height: 5px;
+    background: var(--portal-hair);
+  }
+
+  .faded__line--short {
+    width: 70%;
+  }
+
+  /* The dimming is the chrome, mostly opaque; the token sets it for each theme. */
+  .backdrop {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    background: var(--portal-backdrop);
+  }
+
+  .sheet {
+    width: 100%;
+    padding: var(--space-lg) var(--portal-gutter) var(--space-xl);
+    background: var(--color-bg);
+    border-block-start: var(--rule-accent) solid var(--color-highlight);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  @media (min-width: 48rem) {
+    .confirm {
+      margin-inline: 0;
+      margin-block-end: 0;
+    }
+
+    .faded {
+      padding-inline: 0;
+    }
+  }
+
+  /* Desktop: the backdrop is in flow beneath the faded proposal, and the
+     sheet sits at the top of it, 560 wide and centred. */
+  @media (min-width: 75rem) {
+    .confirm {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .backdrop {
+      align-items: flex-start;
+      padding: var(--space-xl) 0 var(--space-2xl);
+    }
+
+    .sheet {
+      max-width: 35rem;
+    }
+  }
+</style>

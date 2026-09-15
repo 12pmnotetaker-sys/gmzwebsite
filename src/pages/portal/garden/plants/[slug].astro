@@ -1,48 +1,33 @@
 ---
 /**
- * The plant record: one page per plant on record, built from its entry in the
- * plants collection.
+ * One plant's record: where it is, what it needs, what the crew has done,
+ * what they have flagged, and their notes. The screen no competitor has.
  *
- * The name is the heading and the species sits under it in italic. Then the
- * facts as rows, the thing that needs saying about this plant on amber (a
- * protected tree's permit, or a decision the crew is waiting on), the care
- * history as dated steps, the crew's notes, and every other plant on record
- * as a row into its own page.
- *
- * On desktop the amber panel moves to the rail, which is why it renders
- * twice: once in the column with `column-only`, once in the rail. The steps
- * are the same; there is just room beside them. A plant with nothing to say
- * on amber declares no rail content, and the layout renders no aside for it:
- * PortalLayout renders the rail slot first and only draws the aside when the
- * result is not empty.
+ * Every field is optional except the ones that make it a record. Where the
+ * record gives no care history, none is shown rather than invented.
  */
-import type { GetStaticPaths } from 'astro';
-import { render } from 'astro:content';
 import PortalLayout from '@layouts/PortalLayout.astro';
 import ScreenHead from '@components/portal/ScreenHead.astro';
 import Facts from '@components/portal/Facts.astro';
 import Row from '@components/portal/Row.astro';
 import Plate from '@components/portal/Plate.astro';
 import { routes } from '@data/portal/routes';
-import { client } from '@data/portal/garden';
-import { getPlants, plantHref } from '@data/portal/plants';
 import type { StatusKey } from '@data/portal/status';
+import { signedUrl } from '../../../../server/db';
+import { gardenScreen } from '../../../../server/screen';
 
-export const getStaticPaths = (async () => {
-  const plants = await getPlants();
-  return plants.map((plant) => ({
-    params: { slug: plant.id },
-    props: { plant, others: plants.filter((entry) => entry.id !== plant.id) },
-  }));
-}) satisfies GetStaticPaths;
+export const prerender = false;
 
-const { plant, others } = Astro.props;
+const screen = await gardenScreen(Astro, {});
+if (screen instanceof Response) return screen;
+const { garden, plants } = screen;
+
+const plant = plants.find((entry) => entry.slug === Astro.params.slug);
+if (!plant) return Astro.redirect(routes.plants, 302);
 const { data } = plant;
-const { Content } = await render(plant);
-const hasNotes = Boolean(plant.body?.trim());
+const others = plants.filter((entry) => entry.slug !== plant.slug);
+const photoSrc = data.photo?.path ? await signedUrl(data.photo.path) : undefined;
 
-/* The fact rows, in the record's order. A row only appears when the entry
-   has something to put in it. */
 interface Fact {
   label: string;
   value?: string;
@@ -53,25 +38,29 @@ const facts: Fact[] = [{ label: 'Where', value: data.where }];
 if (data.onRecordSince) facts.push({ label: 'On record since', value: data.onRecordSince });
 if (data.water) facts.push({ label: 'Water', value: data.water });
 if (data.condition) facts.push({ label: 'Condition', chip: data.condition });
+if (data.protectedTree) {
+  facts.push({ label: 'Protected', value: data.protectedTree.jurisdiction });
+  facts.push({ label: 'Permit', value: data.protectedTree.permit });
+}
 
 const hasRail = Boolean(data.protectedTree || data.flag);
 ---
 
 <PortalLayout
   title={data.name}
-  property={client.property}
+  property={garden.display.property}
   backHref={routes.plants}
   backLabel="Back"
   footerKicker="Questions about a plant"
 >
-  <ScreenHead kicker={`Your garden, ${client.town}`} title={data.name} long>
+  <ScreenHead kicker={`Your garden, ${garden.display.town}`} title={data.name} long>
     <span class="species">{data.species}</span>
   </ScreenHead>
 
   {
-    data.plate && (
+    data.photo && (
       <div class="block--tight">
-        <Plate caption={data.plate} height={200} tall />
+        <Plate caption={data.photo.caption} alt={data.photo.alt} src={photoSrc} height={200} tall />
       </div>
     )
   }
@@ -115,7 +104,7 @@ const hasRail = Boolean(data.protectedTree || data.flag);
   }
 
   {
-    data.careHistory && (
+    data.careHistory && data.careHistory.length > 0 && (
       <section class="block stack stack--md" aria-labelledby="care-history">
         <div class="sect">
           <h2 class="kicker" id="care-history">
@@ -135,7 +124,7 @@ const hasRail = Boolean(data.protectedTree || data.flag);
   }
 
   {
-    hasNotes && (
+    data.notes.length > 0 && (
       <section class="block stack stack--md" aria-labelledby="crew-notes">
         <div class="sect">
           <h2 class="kicker" id="crew-notes">
@@ -143,29 +132,35 @@ const hasRail = Boolean(data.protectedTree || data.flag);
           </h2>
         </div>
         <div class="notes">
-          <Content />
+          {data.notes.map((paragraph) => (
+            <p>{paragraph}</p>
+          ))}
         </div>
       </section>
     )
   }
 
-  <section class="block block--end stack stack--md" aria-labelledby="also-on-record">
-    <div class="sect">
-      <h2 class="kicker" id="also-on-record">Also on record</h2>
-    </div>
-    <div class="rows">
-      {
-        others.map((other) => (
-          <Row
-            href={plantHref(other)}
-            title={other.data.name}
-            note={other.data.summary}
-            chip={other.data.status.tone === 'done' ? undefined : other.data.status}
-          />
-        ))
-      }
-    </div>
-  </section>
+  {
+    others.length > 0 && (
+      <section class="block block--end stack stack--md" aria-labelledby="also-on-record">
+        <div class="sect">
+          <h2 class="kicker" id="also-on-record">
+            Also on record
+          </h2>
+        </div>
+        <div class="rows">
+          {others.map((other) => (
+            <Row
+              href={routes.plant(other.slug)}
+              title={other.data.name}
+              note={other.data.summary}
+              chip={other.data.status.tone === 'done' ? undefined : other.data.status}
+            />
+          ))}
+        </div>
+      </section>
+    )
+  }
 
   {
     hasRail && (

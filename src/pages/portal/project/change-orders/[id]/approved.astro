@@ -1,0 +1,104 @@
+---
+/**
+ * A change order, approved. What was recorded and when, and the schedule as
+ * it now stands.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import StatusChip from '@components/portal/StatusChip.astro';
+import { routes } from '@data/portal/routes';
+import { status } from '@data/portal/status';
+import { loadApproval, recordedLine } from '../../../../../server/records';
+import { projectScreen } from '../../../../../server/screen';
+
+export const prerender = false;
+
+const screen = await projectScreen(Astro, {});
+if (screen instanceof Response) return screen;
+const { client, project } = screen;
+
+const id = Number(Astro.params.id);
+const changeOrder = project.changeOrders.find((entry) => entry.id === id);
+if (!changeOrder) return Astro.redirect(routes.project, 302);
+
+const approval = await loadApproval(client, `change-order:${changeOrder.id}`);
+if (!approval) return Astro.redirect(routes.changeConfirm(changeOrder.id), 302);
+const recorded = recordedLine(approval);
+---
+
+<PortalLayout
+  title="Approved"
+  property={project.display.property}
+  footerKicker="Questions on this change"
+>
+  <h1 class="visually-hidden">Approved</h1>
+  <section class="panel panel--done block column-only" aria-labelledby="approved-change">
+    <span class="kicker kicker--muted" id="approved-change">{changeOrder.kicker}</span>
+    <p class="answer">Approved</p>
+    <p class="body">{recorded}</p>
+    <StatusChip tone={status.done.key} label={status.done.label} />
+  </section>
+
+  <section class="block stack stack--md">
+    <div class="sect">
+      <h2 class="kicker">What happens next</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <span class="step__when">Today</span>
+        <p class="note">
+          The change is written up as a change order and goes to your email for signature.
+        </p>
+      </div>
+      <div class="step">
+        <span class="step__when">Then</span>
+        <p class="note">{changeOrder.schedule.note}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block block--end panel panel--attention schedule" aria-labelledby="schedule-now">
+    <span class="kicker" id="schedule-now">{changeOrder.schedule.kicker}</span>
+    <dl class="record">
+      {
+        changeOrder.schedule.rows.map((row) => (
+          <div class:list={['record__row', { 'record__row--changed': row.changed }]}>
+            <dt>{row.label}</dt>
+            <dd>{row.value}</dd>
+          </div>
+        ))
+      }
+    </dl>
+  </section>
+
+  <div class="block block--end actions column-only">
+    <a class="btn btn--secondary" href={routes.project}>Back to your project</a>
+  </div>
+
+  <Fragment slot="rail">
+    <section class="panel panel--done" aria-label={changeOrder.kicker}>
+      <span class="kicker kicker--muted">{changeOrder.kicker}</span>
+      <p class="answer">Approved</p>
+      <p class="body">{recorded}</p>
+      <StatusChip tone={status.done.key} label={status.done.label} />
+    </section>
+    <a class="btn btn--secondary" href={routes.project}>Back to your project</a>
+  </Fragment>
+</PortalLayout>
+
+<style>
+  .sect .body,
+  .sect .answer,
+
+  /* On the amber panel the row that moves is set at 600 on both sides, and
+     the rows that do not at 400, so the eye lands on the one figure that
+     changed rather than on every amount. */
+  .schedule .record__row dt,
+  .schedule .record__row dd {
+    font-weight: 400;
+  }
+
+  .schedule .record__row--changed dt,
+  .schedule .record__row--changed dd {
+    font-weight: 600;
+  }
+</style>

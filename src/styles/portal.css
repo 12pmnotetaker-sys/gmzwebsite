@@ -887,3 +887,20 @@ a.row:focus-visible .row__title {
     animation: none !important;
   }
 }
+
+/* ---- What a form says when it cannot go on ---------------------------- */
+
+/*
+ * The sentence above a form that explains why the last try did not send:
+ * a wrong password, an empty field, a photo too large. Teal on the amber
+ * fill, like every "needs you" state, so it reads as attention rather than
+ * alarm. Rendered by the server, so it is there with JavaScript off.
+ */
+.field__error {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--status-needs-text);
+  background: var(--status-needs-bg);
+  padding: var(--space-xs) var(--space-sm);
+}

@@ -11,6 +11,7 @@
  * repeated eighteen times. Every fact reads from src/data/site.ts.
  */
 import { company, primaryPhone, licenseShort, portalHoursLine } from '@data/site';
+import { routes } from '@data/portal/routes';
 
 interface Props {
   /** The amber line above the number. Omit for the company name; pass "" for none. */
@@ -24,6 +25,12 @@ interface Props {
 }
 
 const { kicker = company.legalName, tagline = false, licence = false, hours = false } = Astro.props;
+
+/*
+ * "Sign out" shows only to a signed-in client, and it is a form rather than a
+ * link because ending a session is a POST: a link in an email cannot do it.
+ */
+const client = Astro.locals.client ?? null;
 ---
 
 <footer class="foot on-dark">
@@ -41,6 +48,16 @@ const { kicker = company.legalName, tagline = false, licence = false, hours = fa
       {!licence && tagline && <span class="foot__note">{company.tagline}</span>}
     </div>
     {hours && <p class="foot__hours">{portalHoursLine}</p>}
+    {
+      client && (
+        <form class="foot__session" action={routes.signOut} method="post">
+          <span class="foot__note">Signed in as {client.name}</span>
+          <button class="foot__signout" type="submit">
+            Sign out
+          </button>
+        </form>
+      )
+    }
   </div>
 </footer>
 
@@ -104,5 +121,31 @@ const { kicker = company.legalName, tagline = false, licence = false, hours = fa
     font-size: var(--text-sm);
     line-height: 1.5;
     color: var(--portal-chrome-muted);
+  }
+
+  .foot__session {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    align-items: flex-start;
+  }
+
+  /* A button that reads as a quiet link, on the chrome, with the tap floor kept. */
+  .foot__signout {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap-target);
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--gmz-amber);
+    cursor: pointer;
+  }
+
+  .foot__signout:hover {
+    color: var(--portal-chrome-text);
   }
 </style>

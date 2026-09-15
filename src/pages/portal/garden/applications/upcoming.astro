@@ -1,30 +1,65 @@
 ---
 /**
- * The application notice: the before state of the application pair.
+ * The application notice: what we plan to apply, where, why, and when it is
+ * safe for children and pets. The two buttons answer it, and the answer is
+ * kept as a request of kind `application` and sent to the office, because
+ * "go ahead" is a decision GMZ has to be able to show it was given.
  *
- * The crew plans to spray something on Wednesday, and this screen says so
- * before it happens. The answer is the date, on the amber panel because it
- * needs a reply. Under it, what we would apply, where and why, as three
- * facts; then the one thing a parent or a dog owner needs to know, on the
- * calm panel; then the two ways to answer and the deadline for answering.
- *
- * On desktop the buttons and the deadline move to the rail, which is why
- * they render twice: once in the column with `column-only`, once in the
- * rail. The steps are the same; there is just room beside them.
+ * Once answered, the screen says which answer was given and when, and the
+ * buttons go: a notice is answered once.
  */
 import PortalLayout from '@layouts/PortalLayout.astro';
 import StatusChip from '@components/portal/StatusChip.astro';
 import Facts from '@components/portal/Facts.astro';
 import { routes } from '@data/portal/routes';
-import { client, application } from '@data/portal/garden';
 import { status } from '@data/portal/status';
+import { loadApplicationAnswer } from '../../../../server/records';
+import { RequestRejected, createRequest } from '../../../../server/requests';
+import { field, gardenScreen } from '../../../../server/screen';
 
-const notice = application.before;
+export const prerender = false;
+
+const screen = await gardenScreen(Astro, {});
+if (screen instanceof Response) return screen;
+const { client, garden } = screen;
+const notice = garden.application.before;
+if (!notice) return Astro.redirect(routes.garden, 302);
+
+let error: string | undefined;
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const decision = field(form, 'decision', 20) === 'skip' ? 'skip' : 'go-ahead';
+  // A notice is answered once. A second tap, or a second tab, changes nothing.
+  if (await loadApplicationAnswer(client, notice.date)) {
+    return Astro.redirect(routes.applicationNotice, 303);
+  }
+  try {
+    await createRequest(client, {
+      kind: 'application',
+      about: notice.kicker,
+      body:
+        decision === 'skip' ? `Skip it this visit: ${notice.intent}` : `Go ahead: ${notice.intent}`,
+      details: { decision, date: notice.date },
+    });
+    return Astro.redirect(routes.applicationNotice, 303);
+  } catch (cause) {
+    if (!(cause instanceof RequestRejected)) throw cause;
+    console.error(cause.message);
+    error = 'Your answer did not reach us. Try once more, or call the office and tell us.';
+  }
+}
+
+const answer = await loadApplicationAnswer(client, notice.date);
+const answered = answer
+  ? answer.decision === 'go-ahead'
+    ? 'You said go ahead. We will do it on the visit and record what was applied.'
+    : 'You said skip it this visit. We will leave it alone and ask again.'
+  : null;
 ---
 
 <PortalLayout
   title={notice.kicker}
-  property={client.property}
+  property={garden.display.property}
   backHref={routes.garden}
   backLabel="Back"
   footerKicker=""
@@ -33,7 +68,16 @@ const notice = application.before;
     <span class="kicker" id="notice">{notice.kicker}</span>
     <h1 class="answer">{notice.date}</h1>
     <p class="body">{notice.intent}</p>
-    <StatusChip tone={status.needs.key} label={status.needs.label} />
+    {
+      answered ? (
+        <StatusChip
+          tone={status.done.key}
+          label={answer?.decision === 'skip' ? 'Skipped' : 'Go ahead'}
+        />
+      ) : (
+        <StatusChip tone={status.needs.key} label={status.needs.label} />
+      )
+    }
   </section>
 
   <div class="block">
@@ -45,20 +89,57 @@ const notice = application.before;
     <p class="body">{notice.safety.body}</p>
   </section>
 
-  <div class="block block--end actions column-only">
-    <a class="btn btn--primary" href={routes.applicationRecord}>That works, go ahead</a>
-    <a class="btn btn--secondary" href={routes.ask}>Skip it this visit</a>
-    <p class="note">{notice.deadline}</p>
-  </div>
+  {
+    answered ? (
+      <section class="block block--end panel panel--done" aria-labelledby="answered">
+        <span class="kicker kicker--muted" id="answered">
+          Your answer
+        </span>
+        <p class="body">{answered}</p>
+        <a class="link-action" href={routes.ask}>
+          Changed your mind? Ask for something
+        </a>
+      </section>
+    ) : (
+      <form
+        class="block block--end actions column-only"
+        method="post"
+        action={routes.applicationNotice}
+      >
+        {error && (
+          <p class="field__error" role="alert">
+            {error}
+          </p>
+        )}
+        <button class="btn btn--primary" type="submit" name="decision" value="go-ahead">
+          That works, go ahead
+        </button>
+        <button class="btn btn--secondary" type="submit" name="decision" value="skip">
+          Skip it this visit
+        </button>
+        <p class="note">{notice.deadline}</p>
+      </form>
+    )
+  }
 
-  <Fragment slot="rail">
-    <section class="sect" aria-labelledby="deadline">
-      <h2 class="kicker" id="deadline">{notice.deadlineLead}</h2>
-      <p class="note">{notice.deadlineNote}</p>
-    </section>
-    <div class="actions">
-      <a class="btn btn--primary" href={routes.applicationRecord}>That works, go ahead</a>
-      <a class="btn btn--secondary" href={routes.ask}>Skip it this visit</a>
-    </div>
-  </Fragment>
+  {
+    !answered && (
+      <Fragment slot="rail">
+        <section class="sect" aria-labelledby="deadline">
+          <h2 class="kicker" id="deadline">
+            {notice.deadlineLead}
+          </h2>
+          <p class="note">{notice.deadlineNote}</p>
+        </section>
+        <form class="actions" method="post" action={routes.applicationNotice}>
+          <button class="btn btn--primary" type="submit" name="decision" value="go-ahead">
+            That works, go ahead
+          </button>
+          <button class="btn btn--secondary" type="submit" name="decision" value="skip">
+            Skip it this visit
+          </button>
+        </form>
+      </Fragment>
+    )
+  }
 </PortalLayout>

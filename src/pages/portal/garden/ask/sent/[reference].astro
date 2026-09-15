@@ -1,0 +1,40 @@
+---
+/**
+ * Request sent: the receipt, by reference. The reference, the category and
+ * the sentence the client wrote come from the request they sent, so they can
+ * see we hold the same request; the words around them are the garden's own.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import RequestSent from '@components/portal/RequestSent.astro';
+import { routes } from '@data/portal/routes';
+import { loadRequest } from '../../../../../server/records';
+import { gardenScreen } from '../../../../../server/screen';
+
+export const prerender = false;
+
+const screen = await gardenScreen(Astro, {});
+if (screen instanceof Response) return screen;
+const { client, garden } = screen;
+
+const request = await loadRequest(client, Astro.params.reference ?? '');
+if (!request) return Astro.redirect(routes.garden, 302);
+
+const sent = {
+  reference: request.reference,
+  about: request.about,
+  wrote: request.body || 'Nothing written; the choices you made are on the request.',
+  body: garden.request.ack.body,
+  next: garden.request.ack.next,
+};
+---
+
+<PortalLayout
+  title="Request sent"
+  property={garden.display.property}
+  footerKicker="Something urgent"
+>
+  <RequestSent sent={sent} backHref={routes.garden} backLabel="Back to your garden" />
+  <Fragment slot="rail">
+    <RequestSent sent={sent} backHref={routes.garden} backLabel="Back to your garden" rail />
+  </Fragment>
+</PortalLayout>

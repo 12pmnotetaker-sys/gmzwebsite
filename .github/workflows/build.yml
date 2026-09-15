@@ -15,6 +15,16 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # The site is built twice: once as it deploys today (noindex, no sitemap)
+    # and once as it will be the day the domain moves (SEARCH_INDEXING=on).
+    # content-lint checks that robots.txt, the noindex tags and the sitemap
+    # agree in both states, so the published state is proven on every push
+    # rather than discovered on launch day.
+    strategy:
+      matrix:
+        indexing: ['off', 'on']
+    env:
+      SEARCH_INDEXING: ${{ matrix.indexing }}
     steps:
       - uses: actions/checkout@v4
 

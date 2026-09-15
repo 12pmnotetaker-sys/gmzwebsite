@@ -2,18 +2,22 @@
 /**
  * "Add a photo."
  *
- * A real file input with a real preview, and the only JavaScript in the portal.
- * Nothing is uploaded anywhere yet: the form has no backend in this pass, so
- * the preview is the honest extent of it. The input deliberately carries no
- * `name`, like every other typed-into control in the portal, so a chosen
- * file's name never lands in the GET the form makes. When the request
- * endpoint exists, give the input a name and the form `enctype`; the `name`
- * prop here only builds the ids the labels point at.
+ * A real file input with a real preview. The input carries the form's field
+ * name, so a chosen photograph travels with the request as multipart data
+ * and is re-encoded on the server before it is stored; see
+ * `src/server/requests.ts`.
  *
- * With JavaScript off it is still a working file picker; the label just does
- * not turn into a thumbnail.
+ * The script also shrinks a large photograph before it is sent. A phone
+ * photograph is several megabytes and the function that receives the form
+ * will not read a body much over four, so anything over the server's ceiling
+ * is redrawn at a smaller size and replaced in the input. The server still
+ * re-encodes whatever arrives, so this is a courtesy to the upload, not the
+ * thing that keeps metadata out. With JavaScript off it is still a working
+ * file picker; the label just does not turn into a thumbnail, and a very
+ * large photograph is refused with the reason.
  */
 interface Props {
+  /** The field name the server reads. Both slots of a pair share it. */
   name: string;
   label?: string;
   height?: number;
@@ -29,7 +33,7 @@ const ids = pair ? [`${name}-1`, `${name}-2`] : [name];
   {
     ids.map((id) => (
       <label class="photos__slot" style={`min-height:${height}px`} data-photo-slot>
-        <input type="file" id={id} accept="image/*" class="visually-hidden" />
+        <input type="file" id={id} name={name} accept="image/*" class="visually-hidden" />
         <span class="photos__label">{label}</span>
         <img class="photos__preview" alt="" hidden data-alt-set-by-script />
       </label>
@@ -38,6 +42,39 @@ const ids = pair ? [`${name}-1`, `${name}-2`] : [name];
 </div>
 
 <script>
+  /** The server's ceiling per photograph; see MAX_PHOTO_BYTES in src/server/requests.ts. */
+  const CEILING = 2 * 1024 * 1024;
+  /** Long edge after shrinking. Plenty for the crew to see what is meant. */
+  const LONG_EDGE = 1800;
+
+  // Redraw a photograph smaller until it fits under the ceiling. Returns the
+  // original when it already fits, or when the browser cannot decode it.
+  const shrink = async (file: File): Promise<File> => {
+    if (file.size <= CEILING || !file.type.startsWith('image/')) return file;
+    try {
+      const bitmap = await createImageBitmap(file);
+      const scale = Math.min(1, LONG_EDGE / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+      for (const quality of [0.85, 0.7, 0.55]) {
+        const blob = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, 'image/jpeg', quality),
+        );
+        if (blob && blob.size <= CEILING) {
+          return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', {
+            type: 'image/jpeg',
+          });
+        }
+      }
+    } catch {
+      /* Not decodable here; the server will say so. */
+    }
+    return file;
+  };
+
   // Preview the chosen file inside its slot. Object URLs are revoked when
   // replaced so a client picking several photos in a row does not leak them.
   // Runs on first paint and after every client-side navigation, and the
@@ -50,14 +87,21 @@ const ids = pair ? [`${name}-1`, `${name}-2`] : [name];
       if (!input || !img || !label || slot.dataset.ready) return;
       slot.dataset.ready = '1';
       let url: string | null = null;
-      input.addEventListener('change', () => {
-        const file = input.files?.[0];
+      input.addEventListener('change', async () => {
+        let file = input.files?.[0];
         if (url) URL.revokeObjectURL(url);
         if (!file) {
           img.hidden = true;
           label.hidden = false;
           slot.classList.remove('photos__slot--filled');
           return;
+        }
+        const smaller = await shrink(file);
+        if (smaller !== file) {
+          const transfer = new DataTransfer();
+          transfer.items.add(smaller);
+          input.files = transfer.files;
+          file = smaller;
         }
         url = URL.createObjectURL(file);
         img.src = url;

@@ -1,59 +1,95 @@
 ---
 /**
- * Approve, confirm: the sheet over the dimmed proposal.
+ * Review and approve: the sheet over the faded proposal.
  *
- * The proposal the client just read stays on the page, faded to a stand-in,
- * and the sheet rises over it with the three amounts they are agreeing to,
- * the line that says no money is due until the contract is signed, and a
- * name field. One thing to do, one way out.
- *
- * There is no backend behind this form yet. The name field carries no `name`,
- * so nothing a person types is ever put in a URL or a request; approving
- * simply opens the approved screen, with JavaScript or without it. Recording
- * an approval needs a server that stores the name and the time against the
- * estimate, and that is the next planning cycle, not a change to this screen.
- *
- * On a phone the backdrop covers the column and the sheet sits at the bottom
- * of it; on desktop the backdrop is in flow beneath the faded proposal and
- * the sheet sits at the top of it, 560 wide and centred. The faded block and
- * the backdrop share one grid cell rather than stacking with `absolute`, so
- * the backdrop is always as tall as the sheet needs and nothing is clipped on
- * a short phone. The faded block is hidden from assistive technology: it is a
- * picture of the page beneath, not content.
+ * Posting the typed name records the intent to proceed, tells the office,
+ * and lands on the approved screen. A name that is missing brings the sheet
+ * back with the reason; an approval already on file skips the sheet.
  */
 import PortalLayout from '@layouts/PortalLayout.astro';
 import Money from '@components/portal/Money.astro';
 import { routes } from '@data/portal/routes';
-import { client, approval } from '@data/portal/project';
+import { loadApproval } from '../../../../server/records';
+import { RequestRejected, recordApproval } from '../../../../server/requests';
+import { field, projectScreen } from '../../../../server/screen';
+
+export const prerender = false;
+
+const screen = await projectScreen(Astro, {});
+if (screen instanceof Response) return screen;
+const { client, project } = screen;
+const { approval } = project;
+
+if (await loadApproval(client, 'proposal')) return Astro.redirect(routes.approved, 302);
+
+let error: string | undefined;
+let typed = '';
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  typed = field(form, 'signer', 120);
+  if (typed.length < 2) {
+    error = 'Type your full name to approve.';
+  } else {
+    try {
+      await recordApproval(client, {
+        subject: 'proposal',
+        typedName: typed,
+        amount: project.proposal.total,
+        summary: `${project.display.projectName}, estimate ${project.proposal.estimateNo}`,
+      });
+      return Astro.redirect(routes.approved, 303);
+    } catch (cause) {
+      if (!(cause instanceof RequestRejected)) throw cause;
+      console.error(cause.message);
+      error = 'Your approval did not reach us. Try once more, or call the office.';
+    }
+  }
+}
 ---
 
 <PortalLayout
   title="Review and approve"
-  property={client.property}
+  property={project.display.property}
   backHref={routes.proposal}
   backLabel="Back"
   footerKicker="Questions before you sign"
 >
   <div class="confirm">
     <div class="faded" aria-hidden="true">
-      <span class="kicker">Proposal, {client.name}</span>
-      <p class="answer">{client.projectName}</p>
+      <span class="kicker">Proposal, {project.display.name}</span>
+      <p class="answer">{project.display.projectName}</p>
       <div class="faded__line"></div>
       <div class="faded__line"></div>
       <div class="faded__line faded__line--short"></div>
     </div>
 
     <div class="backdrop">
-      <form class="sheet" action={routes.approved} method="get" aria-labelledby="agreeing">
+      <form class="sheet" action={routes.confirm} method="post" aria-labelledby="agreeing">
         <header class="stack">
           <span class="kicker">{approval.kicker}</span>
           <h1 class="answer" id="agreeing">{approval.headline}</h1>
         </header>
         <Money lines={approval.lines} closed />
         <p class="body">{approval.body}</p>
+        {
+          error && (
+            <p class="field__error" role="alert" id="signer-error">
+              {error}
+            </p>
+          )
+        }
         <div class="field">
           <label class="label" for="signer">Type your full name</label>
-          <input id="signer" type="text" autocomplete="name" value={approval.signerPlaceholder} />
+          <input
+            id="signer"
+            name="signer"
+            type="text"
+            autocomplete="name"
+            placeholder={client.name}
+            value={typed}
+            required
+            aria-describedby={error ? 'signer-error' : undefined}
+          />
         </div>
         <div class="actions">
           <button class="btn btn--primary" type="submit">Approve this proposal</button>
@@ -105,14 +141,14 @@ import { client, approval } from '@data/portal/project';
     width: 70%;
   }
 
-  /* The dimming is the chrome teal at 72%, whatever the theme. */
+  /* The dimming is the chrome, mostly opaque; the token sets it for each theme. */
   .backdrop {
     position: relative;
     z-index: 1;
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    background: rgb(0 43 55 / 72%);
+    background: var(--portal-backdrop);
   }
 
   .sheet {

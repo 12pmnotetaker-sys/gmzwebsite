@@ -1,0 +1,221 @@
+---
+/**
+ * A seasonal offer: a fixed price for a fixed thing, chosen and sent as a
+ * request. Sending is not an approval, and the screen says so; the office
+ * confirms the colour, the number and the total before anything is planted.
+ *
+ * The record carries one offer at a time, under its own slug. A slug that is
+ * not the current offer goes back to the garden rather than to a blank page.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import ScreenHead from '@components/portal/ScreenHead.astro';
+import PhotoField from '@components/portal/PhotoField.astro';
+import Plate from '@components/portal/Plate.astro';
+import { routes } from '@data/portal/routes';
+import { RequestRejected, createRequest } from '../../../../server/requests';
+import { chosen, field, files, gardenScreen, toSlug } from '../../../../server/screen';
+
+export const prerender = false;
+
+const screen = await gardenScreen(Astro, {});
+if (screen instanceof Response) return screen;
+const { client, garden } = screen;
+const offer = garden.offer;
+if (!offer || offer.slug !== Astro.params.slug) return Astro.redirect(routes.garden, 302);
+
+const formId = 'offer-form';
+let error: string | undefined;
+let chosenColour = offer.colours[0]!.label;
+let chosenQuantity = offer.quantities[1] ?? offer.quantities[0]!;
+let where = '';
+let recommend = false;
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  chosenColour = chosen(
+    offer.colours.map((c) => c.label),
+    field(form, 'colour', 40),
+  );
+  chosenQuantity = chosen(offer.quantities, field(form, 'flats', 40));
+  where = field(form, 'where', 2000);
+  recommend = form.get('recommend') === 'on';
+  try {
+    const { reference } = await createRequest(client, {
+      kind: 'offer',
+      about: offer.rowTitle,
+      body: where,
+      details: {
+        offer: offer.slug,
+        colour: chosenColour,
+        flats: chosenQuantity,
+        recommend: recommend ? 'yes' : 'no',
+      },
+      photos: files(form, 'spot'),
+    });
+    return Astro.redirect(routes.asked(reference), 303);
+  } catch (cause) {
+    if (!(cause instanceof RequestRejected)) throw cause;
+    console.error(cause.message);
+    error =
+      cause.reason === 'photo-too-large' || cause.reason === 'photo-unreadable'
+        ? 'The photo could not be sent. Try another, or send without it.'
+        : 'This did not reach us. Try once more, or call the office; nothing you chose is lost.';
+  }
+}
+---
+
+<PortalLayout
+  title={offer.rowTitle}
+  property={garden.display.property}
+  backHref={routes.garden}
+  backLabel="Back"
+  footerKicker="Rather talk it through"
+>
+  <Plate caption={offer.photoCaption} height={190} bleed />
+
+  <ScreenHead kicker={offer.kicker} title={offer.title} long>
+    <p class="body">{offer.intro}</p>
+  </ScreenHead>
+
+  <section class="block block--tight panel panel--calm" aria-labelledby="price">
+    <span class="kicker kicker--muted" id="price">{offer.priceKicker}</span>
+    <p class="answer answer--figure">{offer.price}</p>
+    <p class="body">{offer.includes}</p>
+  </section>
+
+  <form
+    class="block stack stack--lg"
+    id={formId}
+    action={routes.offer(offer.slug)}
+    method="post"
+    enctype="multipart/form-data"
+  >
+    {
+      error && (
+        <p class="field__error" role="alert">
+          {error}
+        </p>
+      )
+    }
+    <fieldset class="group">
+      <legend class="label">Colour</legend>
+      <div class="choices">
+        {
+          offer.colours.map((colour) => (
+            <label class="choice">
+              <input
+                type="radio"
+                name="colour"
+                value={toSlug(colour.label)}
+                checked={colour.label === chosenColour}
+              />
+              {colour.swatch && (
+                <span
+                  class="choice__swatch"
+                  style={`background:${colour.swatch}`}
+                  aria-hidden="true"
+                />
+              )}
+              <span>{colour.label}</span>
+            </label>
+          ))
+        }
+      </div>
+    </fieldset>
+
+    <div class="field">
+      <label class="label" for="offer-where">Where they go</label>
+      <textarea
+        id="offer-where"
+        name="where"
+        rows="3"
+        maxlength="2000"
+        placeholder="The front beds either side of the path, and the two pots by the door"
+        set:text={where}
+      />
+      <p class="note">{offer.placeNote}</p>
+    </div>
+
+    <fieldset class="group">
+      <legend class="label">Not sure where</legend>
+      <label class="choice choice--wide">
+        <input type="checkbox" name="recommend" checked={recommend} />
+        <span>{offer.recommendLabel}</span>
+        <span class="choice__plus" aria-hidden="true">+</span>
+      </label>
+      <p class="note">{offer.recommendNote}</p>
+    </fieldset>
+
+    <fieldset class="group">
+      <legend class="label">A photo of the spot, if it helps</legend>
+      <PhotoField name="spot" height={140} />
+    </fieldset>
+
+    <fieldset class="group">
+      <legend class="label">How many flats</legend>
+      <div class="choices">
+        {
+          offer.quantities.map((quantity) => (
+            <label class="choice">
+              <input
+                type="radio"
+                name="flats"
+                value={toSlug(quantity)}
+                checked={quantity === chosenQuantity}
+              />
+              <span>{quantity}</span>
+            </label>
+          ))
+        }
+      </div>
+      <p class="note">{offer.quantityNote}</p>
+    </fieldset>
+  </form>
+
+  <section class="block panel panel--attention column-only" aria-labelledby="total">
+    <span class="kicker" id="total">{offer.total.kicker}</span>
+    <p class="sub">{offer.total.line}</p>
+    <p class="body">{offer.total.body}</p>
+  </section>
+
+  <div class="block block--end actions column-only">
+    <button class="btn btn--primary" type="submit" form={formId}>Send this request</button>
+    <a class="btn btn--secondary" href={routes.ask}>Ask how many I need</a>
+    <p class="note">{offer.disclaimer}</p>
+  </div>
+
+  <Fragment slot="rail">
+    <section class="panel panel--attention" aria-label={offer.total.kicker}>
+      <span class="kicker">{offer.total.kicker}</span>
+      <p class="sub">{offer.total.line}</p>
+      <p class="body">{offer.total.body}</p>
+    </section>
+    <div class="actions">
+      <button class="btn btn--primary" type="submit" form={formId}>Send this request</button>
+      <a class="btn btn--secondary" href={routes.ask}>Ask how many I need</a>
+      <p class="note">{offer.disclaimer}</p>
+    </div>
+  </Fragment>
+</PortalLayout>
+
+<style>
+  /* A fieldset is the right element for a set of choices; the browser's box
+     around it is not. The min-width reset is what lets the chips wrap on a
+     narrow phone. */
+  .group {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-inline-size: 0;
+  }
+
+  .group > legend {
+    padding: 0 0 var(--space-xs);
+  }
+
+  /* The note under a set of choices keeps the same 8 the field keeps under
+     its textarea. */
+  .group > .note {
+    margin-block-start: var(--space-xs);
+  }
+</style>

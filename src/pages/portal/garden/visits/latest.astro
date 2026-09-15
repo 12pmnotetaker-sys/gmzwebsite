@@ -1,16 +1,8 @@
 ---
 /**
- * The visit report: what the crew did on Wednesday, in their own words.
- *
- * The answer is the date, and the Done chip under it says the visit happened.
- * Then what we did, then the one thing the crew noticed for next time, on the
- * calm panel so it reads as a note rather than a warning, and who wrote it.
- * There is no duration and no time on site anywhere here: a report says what
- * was done, not how long it took.
- *
- * On desktop the photos move to the rail, which is why they render twice:
- * once in the column with `column-only`, once in the rail. The plates say
- * what the photographs will be until the crew's visit record supplies them.
+ * The visit report. Written by a person, on the day; no duration, no time on
+ * site. Photographs, when the record has them, are served from private
+ * storage through a URL that lives about as long as the page view.
  */
 import PortalLayout from '@layouts/PortalLayout.astro';
 import ScreenHead from '@components/portal/ScreenHead.astro';
@@ -18,67 +10,103 @@ import StatusChip from '@components/portal/StatusChip.astro';
 import Row from '@components/portal/Row.astro';
 import Plate from '@components/portal/Plate.astro';
 import { routes } from '@data/portal/routes';
-import { client, visitReport } from '@data/portal/garden';
 import { status } from '@data/portal/status';
+import { signedUrl } from '../../../../server/db';
+import { gardenScreen } from '../../../../server/screen';
+
+export const prerender = false;
+
+const screen = await gardenScreen(Astro, {});
+if (screen instanceof Response) return screen;
+const { garden } = screen;
+const report = garden.visitReport;
+
+const photos = await Promise.all(
+  report.photos.map(async (photo) => ({
+    ...photo,
+    src: photo.path ? await signedUrl(photo.path) : undefined,
+  })),
+);
+const anyPlate = photos.some((photo) => !photo.src);
 ---
 
 <PortalLayout
   title="Visit report"
-  property={client.property}
+  property={garden.display.property}
   backHref={routes.service}
   backLabel="Your service"
   footerKicker=""
 >
-  <ScreenHead kicker="Visit report" title={visitReport.date} long>
+  <ScreenHead kicker="Visit report" title={report.date} long>
     <StatusChip tone={status.done.key} label={status.done.label} />
   </ScreenHead>
 
   <section class="block stack stack--md">
     <div class="sect">
       <h2 class="kicker">What we did</h2>
-      <p class="body">{visitReport.body}</p>
+      <p class="body">{report.body}</p>
     </div>
     <section class="panel panel--calm" aria-labelledby="noted">
-      <span class="kicker kicker--muted" id="noted">{visitReport.noted.kicker}</span>
-      <p class="body">{visitReport.noted.body}</p>
+      <span class="kicker kicker--muted" id="noted">{report.noted.kicker}</span>
+      <p class="body">{report.noted.body}</p>
     </section>
-    <p class="note">{visitReport.attribution}</p>
+    <p class="note">{report.attribution}</p>
   </section>
 
-  <section class="block stack stack--md column-only photos" aria-labelledby="visit-photos">
-    <h2 class="kicker" id="visit-photos">Photos from the visit</h2>
-    <div class="plates">
-      {visitReport.photos.map((photo) => <Plate caption={photo.caption} height={130} />)}
-    </div>
-    <p class="note note--xs">
-      Photo plates, not photographs. Real images come from the crew's visit record.
-    </p>
-  </section>
+  {
+    photos.length > 0 && (
+      <section class="block stack stack--md column-only photos" aria-labelledby="visit-photos">
+        <h2 class="kicker" id="visit-photos">
+          Photos from the visit
+        </h2>
+        <div class="plates">
+          {photos.map((photo) => (
+            <Plate caption={photo.caption} alt={photo.alt} src={photo.src} height={130} />
+          ))}
+        </div>
+        {anyPlate && (
+          <p class="note note--xs">
+            Photo plates, not photographs. Real images come from the crew's visit record.
+          </p>
+        )}
+      </section>
+    )
+  }
 
   <nav class="block rows" aria-label="More on this visit">
-    <Row
-      href={routes.applicationNotice}
-      title="Applications on this visit"
-      note={visitReport.applicationsNote}
-    />
-    <Row href={routes.service} title="Earlier visits" note={visitReport.earlier} />
+    {
+      garden.application.before && (
+        <Row
+          href={routes.applicationNotice}
+          title="Applications on this visit"
+          note={report.applicationsNote}
+        />
+      )
+    }
+    <Row href={routes.service} title="Earlier visits" note={report.earlier} />
   </nav>
 
   <div class="block block--end actions">
     <a class="btn btn--secondary" href={routes.ask}>Ask about this visit</a>
   </div>
 
-  <Fragment slot="rail">
-    <section class="stack stack--lg" aria-label="Photos from the visit">
-      <div class="sect">
-        <h2 class="kicker">Photos from the visit</h2>
-      </div>
-      <div class="stack">
-        {visitReport.photos.map((photo) => <Plate caption={photo.caption} height={150} />)}
-        <p class="note note--xs">Photo plates, not photographs.</p>
-      </div>
-    </section>
-  </Fragment>
+  {
+    photos.length > 0 && (
+      <Fragment slot="rail">
+        <section class="stack stack--lg" aria-label="Photos from the visit">
+          <div class="sect">
+            <h2 class="kicker">Photos from the visit</h2>
+          </div>
+          <div class="stack">
+            {photos.map((photo) => (
+              <Plate caption={photo.caption} alt={photo.alt} src={photo.src} height={150} />
+            ))}
+            {anyPlate && <p class="note note--xs">Photo plates, not photographs.</p>}
+          </div>
+        </section>
+      </Fragment>
+    )
+  }
 </PortalLayout>
 
 <style>

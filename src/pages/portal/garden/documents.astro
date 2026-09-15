@@ -1,33 +1,37 @@
 ---
 /**
- * Documents: everything on file for the garden.
- *
- * One row per document. A row with a document behind it opens the document;
- * one without says "To come" and is not a link, because a shelf that opens
- * itself is worse than one that admits the gap. The list is the data
- * module's, so a document added to the record appears here without touching
- * the page.
- *
- * On desktop the "need something that is not here" panel moves to the rail,
- * which is why it renders twice: once in the column with `column-only`, once
- * in the rail. The steps are the same; there is just room beside them.
+ * Documents: everything on file for the garden. A row opens a screen in the
+ * portal, opens a file from private storage, or says "To come".
  */
 import PortalLayout from '@layouts/PortalLayout.astro';
 import ScreenHead from '@components/portal/ScreenHead.astro';
 import Row from '@components/portal/Row.astro';
 import { routes } from '@data/portal/routes';
-import { client, documents, documentsAsk } from '@data/portal/garden';
+import { gardenScreen } from '../../../server/screen';
+
+export const prerender = false;
+
+const screen = await gardenScreen(Astro, {});
+if (screen instanceof Response) return screen;
+const { garden } = screen;
+
+const hrefFor = (index: number) => {
+  const doc = garden.documents[index]!;
+  if (doc.route) return doc.route;
+  if (doc.path) return routes.document(index);
+  return undefined;
+};
 ---
 
 <PortalLayout
   title="Documents"
-  property={client.property}
+  property={garden.display.property}
   backHref={routes.garden}
   backLabel="Back"
   footerKicker=""
   footerTagline
 >
-  <ScreenHead kicker={`${client.name}, ${client.town}`} title="Documents" long>
+  <ScreenHead kicker={`${garden.display.name}, ${garden.display.town}`} title="Documents" long>
     <p class="body note--lead">
       Everything on file for your garden. Each one opens as the document itself, and downloads.
     </p>
@@ -35,28 +39,28 @@ import { client, documents, documentsAsk } from '@data/portal/garden';
 
   <nav class="block rows" aria-label="Documents on file">
     {
-      documents.map((doc) => (
+      garden.documents.map((doc, index) => (
         <Row
-          href={doc.href}
+          href={hrefFor(index)}
           title={doc.title}
           note={doc.note}
-          action={doc.href ? 'Open' : 'To come'}
+          action={hrefFor(index) ? 'Open' : 'To come'}
         />
       ))
     }
   </nav>
 
   <section class="block panel panel--calm column-only" aria-labelledby="need-more">
-    <span class="kicker kicker--muted" id="need-more">{documentsAsk.kicker}</span>
-    <p class="body">{documentsAsk.body}</p>
-    <a class="link-action" href={routes.ask}>{documentsAsk.link}</a>
+    <span class="kicker kicker--muted" id="need-more">{garden.documentsAsk.kicker}</span>
+    <p class="body">{garden.documentsAsk.body}</p>
+    <a class="link-action" href={routes.ask}>{garden.documentsAsk.link}</a>
   </section>
 
   <Fragment slot="rail">
-    <section class="panel panel--calm" aria-label={documentsAsk.kicker}>
-      <span class="kicker kicker--muted">{documentsAsk.kicker}</span>
-      <p class="body">{documentsAsk.body}</p>
-      <a class="link-action" href={routes.ask}>{documentsAsk.link}</a>
+    <section class="panel panel--calm" aria-label={garden.documentsAsk.kicker}>
+      <span class="kicker kicker--muted">{garden.documentsAsk.kicker}</span>
+      <p class="body">{garden.documentsAsk.body}</p>
+      <a class="link-action" href={routes.ask}>{garden.documentsAsk.link}</a>
     </section>
   </Fragment>
 </PortalLayout>

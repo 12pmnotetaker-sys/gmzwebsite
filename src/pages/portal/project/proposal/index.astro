@@ -1,17 +1,8 @@
 ---
 /**
- * The proposal: the longest screen in the portal, and the one a project
- * client reads slowest.
- *
- * It is the contract in the client's language, in reading order: what we will
- * do, what it costs and which line will move, how the money is paid and what
- * each payment waits for, and the notices that come with it. The one answer is
- * the project's name; the price is the first sub-answer under it.
- *
- * On desktop the stage bar, the price line and the two buttons move to the
- * rail, which is why they render twice: once in the column with
- * `column-only`, once in the rail. The steps are the same; there is just room
- * beside them.
+ * The proposal in full: scope, the price with its allowance, the payment
+ * schedule, and the statutory notices. Approved or not, it reads the same;
+ * only the buttons and the stage bar change.
  */
 import PortalLayout from '@layouts/PortalLayout.astro';
 import ScreenHead from '@components/portal/ScreenHead.astro';
@@ -20,25 +11,40 @@ import Money from '@components/portal/Money.astro';
 import Draws from '@components/portal/Draws.astro';
 import NoticePages from '@components/portal/NoticePages.astro';
 import { routes } from '@data/portal/routes';
-import { client, proposal, projectStages } from '@data/portal/project';
+import { signedUrl } from '../../../../server/db';
+import { loadApproval } from '../../../../server/records';
+import { projectScreen } from '../../../../server/screen';
 
-const stage = projectStages.atProposal;
+export const prerender = false;
+
+const screen = await projectScreen(Astro, {});
+if (screen instanceof Response) return screen;
+const { client, project } = screen;
+const { proposal } = project;
+
+const approval = await loadApproval(client, 'proposal');
+const stage = approval ? project.stages.atApproved : project.stages.atProposal;
+const noticesSrc = proposal.notices.path ? await signedUrl(proposal.notices.path) : undefined;
 ---
 
 <PortalLayout
   title="Proposal"
-  property={client.property}
+  property={project.display.property}
   backHref={routes.project}
   backLabel="Back"
   footerLicence
 >
-  <ScreenHead kicker={`Proposal, ${client.name}, ${client.town}`} title={client.projectName} long>
+  <ScreenHead
+    kicker={`Proposal, ${project.display.name}, ${project.display.town}`}
+    title={project.display.projectName}
+    long
+  >
     <p class="estimate-no">{proposal.estimateNo}</p>
   </ScreenHead>
 
   <div class="block column-only">
     <StageBar
-      total={projectStages.total}
+      total={project.stages.total}
       done={stage.done}
       now={stage.now}
       caption={stage.caption}
@@ -83,20 +89,36 @@ const stage = projectStages.atProposal;
       <p class="body">{proposal.notices.body}</p>
     </div>
     <div class="well notices-well">
-      <NoticePages />
-      <span class="label">Design note</span>
-      <p class="note">{proposal.notices.designNote}</p>
+      <NoticePages src={noticesSrc} />
+      {
+        !noticesSrc && (
+          <p class="note">
+            The notices are shown as the document itself once it is on file. Until then this stands
+            in for it and is not the legal text.
+          </p>
+        )
+      }
     </div>
   </section>
 
   <div class="block block--end actions column-only">
-    <a class="btn btn--primary" href={routes.confirm}>Review and approve</a>
+    {
+      approval ? (
+        <a class="btn btn--primary" href={routes.approved}>
+          What happens next
+        </a>
+      ) : (
+        <a class="btn btn--primary" href={routes.confirm}>
+          Review and approve
+        </a>
+      )
+    }
     <a class="btn btn--secondary" href={routes.projectAsk}>Ask for a change</a>
   </div>
 
   <Fragment slot="rail">
     <StageBar
-      total={projectStages.total}
+      total={project.stages.total}
       done={stage.done}
       now={stage.now}
       caption={stage.caption}
@@ -106,7 +128,17 @@ const stage = projectStages.atProposal;
       <p class="sub">{proposal.priceLine}</p>
     </section>
     <div class="actions">
-      <a class="btn btn--primary" href={routes.confirm}>Review and approve</a>
+      {
+        approval ? (
+          <a class="btn btn--primary" href={routes.approved}>
+            What happens next
+          </a>
+        ) : (
+          <a class="btn btn--primary" href={routes.confirm}>
+            Review and approve
+          </a>
+        )
+      }
       <a class="btn btn--secondary" href={routes.projectAsk}>Ask for a change</a>
     </div>
   </Fragment>

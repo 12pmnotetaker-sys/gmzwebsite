@@ -1,0 +1,243 @@
+---
+import type { GetStaticPaths } from 'astro';
+import { Image, getImage } from 'astro:assets';
+import { render } from 'astro:content';
+import BaseLayout from '@layouts/BaseLayout.astro';
+import PageHeader from '@components/PageHeader.astro';
+import ReviewList from '@components/ReviewList.astro';
+import {
+  disciplineLabel,
+  formatCompleted,
+  getPublishedProjects,
+  serviceLineLabel,
+} from '@data/projects';
+import { getReviewsForProject } from '@data/reviews';
+import { company, fees, primaryCta } from '@data/site';
+
+/**
+ * One public project. It is identified by town, which the schema enforces,
+ * and it never reads the gated portfolio.
+ */
+export const getStaticPaths = (async () => {
+  const projects = await getPublishedProjects();
+  return projects.map((project) => ({ params: { slug: project.id }, props: { project } }));
+}) satisfies GetStaticPaths;
+
+const { project } = Astro.props;
+const { data } = project;
+const { Content } = await render(project);
+const reviews = await getReviewsForProject(project.id);
+const hasBody = Boolean(project.body?.trim());
+
+/** The hero doubles as the social image, so a shared link shows the garden. */
+const social = await getImage({ src: data.hero.src, width: 1200, format: 'jpg' });
+
+const PHASE_LABELS = { before: 'Before', during: 'During', after: 'After' } as const;
+---
+
+<BaseLayout
+  title={data.seo.title ?? data.title}
+  description={data.seo.description ?? data.summary}
+  image={social.src}
+  type="article"
+  noindex={data.seo.noindex}
+>
+  <PageHeader eyebrow={data.location} title={data.title} lede={data.summary} />
+
+  <div class="container project">
+    <figure class="figure hero">
+      <Image
+        class="hero__image"
+        src={data.hero.src}
+        alt={data.hero.alt}
+        widths={[768, 1200, 1800]}
+        sizes="(width >= 1200px) 1120px, 100vw"
+        loading="eager"
+      />
+      <div class="rule-accent"></div>
+      {
+        data.hero.caption && (
+          <figcaption class="figure__caption figure__note">{data.hero.caption}</figcaption>
+        )
+      }
+    </figure>
+
+    <section class="facts-block" aria-label="Project facts">
+      <dl class="facts">
+        <div class="facts__row facts__row--inline">
+          <dt>Town</dt>
+          <dd>{data.location}</dd>
+        </div>
+        <div class="facts__row facts__row--inline">
+          <dt>Completed</dt>
+          <dd>{formatCompleted(data.completed)}</dd>
+        </div>
+        <div class="facts__row facts__row--inline">
+          <dt>Service</dt>
+          <dd>{serviceLineLabel(data.serviceLine)}</dd>
+        </div>
+        <div class="facts__row facts__row--inline">
+          <dt>Work</dt>
+          <dd>{data.disciplines.map(disciplineLabel).join(', ')}</dd>
+        </div>
+        {
+          data.serviceLine === 'design-build' && (
+            <div class="facts__row facts__row--inline">
+              <dt>Drawings</dt>
+              <dd>{company.drawings}</dd>
+            </div>
+          )
+        }
+        {
+          data.duration && (
+            <div class="facts__row facts__row--inline">
+              <dt>Duration</dt>
+              <dd>{data.duration}</dd>
+            </div>
+          )
+        }
+        {
+          data.showBudgetBand && data.budgetBand && (
+            <div class="facts__row facts__row--inline">
+              <dt>Budget</dt>
+              <dd>{data.budgetBand}</dd>
+            </div>
+          )
+        }
+      </dl>
+    </section>
+
+    {
+      hasBody && (
+        <article class="prose body">
+          <Content />
+        </article>
+      )
+    }
+
+    {
+      data.gallery.length > 0 && (
+        <section class="section gallery-block">
+          <div class="section-head">
+            <div>
+              <p class="kicker">Photographs</p>
+              <h2 class="section-title">The garden as built.</h2>
+            </div>
+          </div>
+          <ul class="gallery">
+            {data.gallery.map((photo) => (
+              <li>
+                <figure class="figure">
+                  <Image
+                    class="gallery__image"
+                    src={photo.src}
+                    alt={photo.alt}
+                    widths={[480, 768, 1200]}
+                    sizes="(width >= 1100px) 540px, (width >= 760px) 50vw, 100vw"
+                    loading="lazy"
+                  />
+                  {(photo.caption || photo.phase) && (
+                    <figcaption class="figure__caption">
+                      {photo.phase && (
+                        <span class="figure__label">{PHASE_LABELS[photo.phase]}</span>
+                      )}
+                      {photo.caption && <span class="figure__note">{photo.caption}</span>}
+                    </figcaption>
+                  )}
+                </figure>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
+
+    {
+      reviews.length > 0 && (
+        <section class="section">
+          <div class="section-head">
+            <div>
+              <p class="kicker">In their words</p>
+              <h2 class="section-title">What the client said.</h2>
+            </div>
+          </div>
+          <div class="reviews-block">
+            <ReviewList {reviews} />
+          </div>
+        </section>
+      )
+    }
+
+    <section class="section closing">
+      <div class="section-head">
+        <div>
+          <p class="kicker">Next</p>
+          <h2 class="section-title">Start with a visit.</h2>
+        </div>
+        <p class="section-head__note">
+          The consultation is {fees.consultation.display} and covers {fees.consultation.covers}.
+        </p>
+      </div>
+      <p class="closing__links">
+        <a class="btn btn--primary" href={primaryCta.href}>
+          {primaryCta.label}
+        </a>
+        <a class="link-accent" href="/work">All public projects</a>
+      </p>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .hero__image {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: var(--gmz-well);
+  }
+
+  .facts-block {
+    margin-block-start: var(--space-xl);
+    max-inline-size: var(--width-prose);
+  }
+
+  .body {
+    margin-block-start: var(--space-xl);
+  }
+
+  .gallery {
+    list-style: none;
+    margin: var(--space-lg) 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+    gap: var(--space-lg);
+  }
+
+  .gallery__image {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: var(--gmz-well);
+  }
+
+  .figure__label + .figure__note {
+    display: block;
+  }
+
+  .reviews-block {
+    margin-block-start: var(--space-lg);
+  }
+
+  .closing {
+    padding-block-end: var(--space-3xl);
+  }
+
+  .closing__links {
+    margin-block-start: var(--space-lg);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-md) var(--space-lg);
+  }
+</style>

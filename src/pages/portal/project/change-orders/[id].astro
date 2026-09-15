@@ -1,0 +1,124 @@
+---
+/**
+ * A change order: what changes, what it adds, and its effect on the payment
+ * schedule, which California requires and which gets the amber panel rather
+ * than a footnote. Its own approve sheet, with its own amounts, is behind
+ * "Review and approve".
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import ScreenHead from '@components/portal/ScreenHead.astro';
+import StatusChip from '@components/portal/StatusChip.astro';
+import { routes } from '@data/portal/routes';
+import { status } from '@data/portal/status';
+import { loadApproval } from '../../../../server/records';
+import { projectScreen } from '../../../../server/screen';
+
+export const prerender = false;
+
+const screen = await projectScreen(Astro, {});
+if (screen instanceof Response) return screen;
+const { client, project } = screen;
+
+const id = Number(Astro.params.id);
+const changeOrder = project.changeOrders.find((entry) => entry.id === id);
+if (!changeOrder) return Astro.redirect(routes.project, 302);
+
+const approval = await loadApproval(client, `change-order:${changeOrder.id}`);
+---
+
+<PortalLayout title="Change order" property={project.display.property} footerKicker="">
+  <ScreenHead kicker={changeOrder.kicker} title={changeOrder.title}>
+    {
+      approval ? (
+        <StatusChip tone={status.done.key} label="Approved" />
+      ) : (
+        <StatusChip tone={status.needs.key} label={status.needs.label} />
+      )
+    }
+  </ScreenHead>
+
+  <div class="block stack stack--lg">
+    <section class="sect">
+      <h2 class="kicker">What changes</h2>
+      <p class="body">{changeOrder.scope}</p>
+    </section>
+
+    <section class="sect">
+      <h2 class="kicker">Amount added</h2>
+      <p class="answer answer--figure">{changeOrder.amount}</p>
+      <p class="note">{changeOrder.amountNote}</p>
+    </section>
+
+    <section class="panel panel--attention schedule" aria-labelledby="schedule">
+      <span class="kicker" id="schedule">{changeOrder.schedule.kicker}</span>
+      <dl class="record">
+        {
+          changeOrder.schedule.rows.map((row) => (
+            <div class:list={['record__row', { 'record__row--changed': row.changed }]}>
+              <dt>{row.label}</dt>
+              <dd>{row.value}</dd>
+            </div>
+          ))
+        }
+      </dl>
+      <p class="note">{changeOrder.schedule.note}</p>
+    </section>
+  </div>
+
+  <div class="block block--end actions column-only">
+    {
+      approval ? (
+        <a class="btn btn--primary" href={routes.changeApproved(changeOrder.id)}>
+          What happens next
+        </a>
+      ) : (
+        <a class="btn btn--primary" href={routes.changeConfirm(changeOrder.id)}>
+          Review and approve
+        </a>
+      )
+    }
+    <a class="btn btn--secondary" href={routes.projectAsk}>Ask a question first</a>
+    {!approval && <p class="note">{changeOrder.disclaimer}</p>}
+  </div>
+
+  <Fragment slot="rail">
+    <section class="sect" aria-labelledby="rail-amount">
+      <span class="kicker" id="rail-amount">Amount added</span>
+      <p class="answer answer--figure">{changeOrder.amount}</p>
+      <p class="note">{changeOrder.amountNoteShort}</p>
+    </section>
+    <div class="actions">
+      {
+        approval ? (
+          <a class="btn btn--primary" href={routes.changeApproved(changeOrder.id)}>
+            What happens next
+          </a>
+        ) : (
+          <a class="btn btn--primary" href={routes.changeConfirm(changeOrder.id)}>
+            Review and approve
+          </a>
+        )
+      }
+      <a class="btn btn--secondary" href={routes.projectAsk}>Ask a question first</a>
+      {!approval && <p class="note">{changeOrder.disclaimer}</p>}
+    </div>
+  </Fragment>
+</PortalLayout>
+
+<style>
+  .sect .body,
+  .sect .answer,
+
+  /* On the amber panel the row that moves is set at 600 on both sides, and
+     the rows that do not at 400, so the eye lands on the one figure that
+     changed rather than on every amount. */
+  .schedule .record__row dt,
+  .schedule .record__row dd {
+    font-weight: 400;
+  }
+
+  .schedule .record__row--changed dt,
+  .schedule .record__row--changed dd {
+    font-weight: 600;
+  }
+</style>
