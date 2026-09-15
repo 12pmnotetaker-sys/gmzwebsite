@@ -12,14 +12,18 @@ opens to search only when the domain moves. Do them in that order.
 ## 1. Turn the portal on
 
 The portal refuses politely until it has a database and a way to send mail.
-Both are environment variables on the Vercel project, for the Production and
-Preview environments.
+Configure and test Preview on `codex/homepage-refresh` first. Production is a
+separate environment and must receive its settings before the approved launch.
+Redeploy the updated branch after changing variables; redeploying an older
+Production build does not deploy the preview branch.
 
 | Variable                    | Value                                                                                   |
 | --------------------------- | --------------------------------------------------------------------------------------- |
 | `SUPABASE_URL`              | `https://xtilbzmdlelzbufhkpoj.supabase.co`, the `gmz-client-portal` project             |
 | `SUPABASE_SERVICE_ROLE_KEY` | the project's service role key, from the Supabase dashboard under Project Settings, API |
-| `RESEND_API_KEY`            | the same key the intake form uses                                                       |
+| `RESEND_API_KEY`            | private Resend sending key, entered directly in Vercel |
+| `ENQUIRY_FROM`              | verified sender; required by the public enquiry endpoint |
+| `ENQUIRY_TO`                | monitored office inbox; defaults to the company email in `site.ts` |
 | `PORTAL_FROM`               | a sender on a domain verified with the provider; falls back to `ENQUIRY_FROM`           |
 | `PORTAL_OFFICE_TO`          | where requests and approvals land; falls back to `ENQUIRY_TO`, then to `site.ts`        |
 
@@ -80,13 +84,15 @@ The cutover, in order:
    from this environment, so the map has to be made by hand from that export.
    `scripts/check-redirects.mjs <preview-url> old-paths.txt` fetches every old
    path against a deployment and reports any that do not land on a `200`.
-3. **Set `SEARCH_INDEXING=on`** on Production and redeploy. Confirm
-   `/robots.txt` reads `Allow: /` with the two `Disallow` lines for
-   `/portfolio/` and `/portal/`, and that `/sitemap-index.xml` exists.
+3. **Obtain launch approval** after the preview, redirects and email tests pass.
+   Keep the old Wix site published for rollback.
 4. **Point `www.gmzlandscape.com` and the apex at Vercel** (add the domain to
    the Vercel project first; it gives the DNS records). `SITE_URL` needs no
    change: the site already builds against `https://www.gmzlandscape.com`.
-5. **Watch the first day.** Runtime logs on the Vercel project show every
+5. **Enable indexing after the domain serves the new site.** Set
+   `SEARCH_INDEXING=on` on Production and redeploy. Confirm `/robots.txt`
+   allows public pages, disallows `/portfolio/` and `/portal/`, and that
+   `/sitemap-index.xml` exists. Then **watch the first day.** Runtime logs on the Vercel project show every
    `/api/enquiry` and portal request with a status code and nothing else. A
    `503` from the intake endpoint means neither a mail provider nor the
    database is configured; a `502` means what is configured refused it.
@@ -103,3 +109,49 @@ The cutover, in order:
   both indexing states.
 - A portal record is checked against the same house style rules as the site,
   on the way in and on the way out.
+
+## Email setup checkpoint, September 15, 2026
+
+The Wix DNS API confirmed these records were added without deleting existing
+website or business-email records. This confirms DNS configuration, not Resend
+verification or email delivery.
+
+| Type | Relative name | Value |
+| --- | --- | --- |
+| TXT | resend._domainkey.notifications | Public DKIM key supplied by the owner and saved in Wix |
+| CNAME | rsend.notifications | rsend.forge.rmta.net |
+| CNAME | send.notifications | send.forge.rmta.net |
+
+The last owner screenshot showed Pending / Checking DNS. Do not label email as
+working until Resend confirms verification and a real test reaches an approved
+recipient. No receiving MX record was added for the notification subdomain.
+
+Use a sender such as `GMZ Landscaping <portal@notifications.gmzlandscape.com>`
+for both `ENQUIRY_FROM` and `PORTAL_FROM`. Never set `PORTAL_MAIL_SINK` on Vercel.
+Do not save private API keys or service-role keys in this document or Git.
+
+Test these separately on Preview with an approved test address:
+
+- Portal: the address must belong to a portal client; the example.com seed
+  accounts cannot receive real email. Confirm a sign-in email arrives and opens
+  the correct account. An unknown address deliberately gets a generic response.
+- Public enquiry: confirm the office receives the submitted request.
+- Portfolio access: confirm the office receives the request with the correct
+  reply-to. The request does not automatically issue a portfolio code.
+- A portal request: confirm both the saved request and office notification.
+
+## Rollback preparation
+
+Immediately before cutover, read and save the then-current DNS records. The
+September 15 Wix baseline for the website was:
+
+| Record | Values | TTL |
+| --- | --- | --- |
+| Apex A | 185.230.63.171, 185.230.63.186, 185.230.63.107 | 3600 |
+| www CNAME | cdn3.wixdns.net | 3600 |
+
+If a launch must be reversed, restore only the website records changed during
+that launch, using the fresh baseline. Preserve mail, notification, app,
+portfolio, timesheet and other unrelated records. Keep Wix published until the
+new site has passed production checks. Turn search indexing off on the Vercel
+deployment if the domain is moved back to Wix.
