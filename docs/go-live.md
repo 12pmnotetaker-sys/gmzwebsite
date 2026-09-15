@@ -21,9 +21,9 @@ Production build does not deploy the preview branch.
 | --------------------------- | --------------------------------------------------------------------------------------- |
 | `SUPABASE_URL`              | `https://xtilbzmdlelzbufhkpoj.supabase.co`, the `gmz-client-portal` project             |
 | `SUPABASE_SERVICE_ROLE_KEY` | the project's service role key, from the Supabase dashboard under Project Settings, API |
-| `RESEND_API_KEY`            | private Resend sending key, entered directly in Vercel |
-| `ENQUIRY_FROM`              | verified sender; required by the public enquiry endpoint |
-| `ENQUIRY_TO`                | monitored office inbox; defaults to the company email in `site.ts` |
+| `RESEND_API_KEY`            | private Resend sending key, entered directly in Vercel                                  |
+| `ENQUIRY_FROM`              | verified sender; required by the public enquiry endpoint                                |
+| `ENQUIRY_TO`                | monitored office inbox; defaults to the company email in `site.ts`                      |
 | `PORTAL_FROM`               | a sender on a domain verified with the provider; falls back to `ENQUIRY_FROM`           |
 | `PORTAL_OFFICE_TO`          | where requests and approvals land; falls back to `ENQUIRY_TO`, then to `site.ts`        |
 
@@ -116,11 +116,11 @@ The Wix DNS API confirmed these records were added without deleting existing
 website or business-email records. This confirms DNS configuration, not Resend
 verification or email delivery.
 
-| Type | Relative name | Value |
-| --- | --- | --- |
-| TXT | resend._domainkey.notifications | Public DKIM key supplied by the owner and saved in Wix |
-| CNAME | rsend.notifications | rsend.forge.rmta.net |
-| CNAME | send.notifications | send.forge.rmta.net |
+| Type  | Relative name                   | Value                                                  |
+| ----- | ------------------------------- | ------------------------------------------------------ |
+| TXT   | resend._domainkey.notifications | Public DKIM key supplied by the owner and saved in Wix |
+| CNAME | rsend.notifications             | rsend.forge.rmta.net                                   |
+| CNAME | send.notifications              | send.forge.rmta.net                                    |
 
 The last owner screenshot showed Pending / Checking DNS. Do not label email as
 working until Resend confirms verification and a real test reaches an approved
@@ -145,10 +145,10 @@ Test these separately on Preview with an approved test address:
 Immediately before cutover, read and save the then-current DNS records. The
 September 15 Wix baseline for the website was:
 
-| Record | Values | TTL |
-| --- | --- | --- |
-| Apex A | 185.230.63.171, 185.230.63.186, 185.230.63.107 | 3600 |
-| www CNAME | cdn3.wixdns.net | 3600 |
+| Record    | Values                                         | TTL  |
+| --------- | ---------------------------------------------- | ---- |
+| Apex A    | 185.230.63.171, 185.230.63.186, 185.230.63.107 | 3600 |
+| www CNAME | cdn3.wixdns.net                                | 3600 |
 
 If a launch must be reversed, restore only the website records changed during
 that launch, using the fresh baseline. Preserve mail, notification, app,
