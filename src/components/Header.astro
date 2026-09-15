@@ -159,12 +159,12 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
   }
 
   /*
-   * Seven items, the portal link and the call to action is a lot for one bar.
+   * Eight items, the portal link and the call to action is a lot for one bar.
    * The gap and the type scale continuously with the viewport rather than
-   * stepping at a new breakpoint, and below 1120px the whole nav folds into
-   * the drawer: measured on the scale test, that is where the row would
-   * otherwise spill past the viewport by ten pixels and the call to action
-   * would wrap to two lines.
+   * stepping at a new breakpoint, and below 1240px the whole nav folds into
+   * the drawer: measured on the scale test, that is the narrowest width at
+   * which the row fits with the call to action on one line. The button never
+   * wraps; a two-line "Start a / project" reads as a mistake.
    */
   .masthead__nav {
     display: flex;
@@ -202,6 +202,7 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
   .masthead__cta {
     padding: 0.625rem 1.0625rem;
     font-size: var(--text-sm);
+    white-space: nowrap;
   }
 
   /*
@@ -258,7 +259,7 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
     background: var(--gmz-amber);
   }
 
-  @media (width < 1120px) {
+  @media (width < 1240px) {
     .masthead__nav {
       display: none;
     }
