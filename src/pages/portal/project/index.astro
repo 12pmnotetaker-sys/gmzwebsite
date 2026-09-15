@@ -1,0 +1,85 @@
+---
+/**
+ * The project landing: the screen a project client with a proposal waiting
+ * arrives at.
+ *
+ * One question, one answer: what the proposal comes to. That figure is the
+ * largest thing on the screen, on the amber panel, with the two things the
+ * client can do about it directly beneath. Everything else is secondary, in
+ * reading order: the estimate number, the priced lines with their total, and
+ * the one line that will move, with why it will and what happens when it does.
+ *
+ * On desktop the proposal panel and the two buttons move to the rail, which
+ * is why they render twice: once in the column with `column-only`, once in
+ * the rail. The steps are the same; there is just room beside them.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import StatusChip from '@components/portal/StatusChip.astro';
+import Money from '@components/portal/Money.astro';
+import { routes } from '@data/portal/routes';
+import { client, proposal } from '@data/portal/project';
+import { status } from '@data/portal/status';
+---
+
+<PortalLayout
+  title="Your project"
+  property={client.property}
+  footerKicker="Questions on this proposal"
+>
+  <header class="head stack">
+    <h1 class="kicker">{client.kicker}</h1>
+    <div class="rule-accent rule-mark" aria-hidden="true"></div>
+  </header>
+
+  <section class="panel panel--attention column-only" aria-labelledby="your-proposal">
+    <span class="kicker" id="your-proposal">Your proposal</span>
+    <p class="answer answer--figure">{proposal.total}</p>
+    <p class="body">{proposal.summary}</p>
+    <StatusChip tone={status.needs.key} label={status.needs.label} />
+  </section>
+
+  <div class="block block--tight actions column-only">
+    <a class="btn btn--primary" href={routes.proposal}>Review and approve</a>
+    <a class="btn btn--secondary" href={routes.projectAsk}>Ask for a change</a>
+  </div>
+
+  <section class="block stack stack--md">
+    <div class="sect">
+      <h2 class="kicker">Estimate</h2>
+      <p class="estimate-no">{proposal.estimateNo}</p>
+    </div>
+    <Money lines={proposal.lines} total={proposal.total} />
+    <section class="panel panel--calm" aria-labelledby="allowance">
+      <span class="kicker kicker--muted" id="allowance">{proposal.allowance.kickerShort}</span>
+      <p class="body">{proposal.allowance.short}</p>
+      <a class="link-action" href={routes.change}>How a change is priced</a>
+    </section>
+  </section>
+
+  <Fragment slot="rail">
+    <section class="panel panel--attention" aria-label="Your proposal">
+      <span class="kicker">Your proposal</span>
+      <p class="answer answer--figure">{proposal.total}</p>
+      <p class="body">{proposal.summary}</p>
+      <StatusChip tone={status.needs.key} label={status.needs.label} />
+    </section>
+    <div class="actions">
+      <a class="btn btn--primary" href={routes.proposal}>Review and approve</a>
+      <a class="btn btn--secondary" href={routes.projectAsk}>Ask for a change</a>
+    </div>
+  </Fragment>
+</PortalLayout>
+
+<style>
+  /* No photo band above this one: the head takes the block step on top and
+     the column's own step beneath. */
+  .head {
+    padding-block: var(--space-lg) var(--space-md);
+  }
+
+  /* On the landing the estimate number is set in the ink, not the muted grey
+     the shared class uses where it sits under a heading. */
+  .sect .estimate-no {
+    color: var(--color-text);
+  }
+</style>

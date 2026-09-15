@@ -1,0 +1,65 @@
+---
+/**
+ * The expired link.
+ *
+ * Recovery in one tap. A client who opened last week's email has done nothing
+ * wrong, and the screen says so before it asks for anything. The address is
+ * already filled in, masked, so the one tap is the amber button; "That is not
+ * my email" is the way out to sign-in for anyone it guessed wrong for.
+ *
+ * There is no backend behind this form yet. The input carries no `name`, so
+ * the address is never put in a URL or a request; submitting simply opens the
+ * demo garden, with JavaScript or without it. Sending a real link needs the
+ * same server sign-in needs, and that is the next planning cycle.
+ *
+ * `novalidate` is deliberate. The masked address is what the server would
+ * show, and the browser's own email check rejects the mask's bullets, which
+ * would stop the form dead on the one tap the screen exists for. With nothing
+ * behind the form there is nothing to validate against yet.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import ScreenHead from '@components/portal/ScreenHead.astro';
+import { routes } from '@data/portal/routes';
+import { primaryPhone, portalHoursLine } from '@data/site';
+---
+
+<PortalLayout title="Expired link" footerTagline>
+  <ScreenHead kicker="Sign in" title="That link expired. We can send a new one." long>
+    <p class="body">
+      Links stay live for seven days, so an old email cannot open your account. Nothing is wrong
+      with your account.
+    </p>
+  </ScreenHead>
+
+  <form action={routes.garden} method="get" novalidate>
+    <div class="block field">
+      <label class="label" for="recover">Send it to</label>
+      <input id="recover" type="email" autocomplete="email" value="k••••@gmail.com" />
+      <a class="link-action link-action--sm" href={routes.signIn}>That is not my email</a>
+    </div>
+    <div class="block stack--md">
+      <button class="btn btn--amber" type="submit">Send me a new link</button>
+      <p class="note">The new link arrives in a minute or two and lasts seven days.</p>
+    </div>
+  </form>
+
+  <section class="block block--xl panel panel--calm call" aria-labelledby="call-office">
+    <span class="kicker kicker--muted" id="call-office">Or call the office</span>
+    <a class="link-phone link-phone--answer" href={`tel:${primaryPhone.tel}`}>
+      {primaryPhone.display}
+    </a>
+    <p class="note">{portalHoursLine}</p>
+  </section>
+</PortalLayout>
+
+<style>
+  .block--xl {
+    margin-block-start: var(--space-xl);
+  }
+
+  /* On this panel the hours are the instruction, not a footnote, so they sit
+     in ink rather than the note's muted grey. */
+  .call .note {
+    color: var(--color-text);
+  }
+</style>

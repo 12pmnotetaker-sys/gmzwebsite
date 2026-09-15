@@ -1,0 +1,123 @@
+---
+/**
+ * "Add a photo."
+ *
+ * A real file input with a real preview, and the only JavaScript in the portal.
+ * Nothing is uploaded anywhere yet: the form has no backend in this pass, so
+ * the preview is the honest extent of it. The input deliberately carries no
+ * `name`, like every other typed-into control in the portal, so a chosen
+ * file's name never lands in the GET the form makes. When the request
+ * endpoint exists, give the input a name and the form `enctype`; the `name`
+ * prop here only builds the ids the labels point at.
+ *
+ * With JavaScript off it is still a working file picker; the label just does
+ * not turn into a thumbnail.
+ */
+interface Props {
+  name: string;
+  label?: string;
+  height?: number;
+  /** Two slots side by side, as on the request form. */
+  pair?: boolean;
+}
+
+const { name, label = 'Add a photo', height = 96, pair = false } = Astro.props;
+const ids = pair ? [`${name}-1`, `${name}-2`] : [name];
+---
+
+<div class:list={['photos', { 'photos--pair': pair }]}>
+  {
+    ids.map((id) => (
+      <label class="photos__slot" style={`min-height:${height}px`} data-photo-slot>
+        <input type="file" id={id} accept="image/*" class="visually-hidden" />
+        <span class="photos__label">{label}</span>
+        <img class="photos__preview" alt="" hidden data-alt-set-by-script />
+      </label>
+    ))
+  }
+</div>
+
+<script>
+  // Preview the chosen file inside its slot. Object URLs are revoked when
+  // replaced so a client picking several photos in a row does not leak them.
+  // Runs on first paint and after every client-side navigation, and the
+  // `data-ready` guard keeps a slot from being wired twice.
+  const initPhotoSlots = () =>
+    document.querySelectorAll<HTMLLabelElement>('[data-photo-slot]').forEach((slot) => {
+      const input = slot.querySelector<HTMLInputElement>('input[type=file]');
+      const img = slot.querySelector<HTMLImageElement>('img');
+      const label = slot.querySelector<HTMLElement>('.photos__label');
+      if (!input || !img || !label || slot.dataset.ready) return;
+      slot.dataset.ready = '1';
+      let url: string | null = null;
+      input.addEventListener('change', () => {
+        const file = input.files?.[0];
+        if (url) URL.revokeObjectURL(url);
+        if (!file) {
+          img.hidden = true;
+          label.hidden = false;
+          slot.classList.remove('photos__slot--filled');
+          return;
+        }
+        url = URL.createObjectURL(file);
+        img.src = url;
+        // The preview is the person's own photograph, so the alt says so. It is set
+        // here rather than in the markup because until a file is chosen the image
+        // is hidden and describes nothing.
+        img.alt = 'The photo you chose';
+        img.hidden = false;
+        label.hidden = true;
+        slot.classList.add('photos__slot--filled');
+      });
+    });
+
+  initPhotoSlots();
+  document.addEventListener('astro:page-load', initPhotoSlots);
+</script>
+
+<style>
+  .photos {
+    display: grid;
+    gap: var(--space-xs);
+  }
+
+  .photos--pair {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .photos__slot {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px dashed var(--color-border);
+    background: transparent;
+    cursor: pointer;
+    overflow: hidden;
+  }
+
+  .photos__slot--filled {
+    border-style: solid;
+    border-color: var(--color-border-strong);
+  }
+
+  .photos__slot:has(input:focus-visible) {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .photos__label {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--portal-action);
+  }
+
+  .photos__preview {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+</style>

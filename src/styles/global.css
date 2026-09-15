@@ -496,3 +496,49 @@ html[data-locked] body {
 .section {
   padding-block: var(--space-2xl);
 }
+
+/* ---- Motion ---------------------------------------------------------- */
+/*
+ * Two kinds of motion, both switched off by the reduced-motion block above.
+ *
+ * Between pages, the client router cross-fades the document. It is short:
+ * long enough to read as one site rather than a series of reloads, not long
+ * enough to be waited for.
+ *
+ * Within a public page, the blocks under the masthead rise into place as the
+ * page arrives, each a beat after the last. The client portal opts out of the
+ * rise: its rule is that nothing moves except to confirm a tap, and the
+ * cross-fade is that confirmation.
+ */
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+  animation-timing-function: var(--ease);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body:not(.portal) main > * {
+    animation: gmzRise 520ms var(--ease) both;
+  }
+
+  body:not(.portal) main > :nth-child(2) {
+    animation-delay: 60ms;
+  }
+
+  body:not(.portal) main > :nth-child(3) {
+    animation-delay: 120ms;
+  }
+
+  body:not(.portal) main > :nth-child(n + 4) {
+    animation-delay: 180ms;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

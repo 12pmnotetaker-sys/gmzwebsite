@@ -55,6 +55,13 @@ asks `isGatedPath()`, so a new page under `/portfolio` is gated because of where
 it lives. A prop can be forgotten; a path cannot. Change the set by editing
 `gatedPrefixes` in `src/data/publication.ts`, which is one line in a diff.
 
+**Gated and veiled are two sets.** `gatedPrefixes` is what robots.txt disallows
+and the sitemap excludes: `/portfolio` and `/portal`. `veiledPrefixes` is the
+subset `BaseLayout` draws the unlock veil over: `/portfolio` only. The client
+portal has its own sign-in screen and its own layout, never renders the veil,
+and marks its body `data-portal` so `content-lint` treats every portal page as
+gated in every indexing state.
+
 **The gated half does not follow the phase switch.** Turning the marketing site
 on in Phase 2 must not drag private client work into a search result with it.
 `content-lint` fails the build if it ever does.
@@ -98,6 +105,21 @@ the teal chrome), `aria-current` on the active nav item, one `h1` per page, the
 `prefers-reduced-motion` block, and real semantics on interactive pieces all
 stay. A redesign that drops one is a regression, not a style change.
 
+**Scripts survive the client router.** Public pages navigate through Astro's
+`ClientRouter`, so a component's `<script>` runs once per session, not once per
+page. Every script initialises on `astro:page-load` as well as on first paint,
+and guards against running twice (`data-ready`). Veiled pages carry no router
+and load in full, so the veil, the lightbox and the slider need none of this;
+a new script on a public page does.
+
+**The portal's own rules.** Nothing under `/portal` shows a time on site, a
+visit duration, an ETA, a map, a crew location or a progress percentage. Draws
+are dollars and cents naming their trigger, never percentages. Nothing is
+credited toward a later stage. No client is told they have a "design/build" or
+"maintenance" account; they have a project or a garden. A form input that a
+person types into carries no `name` until there is a server to receive it, so
+nothing typed ever lands in a URL.
+
 **House style for client-facing prose.**
 
 - No em-dashes. Use a comma, a semicolon or a colon.
@@ -111,22 +133,27 @@ stay. A redesign that drops one is a regression, not a style change.
 
 ## Where things are
 
-| What                       | Where                                            |
-| -------------------------- | ------------------------------------------------ |
-| Company facts              | `src/data/site.ts`                               |
-| Claims not yet allowed     | `claims` in `src/data/site.ts`                   |
-| Search indexing switch     | `src/data/publication.ts`                        |
-| Canonical URL form         | `src/data/canonical.ts`                          |
-| Design tokens              | `src/styles/tokens.css`                          |
-| Repeated patterns          | `src/styles/global.css`                          |
-| Content schemas            | `src/content.config.ts`                          |
-| The last check before live | `scripts/content-lint.mjs`                       |
-| Photograph intake          | `scripts/photo-intake.mjs`                       |
-| The intake form's fields   | `src/data/enquiry.ts`                            |
-| The intake endpoint        | `api/enquiry.ts`                                 |
-| The veil                   | `gate` in `src/data/site.ts`, `Gate.astro`       |
-| Which routes are gated     | `gatedPrefixes` in `src/data/publication.ts`     |
-| Gated content              | `src/content/portfolio/`, `src/pages/portfolio/` |
+| What                       | Where                                                                          |
+| -------------------------- | ------------------------------------------------------------------------------ |
+| Company facts              | `src/data/site.ts`                                                             |
+| Claims not yet allowed     | `claims` in `src/data/site.ts`                                                 |
+| Search indexing switch     | `src/data/publication.ts`                                                      |
+| Canonical URL form         | `src/data/canonical.ts`                                                        |
+| Design tokens              | `src/styles/tokens.css`                                                        |
+| Repeated patterns          | `src/styles/global.css`                                                        |
+| Content schemas            | `src/content.config.ts`                                                        |
+| The last check before live | `scripts/content-lint.mjs`                                                     |
+| Photograph intake          | `scripts/photo-intake.mjs`                                                     |
+| The intake form's fields   | `src/data/enquiry.ts`                                                          |
+| The intake endpoint        | `api/enquiry.ts`                                                               |
+| The veil                   | `gate` in `src/data/site.ts`, `Gate.astro`                                     |
+| Which routes are gated     | `gatedPrefixes` in `src/data/publication.ts`                                   |
+| Which of those are veiled  | `veiledPrefixes` in `src/data/publication.ts`                                  |
+| Gated content              | `src/content/portfolio/`, `src/pages/portfolio/`                               |
+| The client portal          | `src/pages/portal/`, `src/layouts/PortalLayout.astro`, `src/styles/portal.css` |
+| Portal copy and routes     | `src/data/portal/`                                                             |
+| Plant records              | `src/content/plants/`, `plants` in `src/content.config.ts`                     |
+| Portal design record       | `docs/portal-handoff.md`                                                       |
 
 ## Restyling
 
@@ -187,7 +214,11 @@ a note in a style guide.
 - **Phase 2.** The marketing site: home, services, process, about, answers,
   intake. Indexing goes on.
 - **Phase 3.** Cutover: redirects, DNS, then Wix.
-- **Phase 4.** The client portal. Separate planning cycle.
+- **Phase 4 (design landed).** The client portal under `/portal`: every screen
+  of the Claude Design prototype built as a real route, phone to desktop, light
+  and dark, with the brief's example clients as static content. The nav links
+  to its sign-in. What remains is the server side: magic links, sessions, real
+  records and the request endpoint. See `docs/portal-handoff.md`.
 
 ## Open questions for GMZ
 

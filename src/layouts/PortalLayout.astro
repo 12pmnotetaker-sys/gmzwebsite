@@ -1,0 +1,102 @@
+---
+/**
+ * Every screen in the client portal.
+ *
+ * The shape is fixed: teal top bar, one content column, teal footer. What
+ * changes with width is the gutter, and whether the secondary panel appears
+ * beside the column. The steps are the same at every width; they are just
+ * wider. The column is centred on the page at desktop and the rail hangs in
+ * the right-hand gutter beside it (see `.screen` in portal.css).
+ *
+ * Every page here is private, and that is enforced three ways that have to
+ * agree: `noindex` is set here unconditionally, `/portal` is in
+ * `gatedPrefixes` so robots.txt disallows it and the sitemap never lists it,
+ * and `data-portal` on the body tells content-lint to treat the page as gated
+ * however the marketing site's indexing switch is set.
+ *
+ * This is NOT BaseLayout with a different header. The marketing site's chrome,
+ * its nav, its veil and its footer invitation are all wrong for a client who
+ * arrived from a link to see one thing; the portal has one bar, one column
+ * and a phone number.
+ */
+import { ClientRouter } from 'astro:transitions';
+import '@styles/global.css';
+import '@styles/portal.css';
+import SEO from '@components/SEO.astro';
+import TopBar from '@components/portal/TopBar.astro';
+import PortalFooter from '@components/portal/PortalFooter.astro';
+
+interface Props {
+  /** The browser tab. The screen's own h1 is set in the page. */
+  title: string;
+  property?: string;
+  backHref?: string;
+  backLabel?: string;
+  footerKicker?: string;
+  footerTagline?: boolean;
+  footerLicence?: boolean;
+  footerHours?: boolean;
+}
+
+const {
+  title,
+  property,
+  backHref,
+  backLabel,
+  footerKicker,
+  footerTagline,
+  footerLicence,
+  footerHours,
+} = Astro.props;
+
+/*
+ * A screen has a rail when its rail slot renders something. `slots.has` is
+ * true for a slot that exists but is conditionally empty (a plant with no
+ * panel to show), which would leave an empty aside in the gutter.
+ */
+const rail = Astro.slots.has('rail') ? (await Astro.slots.render('rail')).trim() : '';
+const hasRail = rail.length > 0;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="/favicon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <meta name="generator" content={Astro.generator} />
+    <meta name="theme-color" content="#002B37" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#04171D" media="(prefers-color-scheme: dark)" />
+
+    <link
+      rel="preload"
+      href="/fonts/gabarito-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
+    <SEO title={title} description="Your private GMZ client portal." noindex />
+    <slot name="head" />
+
+    {/* Page-to-page transitions. The one motion the portal has; see portal.css. */}
+    <ClientRouter />
+  </head>
+  <body class="portal" data-portal>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <TopBar {property} {backHref} {backLabel} />
+    <main class="screen" id="main" transition:name="portal-screen">
+      <div class="screen__column">
+        <slot />
+      </div>
+      {hasRail && <aside class="screen__rail" aria-label="Also on this screen" set:html={rail} />}
+    </main>
+    <PortalFooter
+      kicker={footerKicker}
+      tagline={footerTagline}
+      licence={footerLicence}
+      hours={footerHours}
+    />
+  </body>
+</html>

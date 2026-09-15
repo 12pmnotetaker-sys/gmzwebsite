@@ -1,0 +1,91 @@
+---
+/**
+ * Your service: the cadence, the month ahead, and the agreement.
+ *
+ * The answer is "Weekly on Wednesdays". Under it, September as a list of
+ * visits, each with its status; the one that is more than routine says so in
+ * its own note. Then the last visit, for anyone who came here to read what
+ * the crew wrote, and the agreement as five facts and one sentence.
+ *
+ * On desktop the agreement moves to the rail, which is why it renders twice:
+ * once in the column with `column-only`, once in the rail. The steps are the
+ * same; there is just room beside them.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import ScreenHead from '@components/portal/ScreenHead.astro';
+import Row from '@components/portal/Row.astro';
+import Facts from '@components/portal/Facts.astro';
+import { routes } from '@data/portal/routes';
+import {
+  client,
+  september,
+  lastVisit,
+  agreement,
+  agreementNote,
+  service,
+} from '@data/portal/garden';
+---
+
+<PortalLayout
+  title="Your service"
+  property={client.property}
+  backHref={routes.garden}
+  backLabel="Back"
+  footerKicker=""
+  footerTagline
+>
+  <ScreenHead kicker={`${client.name}, ${client.town}`} title={service.headline} long />
+
+  <section class="block calendar stack stack--md">
+    <h2 class="kicker">September</h2>
+    <div class="rows">
+      {
+        september.map((day) => (
+          <Row
+            title={day.label}
+            note={day.note}
+            chip={{ tone: day.status, label: day.statusLabel }}
+          />
+        ))
+      }
+    </div>
+    <a class="row row--bare" href={routes.visit}>
+      <span class="row__text">
+        <span class="row__title">{lastVisit.kicker}</span>
+        <span class="row__note">Read what the crew wrote</span>
+      </span>
+      <span class="row__go" aria-hidden="true">&rsaquo;</span>
+    </a>
+  </section>
+
+  <section class="block stack stack--md column-only" aria-labelledby="your-agreement">
+    <div class="sect">
+      <h2 class="kicker" id="your-agreement">Your agreement</h2>
+    </div>
+    <Facts rows={agreement} />
+    <p class="note">{agreementNote}</p>
+    <a class="link-action" href={routes.documents}>Open the signed agreement</a>
+  </section>
+
+  <div class="block block--end actions">
+    <a class="btn btn--primary" href={routes.ask}>Ask for something</a>
+  </div>
+
+  <Fragment slot="rail">
+    <section class="stack stack--lg" aria-label="Your agreement">
+      <div class="sect">
+        <h2 class="kicker">Your agreement</h2>
+      </div>
+      <Facts rows={agreement} />
+      <a class="link-action" href={routes.documents}>Open the signed agreement</a>
+    </section>
+  </Fragment>
+</PortalLayout>
+
+<style>
+  /* The last-visit link sits under the closed calendar with a gap, not
+     another hairline: the list has already drawn its closing rule. */
+  .row--bare {
+    border-block-start: 0;
+  }
+</style>

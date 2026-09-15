@@ -1,0 +1,57 @@
+---
+/**
+ * Priced lines. The one held as an allowance says so on the line itself, in
+ * the amber chip, because a client scanning amounts has to see that this
+ * number will move without reading the paragraph that explains why.
+ */
+import type { LineItem } from '@data/portal/project';
+
+interface Props {
+  lines: readonly LineItem[];
+  /** Render a closing total row. */
+  total?: string;
+  /** Close the list with a hairline rather than leaving the last row open. */
+  closed?: boolean;
+}
+
+const { lines, total, closed = false } = Astro.props;
+---
+
+<div class:list={['money', { 'money--closed': closed }]}>
+  {
+    lines.map((l) => (
+      <div class="money__row">
+        {l.allowance ? (
+          <span class="money__label">
+            <span>{l.label}</span>
+            <span class="chip chip--allowance">Allowance</span>
+          </span>
+        ) : (
+          <span>{l.label}</span>
+        )}
+        <span>{l.amount}</span>
+      </div>
+    ))
+  }
+  {
+    total && (
+      <div class="money__row money__row--total">
+        <span>Total</span>
+        <span>{total}</span>
+      </div>
+    )
+  }
+</div>
+
+<style>
+  .money__label {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2xs);
+  }
+
+  .money--closed {
+    border-block-end: 1px solid var(--color-border);
+  }
+</style>

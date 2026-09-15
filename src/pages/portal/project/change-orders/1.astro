@@ -1,0 +1,96 @@
+---
+/**
+ * The change order.
+ *
+ * Three things have to show, and in this order: what changes, what it adds
+ * to the price, and what it does to the payment schedule. The third is the
+ * one no other portal shows and the one the law requires, which is why it
+ * sits on the amber panel with the row that moves set heavier than the rows
+ * that do not. The title is the change in plain words; the amount is the
+ * first figure under it. There is no back link, because a client arrives here
+ * from a link to decide one thing, and the two buttons are the two answers.
+ *
+ * On desktop the amount and the two buttons move to the rail, which is why
+ * the buttons render twice: once in the column with `column-only`, once in
+ * the rail. The amount stays in the column too, in reading order, and the
+ * rail repeats it with the shorter note. The steps are the same; there is
+ * just room beside them.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import ScreenHead from '@components/portal/ScreenHead.astro';
+import StatusChip from '@components/portal/StatusChip.astro';
+import { routes } from '@data/portal/routes';
+import { client, changeOrder } from '@data/portal/project';
+import { status } from '@data/portal/status';
+---
+
+<PortalLayout title="Change order" property={client.property} footerKicker="">
+  <ScreenHead kicker={changeOrder.kicker} title={changeOrder.title}>
+    <StatusChip tone={status.needs.key} label={status.needs.label} />
+  </ScreenHead>
+
+  <div class="block stack stack--lg">
+    <section class="sect">
+      <h2 class="kicker">What changes</h2>
+      <p class="body">{changeOrder.scope}</p>
+    </section>
+
+    <section class="sect">
+      <h2 class="kicker">Amount added</h2>
+      <p class="answer answer--figure">{changeOrder.amount}</p>
+      <p class="note">{changeOrder.amountNote}</p>
+    </section>
+
+    <section class="panel panel--attention schedule" aria-labelledby="schedule">
+      <span class="kicker" id="schedule">{changeOrder.schedule.kicker}</span>
+      <dl class="record">
+        {
+          changeOrder.schedule.rows.map((row) => (
+            <div class:list={['record__row', { 'record__row--changed': row.changed }]}>
+              <dt>{row.label}</dt>
+              <dd>{row.value}</dd>
+            </div>
+          ))
+        }
+      </dl>
+      <p class="note">{changeOrder.schedule.note}</p>
+    </section>
+  </div>
+
+  <div class="block block--end actions column-only">
+    <a class="btn btn--primary" href={routes.approved}>Review and approve</a>
+    <a class="btn btn--secondary" href={routes.projectAsk}>Ask a question first</a>
+    <p class="note">{changeOrder.disclaimer}</p>
+  </div>
+
+  <Fragment slot="rail">
+    <section class="sect" aria-labelledby="rail-amount">
+      <span class="kicker" id="rail-amount">Amount added</span>
+      <p class="answer answer--figure">{changeOrder.amount}</p>
+      <p class="note">{changeOrder.amountNoteShort}</p>
+    </section>
+    <div class="actions">
+      <a class="btn btn--primary" href={routes.approved}>Review and approve</a>
+      <a class="btn btn--secondary" href={routes.projectAsk}>Ask a question first</a>
+      <p class="note">{changeOrder.disclaimer}</p>
+    </div>
+  </Fragment>
+</PortalLayout>
+
+<style>
+  .sect .body,
+  .sect .answer,
+
+  /* On the amber panel the row that moves is set at 600 on both sides, and
+     the rows that do not at 400, so the eye lands on the one figure that
+     changed rather than on every amount. */
+  .schedule .record__row dt,
+  .schedule .record__row dd {
+    font-weight: 400;
+  }
+
+  .schedule .record__row--changed dt,
+  .schedule .record__row--changed dd {
+    font-weight: 600;
+  }
+</style>

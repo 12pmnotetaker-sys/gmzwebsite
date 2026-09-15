@@ -1,0 +1,122 @@
+---
+/**
+ * Request sent: the receipt after "Ask for something".
+ *
+ * The whole answer is one word, Sent, on the green tint, and under it the
+ * reference, the category and the sentence the client wrote, so they can see
+ * we hold the same request they sent. Nothing here is an approval; the last
+ * section says exactly where the request goes next.
+ *
+ * One component for both clients. The garden client's receipt goes back to
+ * the garden, the project client's back to the project, and the words in the
+ * receipt are each client's own; the page decides which by what it passes.
+ *
+ * On desktop the panel and the button move to the rail, which is why the
+ * page renders this twice: once in the column, once with `rail` for the rail
+ * slot. The column copy carries the panel and the record; the rail copy is
+ * the panel and the button alone.
+ */
+import StatusChip from '@components/portal/StatusChip.astro';
+import { status } from '@data/portal/status';
+
+interface Sent {
+  reference: string;
+  about: string;
+  wrote: string;
+  body: string;
+  next: string;
+}
+
+interface Props {
+  sent: Sent;
+  backHref: string;
+  backLabel: string;
+  /** The rail copy: the panel and the button, nothing else. */
+  rail?: boolean;
+}
+
+const { sent, backHref, backLabel, rail = false } = Astro.props;
+---
+
+{
+  rail ? (
+    <>
+      <section class="panel panel--done" aria-label="Your request">
+        <span class="kicker kicker--muted">Your request</span>
+        <p class="answer">Sent</p>
+        <p class="body">{sent.body}</p>
+        <StatusChip tone={status.done.key} label={status.done.label} />
+      </section>
+      <div class="actions">
+        <a class="btn btn--primary" href={backHref}>
+          {backLabel}
+        </a>
+      </div>
+    </>
+  ) : (
+    <>
+      {/* The one h1, always in the document: on desktop the panel below moves to the rail and is hidden from the column. */}
+      <h1 class="visually-hidden">Sent</h1>
+      <section class="block panel panel--done column-only" aria-labelledby="your-request">
+        <span class="kicker kicker--muted" id="your-request">
+          Your request
+        </span>
+        <p class="answer">Sent</p>
+        <p class="body">{sent.body}</p>
+        <StatusChip tone={status.done.key} label={status.done.label} />
+      </section>
+
+      <div class="block">
+        <dl class="record">
+          <div class="record__row">
+            <dt>Reference</dt>
+            <dd class="reference">{sent.reference}</dd>
+          </div>
+          <div class="record__row">
+            <dt>About</dt>
+            <dd>{sent.about}</dd>
+          </div>
+          <div class="record__row record__row--stack">
+            <dt>What you wrote</dt>
+            <dd>{sent.wrote}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <section class="block sect">
+        <h2 class="kicker">Where it goes from here</h2>
+        <p class="body">{sent.next}</p>
+      </section>
+
+      <div class="block block--end actions column-only">
+        <a class="btn btn--primary" href={backHref}>
+          {backLabel}
+        </a>
+      </div>
+    </>
+  )
+}
+
+<style>
+  /* The reference is the one mono line in the record: the estimate number's
+     stack, but in the ink rather than the muted grey, and not bold. */
+  .reference {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: 400;
+  }
+
+  /* "What you wrote" sets the label over the sentence rather than beside it,
+     because a sentence does not right-align. */
+  .record__row--stack {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2xs);
+  }
+
+  .record__row--stack dd {
+    font-weight: 400;
+    line-height: 1.5;
+    text-align: left;
+  }
+</style>

@@ -57,63 +57,77 @@ const poster = await getImage({ src: posterSource, width: 1280, format: 'webp' }
 
 <script>
   /*
-   * Load and play only when it is wanted. The source is attached here rather
-   * than in the markup so that a narrow viewport or a reduced-motion
-   * preference costs nothing at all, not merely a paused download.
+   * Runs on first paint and again after every client-side navigation: the
+   * router swaps in fresh markup and this module does not run a second time
+   * on its own. On a page without the router the event never fires and the
+   * direct call is the only one. The `data-ready` guard keeps the two from
+   * doubling up.
    */
-  const video = document.querySelector<HTMLVideoElement>('[data-hero-video]');
-  const toggle = document.querySelector<HTMLButtonElement>('[data-hero-toggle]');
-
-  if (video && toggle) {
-    const wide = window.matchMedia('(min-width: 760px)');
-    const still = window.matchMedia('(prefers-reduced-motion: reduce)');
-
-    const label = (text: string) => {
-      toggle.textContent = text;
-      toggle.setAttribute('aria-label', `${text} the background film`);
-    };
-
+  function init() {
     /*
-     * Two encodes of the same twelve seconds. VP9 is the smaller of the two
-     * and every current browser but Safari takes it; H.264 is what Safari
-     * needs. Picking here rather than with <source> children keeps the
-     * property that nothing is fetched until the checks above have passed.
+     * Load and play only when it is wanted. The source is attached here rather
+     * than in the markup so that a narrow viewport or a reduced-motion
+     * preference costs nothing at all, not merely a paused download.
      */
-    const source = () =>
-      video.canPlayType('video/webm; codecs=\"vp9\"')
-        ? video.dataset.srcWebm
-        : video.dataset.srcMp4;
+    const video = document.querySelector<HTMLVideoElement>('[data-hero-video]');
+    const toggle = document.querySelector<HTMLButtonElement>('[data-hero-toggle]');
 
-    const start = () => {
-      if (video.src || !wide.matches || still.matches) return;
-      video.src = source() ?? '';
-      toggle.hidden = false;
-      label('Pause');
-      // A refused autoplay is not a failure worth shouting about: the poster
-      // is already the right image, and the button now offers the film.
-      video.play().catch(() => label('Play'));
-    };
+    if (video && toggle) {
+      if (video.dataset.ready) return;
+      video.dataset.ready = '1';
+      const wide = window.matchMedia('(min-width: 760px)');
+      const still = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-    toggle.addEventListener('click', () => {
-      if (video.paused) {
-        video
-          .play()
-          .then(() => label('Pause'))
-          .catch(() => label('Play'));
-      } else {
-        video.pause();
-        label('Play');
-      }
-    });
+      const label = (text: string) => {
+        toggle.textContent = text;
+        toggle.setAttribute('aria-label', `${text} the background film`);
+      };
 
-    video.addEventListener('ended', () => label('Replay'));
+      /*
+       * Two encodes of the same twelve seconds. VP9 is the smaller of the two
+       * and every current browser but Safari takes it; H.264 is what Safari
+       * needs. Picking here rather than with <source> children keeps the
+       * property that nothing is fetched until the checks above have passed.
+       */
+      const source = () =>
+        video.canPlayType('video/webm; codecs=\"vp9\"')
+          ? video.dataset.srcWebm
+          : video.dataset.srcMp4;
 
-    start();
-    // Someone who turns motion back on, or rotates a tablet into a wide
-    // viewport, should get the film without reloading the page.
-    wide.addEventListener('change', start);
-    still.addEventListener('change', start);
+      const start = () => {
+        if (video.src || !wide.matches || still.matches) return;
+        video.src = source() ?? '';
+        toggle.hidden = false;
+        label('Pause');
+        // A refused autoplay is not a failure worth shouting about: the poster
+        // is already the right image, and the button now offers the film.
+        video.play().catch(() => label('Play'));
+      };
+
+      toggle.addEventListener('click', () => {
+        if (video.paused) {
+          video
+            .play()
+            .then(() => label('Pause'))
+            .catch(() => label('Play'));
+        } else {
+          video.pause();
+          label('Play');
+        }
+      });
+
+      video.addEventListener('ended', () => label('Replay'));
+
+      start();
+      // Someone who turns motion back on, or rotates a tablet into a wide
+      // viewport, should get the film without reloading the page.
+      wide.addEventListener('change', start);
+      still.addEventListener('change', start);
+    }
   }
+
+  init();
+  document.addEventListener('astro:page-load', init);
 </script>
 
 <style>

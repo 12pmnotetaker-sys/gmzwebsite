@@ -1,0 +1,64 @@
+---
+/**
+ * The application record: the after state of the application pair.
+ *
+ * The crew treated the roses on Wednesday morning, and this screen says when
+ * the beds were safe to walk on again. That is the answer, on the done panel
+ * with the Done chip under it, because the one thing a parent or a dog owner
+ * opens this screen to learn is whether it is over. Under it, the record as
+ * five facts, how long we keep it, and the way to the safety sheet.
+ *
+ * On desktop the answer panel moves to the rail, which is why it renders
+ * twice: once in the column with `column-only`, once in the rail. The steps
+ * are the same; there is just room beside them.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import StatusChip from '@components/portal/StatusChip.astro';
+import Facts from '@components/portal/Facts.astro';
+import { routes } from '@data/portal/routes';
+import { client, application } from '@data/portal/garden';
+import { status } from '@data/portal/status';
+
+const record = application.after;
+---
+
+<PortalLayout
+  title="Application record"
+  property={client.property}
+  backHref={routes.visit}
+  backLabel="Visit report"
+  footerKicker=""
+>
+  {
+    /* The one h1, always in the document: on desktop the panel below moves to the rail and is hidden from the column. */
+  }
+  <h1 class="visually-hidden">{record.answer}</h1>
+  <section class="block panel panel--done column-only" aria-labelledby="applied">
+    <span class="kicker kicker--muted" id="applied">{record.kicker}</span>
+    <p class="answer">{record.answer}</p>
+    <p class="body">{record.body}</p>
+    <StatusChip tone={status.done.key} label={status.done.label} />
+  </section>
+
+  <section class="block stack stack--md" aria-labelledby="the-record">
+    <div class="sect">
+      <h2 class="kicker" id="the-record">The record</h2>
+    </div>
+    <Facts rows={record.facts} />
+    <p class="note">{record.retention}</p>
+    <a class="link-action" href={routes.documents}>Open the safety sheet</a>
+  </section>
+
+  <div class="block block--end actions">
+    <a class="btn btn--secondary" href={routes.ask}>Ask about this</a>
+  </div>
+
+  <Fragment slot="rail">
+    <section class="panel panel--done" aria-label={record.kicker}>
+      <span class="kicker kicker--muted">{record.kicker}</span>
+      <p class="answer">{record.answer}</p>
+      <p class="body">{record.body}</p>
+      <StatusChip tone={status.done.key} label={status.done.label} />
+    </section>
+  </Fragment>
+</PortalLayout>

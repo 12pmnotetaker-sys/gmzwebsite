@@ -1,0 +1,158 @@
+---
+/**
+ * Approve, confirm: the sheet over the dimmed proposal.
+ *
+ * The proposal the client just read stays on the page, faded to a stand-in,
+ * and the sheet rises over it with the three amounts they are agreeing to,
+ * the line that says no money is due until the contract is signed, and a
+ * name field. One thing to do, one way out.
+ *
+ * There is no backend behind this form yet. The name field carries no `name`,
+ * so nothing a person types is ever put in a URL or a request; approving
+ * simply opens the approved screen, with JavaScript or without it. Recording
+ * an approval needs a server that stores the name and the time against the
+ * estimate, and that is the next planning cycle, not a change to this screen.
+ *
+ * On a phone the backdrop covers the column and the sheet sits at the bottom
+ * of it; on desktop the backdrop is in flow beneath the faded proposal and
+ * the sheet sits at the top of it, 560 wide and centred. The faded block and
+ * the backdrop share one grid cell rather than stacking with `absolute`, so
+ * the backdrop is always as tall as the sheet needs and nothing is clipped on
+ * a short phone. The faded block is hidden from assistive technology: it is a
+ * picture of the page beneath, not content.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import Money from '@components/portal/Money.astro';
+import { routes } from '@data/portal/routes';
+import { client, approval } from '@data/portal/project';
+---
+
+<PortalLayout
+  title="Review and approve"
+  property={client.property}
+  backHref={routes.proposal}
+  backLabel="Back"
+  footerKicker="Questions before you sign"
+>
+  <div class="confirm">
+    <div class="faded" aria-hidden="true">
+      <span class="kicker">Proposal, {client.name}</span>
+      <p class="answer">{client.projectName}</p>
+      <div class="faded__line"></div>
+      <div class="faded__line"></div>
+      <div class="faded__line faded__line--short"></div>
+    </div>
+
+    <div class="backdrop">
+      <form class="sheet" action={routes.approved} method="get" aria-labelledby="agreeing">
+        <header class="stack">
+          <span class="kicker">{approval.kicker}</span>
+          <h1 class="answer" id="agreeing">{approval.headline}</h1>
+        </header>
+        <Money lines={approval.lines} closed />
+        <p class="body">{approval.body}</p>
+        <div class="field">
+          <label class="label" for="signer">Type your full name</label>
+          <input id="signer" type="text" autocomplete="name" value={approval.signerPlaceholder} />
+        </div>
+        <div class="actions">
+          <button class="btn btn--primary" type="submit">Approve this proposal</button>
+          <a class="btn btn--secondary" href={routes.proposal}>Back to the proposal</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</PortalLayout>
+
+<style>
+  /* The faded proposal and the backdrop share one cell, so the cell is as
+     tall as the sheet needs and the backdrop covers all of it. On a phone the
+     block bleeds to the screen's edges and down to the footer, as the sheet
+     does in the design; the tablet column is already inset, so it stops. */
+  .confirm {
+    flex: 1 0 auto;
+    display: grid;
+    grid-template-rows: 1fr;
+    min-height: 46rem;
+    margin-inline: calc(-1 * var(--portal-gutter));
+    margin-block-end: calc(-1 * var(--space-xl));
+  }
+
+  .faded,
+  .backdrop {
+    grid-area: 1 / 1;
+  }
+
+  /* Opacity below 1 makes this a stacking context that paints above its
+     in-flow sibling, and it stretches to the whole cell, so without these two
+     lines it would sit over the sheet and swallow every tap on it. It is a
+     picture; it takes no pointer. */
+  .faded {
+    padding: var(--space-lg) var(--portal-gutter);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  .faded__line {
+    height: 5px;
+    background: var(--portal-hair);
+  }
+
+  .faded__line--short {
+    width: 70%;
+  }
+
+  /* The dimming is the chrome teal at 72%, whatever the theme. */
+  .backdrop {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    background: rgb(0 43 55 / 72%);
+  }
+
+  .sheet {
+    width: 100%;
+    padding: var(--space-lg) var(--portal-gutter) var(--space-xl);
+    background: var(--color-bg);
+    border-block-start: var(--rule-accent) solid var(--color-highlight);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  @media (min-width: 48rem) {
+    .confirm {
+      margin-inline: 0;
+      margin-block-end: 0;
+    }
+
+    .faded {
+      padding-inline: 0;
+    }
+  }
+
+  /* Desktop: the backdrop is in flow beneath the faded proposal, and the
+     sheet sits at the top of it, 560 wide and centred. */
+  @media (min-width: 75rem) {
+    .confirm {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .backdrop {
+      align-items: flex-start;
+      padding: var(--space-xl) 0 var(--space-2xl);
+    }
+
+    .sheet {
+      max-width: 35rem;
+    }
+  }
+</style>

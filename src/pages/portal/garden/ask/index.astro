@@ -1,0 +1,29 @@
+---
+/**
+ * Ask for something, from the garden.
+ *
+ * The form is AskForm; this page only says who is asking and where the
+ * confirmation is. On desktop the send block moves to the rail, so AskForm
+ * renders a second time there with `rail`, and its button submits the form in
+ * the column.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import AskForm from '@components/portal/AskForm.astro';
+import { company } from '@data/site';
+import { routes } from '@data/portal/routes';
+import { client } from '@data/portal/garden';
+---
+
+<PortalLayout
+  title="Ask for something"
+  property={client.property}
+  backHref={routes.garden}
+  backLabel="Back"
+  footerKicker={company.legalName}
+>
+  <AskForm kicker={`${client.name}, ${client.town}`} sentHref={routes.asked} />
+
+  <Fragment slot="rail">
+    <AskForm rail />
+  </Fragment>
+</PortalLayout>

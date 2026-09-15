@@ -1,0 +1,29 @@
+---
+/**
+ * Ask for something, from the project.
+ *
+ * The same form the garden client uses, entered from the project: AskForm
+ * with the project client's kicker, and the back link to the project. On
+ * desktop the send block moves to the rail, so AskForm renders a second time
+ * there with `rail`, and its button submits the form in the column.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import AskForm from '@components/portal/AskForm.astro';
+import { company } from '@data/site';
+import { routes } from '@data/portal/routes';
+import { client } from '@data/portal/project';
+---
+
+<PortalLayout
+  title="Ask for something"
+  property={client.property}
+  backHref={routes.project}
+  backLabel="Back"
+  footerKicker={company.legalName}
+>
+  <AskForm kicker={`${client.name}, ${client.town}`} sentHref={routes.projectAsked} />
+
+  <Fragment slot="rail">
+    <AskForm rail />
+  </Fragment>
+</PortalLayout>

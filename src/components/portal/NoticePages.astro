@@ -1,0 +1,102 @@
+---
+/**
+ * The statutory notices: the three-day right to cancel, the mechanics lien
+ * warning, and the cancellation form.
+ *
+ * These render as the PDF that goes on file, not as reflowed HTML. The wording
+ * is statutory, so what the client reads has to be the document, page for
+ * page. Until the signed PDF is wired in, this is a plate that says so, with
+ * the page headings real and the body drawn as lines: a stand-in that cannot
+ * be mistaken for the legal text.
+ *
+ * When the real document is available, replace the plate with an <object>
+ * pointing at the PDF and keep the "open the document" link as the fallback.
+ */
+interface Props {
+  /** Path to the signed PDF, once it exists. Renders the embed when set. */
+  src?: string;
+}
+
+const { src } = Astro.props;
+---
+
+<div class="notices well">
+  {
+    src ? (
+      <object class="notices__pdf" data={src} type="application/pdf">
+        <a class="link-action" href={src}>
+          Open the notices as a document
+        </a>
+      </object>
+    ) : (
+      <div class="notices__page" aria-label="Notice pages, rendered from the contract document">
+        <span class="notices__h">THREE-DAY RIGHT TO CANCEL</span>
+        <div class="notices__lines" aria-hidden="true">
+          <i />
+          <i />
+          <i style="width:82%" />
+          <i />
+          <i style="width:64%" />
+        </div>
+        <span class="notices__h">MECHANICS LIEN WARNING</span>
+        <div class="notices__lines" aria-hidden="true">
+          <i />
+          <i />
+          <i style="width:71%" />
+        </div>
+        <span class="notices__folio">Page 1 of 3</span>
+      </div>
+    )
+  }
+</div>
+
+<style>
+  .notices {
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .notices__pdf {
+    width: 100%;
+    aspect-ratio: 8.5 / 11;
+    background: #fff;
+  }
+
+  /* The page is always white with dark type, whatever the theme: it is a
+     picture of a document, not part of the interface. */
+  .notices__page {
+    background: #ffffff;
+    color: #222222;
+    padding: var(--space-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    box-shadow: 0 1px 0 rgb(0 0 0 / 18%);
+  }
+
+  .notices__h {
+    font-size: var(--text-sm);
+    font-weight: 800;
+    line-height: var(--leading-snug);
+  }
+
+  .notices__lines {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .notices__lines i {
+    display: block;
+    height: 5px;
+    background: #c9cdce;
+  }
+
+  .notices__folio {
+    font-size: var(--text-xs);
+    line-height: 1.4;
+    color: #4a5558;
+  }
+</style>

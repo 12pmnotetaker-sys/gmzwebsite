@@ -1,0 +1,93 @@
+---
+/**
+ * Plants in your garden: every plant on record, and what each one needs.
+ *
+ * The screen leads with what is waiting on the client. The amber panel says
+ * how many plants need a decision, and those plants sit at the top of the
+ * list, each with the crew's recommendation and a green line that names the
+ * decision. Every other plant follows as a plain row: the name, the species
+ * in italic under it, and a chip. Nothing is decided from here; each row
+ * opens the plant's own record, where the decision is made.
+ *
+ * On desktop the amber panel and the button move to the rail, which is why
+ * they render twice: once in the column with `column-only`, once in the
+ * rail. The steps are the same; there is just room beside them.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import ScreenHead from '@components/portal/ScreenHead.astro';
+import StatusChip from '@components/portal/StatusChip.astro';
+import Row from '@components/portal/Row.astro';
+import { routes } from '@data/portal/routes';
+import { client, plantsWaiting } from '@data/portal/garden';
+import { getPlants, plantHref } from '@data/portal/plants';
+
+const plants = await getPlants();
+---
+
+<PortalLayout
+  title="Plants in your garden"
+  property={client.property}
+  backHref={routes.garden}
+  footerKicker=""
+>
+  <ScreenHead kicker={`${client.name}, ${client.town}`} title="Plants in your garden" long />
+
+  <section
+    class="block block--tight panel panel--attention column-only"
+    aria-labelledby="waiting-on-you"
+  >
+    <span class="kicker" id="waiting-on-you">{plantsWaiting.kicker}</span>
+    <p class="sub">{plantsWaiting.headline}</p>
+    <p class="body">{plantsWaiting.body}</p>
+  </section>
+
+  <div class="block rows plants">
+    {
+      plants.map((plant) =>
+        plant.data.flag ? (
+          <a class="row row--stack" href={plantHref(plant)}>
+            <span class="row__head">
+              <span class="row__text">
+                <span class="row__title">{plant.data.listName ?? plant.data.name}</span>
+                <span class="row__note">{plant.data.species}</span>
+              </span>
+              <StatusChip tone={plant.data.status.tone} label={plant.data.status.label} />
+            </span>
+            <p class="body">{plant.data.flag.recommendation}</p>
+            <span class="link-action link-action--sm">
+              {plant.data.flag.action} <span aria-hidden="true">&rsaquo;</span>
+            </span>
+          </a>
+        ) : (
+          <Row
+            href={plantHref(plant)}
+            title={plant.data.listName ?? plant.data.name}
+            note={plant.data.species}
+            chip={plant.data.status}
+          />
+        ),
+      )
+    }
+  </div>
+
+  <div class="block block--end actions column-only">
+    <a class="btn btn--secondary" href={routes.ask}>Ask about a plant</a>
+  </div>
+
+  <Fragment slot="rail">
+    <section class="panel panel--attention" aria-label="Waiting on you">
+      <span class="kicker">{plantsWaiting.kicker}</span>
+      <p class="sub">{plantsWaiting.headline}</p>
+      <p class="body">{plantsWaiting.bodyRail}</p>
+    </section>
+    <a class="btn btn--secondary" href={routes.ask}>Ask about a plant</a>
+  </Fragment>
+</PortalLayout>
+
+<style>
+  /* On a list row the species is the row note under the name, in italic,
+     whether the row is stacked for a decision or plain. */
+  .plants :global(.row__note) {
+    font-style: italic;
+  }
+</style>

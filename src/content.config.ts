@@ -691,4 +691,95 @@ const towns = defineCollection({
     }),
 });
 
-export const collections = { projects, services, reviews, faqs, portfolio, articles, towns };
+/* ---------------------------------------------------------------------- */
+/* The client portal                                                       */
+/* ---------------------------------------------------------------------- */
+
+/**
+ * The plant record.
+ *
+ * This is the portal's differentiator screen, and the schema is what makes it
+ * a record rather than a feature: a plant that cannot say where it is or what
+ * it needs fails the build instead of rendering a gap.
+ *
+ * Two rules the schema enforces on purpose:
+ *
+ *  - `protectedTree` requires BOTH a permit reference and the jurisdiction. A
+ *    protected tree with no permit number on screen is worse than useless to a
+ *    client who is about to ask a tree service for a quote.
+ *  - `flag.recommendation` is what the crew is suggesting, in words. There is
+ *    no place to put a price, because asking about a plant is never an
+ *    approval and the portal never quotes one here.
+ *
+ * Optional fields are genuinely optional. Where the design gives a plant no
+ * care history, the record shows no care history rather than inventing one.
+ *
+ * Every route built from this collection sits under `/portal`, which is in
+ * `gatedPrefixes` and is never indexable. Location is the client's own
+ * geography ("front garden, back corner"), never an address.
+ */
+const chip = z.object({
+  tone: z.enum(['done', 'scheduled', 'needs']),
+  label: z.string().min(1),
+});
+
+const plants = defineCollection({
+  loader: glob({ base: './src/content/plants', pattern: '**/*.md' }),
+  schema: z.object({
+    /** What a person calls it. Always leads; the species sits underneath. */
+    name: z.string().min(1),
+    /** Botanical name, rendered in italic under the common name. */
+    species: z.string().min(1),
+    /** Where it is, in the client's own geography. Never an address. */
+    where: z.string().min(1),
+    /** The chip on list rows. The tone picks the colour; the label is always shown. */
+    status: chip,
+    /** The one-line summary used on list rows. */
+    summary: z.string().min(1),
+    /** How the plants list names it, when that differs from `name`. */
+    listName: z.string().optional(),
+    /** When it went in, or when it first appeared on the record. */
+    onRecordSince: z.string().optional(),
+    /** What it needs from us, in plain words. Never a schedule code. */
+    water: z.string().optional(),
+    /** The condition chip inside the record's fact list. */
+    condition: chip.optional(),
+    /** A protected tree shows its permit and the jurisdiction, or it is not protected. */
+    protectedTree: z
+      .object({
+        headline: z.string().min(1),
+        jurisdiction: z.string().min(1),
+        permit: z.string().min(1),
+        body: z.string().min(1),
+      })
+      .optional(),
+    /** What the crew has flagged, and what they suggest. Words, never a price. */
+    flag: z
+      .object({
+        recommendation: z.string().min(1),
+        /** The green action line on the list row. */
+        action: z.string().min(1),
+      })
+      .optional(),
+    careHistory: z.array(z.object({ when: z.string().min(1), what: z.string().min(1) })).optional(),
+    /** The caption on the photo plate, so an empty slot still says what it is. */
+    plate: z.string().optional(),
+    /** List order on the plants screen. Flagged plants first. */
+    order: z.number(),
+    /** Whether this one shows in the short list on the garden landing. */
+    onLanding: z.boolean().default(false),
+    /** The row note used on the landing, which is shorter than the summary. */
+    landingNote: z.string().optional(),
+  }),
+});
+
+export const collections = {
+  projects,
+  services,
+  reviews,
+  faqs,
+  portfolio,
+  articles,
+  towns,
+  plants,
+};

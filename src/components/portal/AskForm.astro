@@ -1,0 +1,120 @@
+---
+/**
+ * The request form: "Ask for something."
+ *
+ * One form for both clients. The garden client reaches it from the landing,
+ * the project client from the project, and the only thing that changes is the
+ * kicker over the title and where "Send it" goes afterwards. What is it
+ * about, what would you like, a photo or two, and the line that says sending
+ * is not an approval.
+ *
+ * There is no backend behind it yet. The textarea and the photo inputs carry
+ * no `name`, so nothing a person types is ever put in a URL; submitting simply
+ * opens the confirmation screen, with JavaScript or without it. The radios do
+ * carry a shared name, because that is what makes them a set, and a fixed
+ * choice is not something a person typed.
+ *
+ * On desktop the send block moves to the rail, which is why it renders twice:
+ * once in the column with `column-only`, once in the rail with `rail`. The
+ * send block sits after the form in both places, so both "Send it" buttons
+ * submit the column's form by id, and there is still one form.
+ */
+import ScreenHead from '@components/portal/ScreenHead.astro';
+import PhotoField from '@components/portal/PhotoField.astro';
+import { request } from '@data/portal/garden';
+import { primaryPhone } from '@data/site';
+
+type Props =
+  /** The form itself, in the column. */
+  | { kicker: string; sentHref: string; rail?: false }
+  /** The send block alone, for the desktop rail. It submits the column's form. */
+  | { rail: true; kicker?: undefined; sentHref?: undefined };
+
+/* Read through `props` rather than destructured, so `rail` narrows the union. */
+const props = Astro.props;
+
+const formId = 'ask-form';
+const slug = (label: string) => label.toLowerCase().replace(/\s+/g, '-');
+---
+
+{
+  !props.rail && (
+    <>
+      <ScreenHead kicker={props.kicker} title="Ask for something" long />
+
+      <form class="block stack stack--lg" id={formId} action={props.sentHref} method="get">
+        <fieldset class="group">
+          <legend class="label">What is it about</legend>
+          <div class="choices">
+            {request.categories.map((category, i) => (
+              <label class="choice">
+                <input type="radio" name="about" value={slug(category)} checked={i === 0} />
+                <span>{category}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        <div class="field">
+          <label class="label" for="ask-what">
+            What would you like
+          </label>
+          <textarea id="ask-what" rows="5" placeholder={request.placeholder} />
+        </div>
+
+        <fieldset class="group">
+          <legend class="label">Photos, if it helps</legend>
+          <PhotoField name="photos" pair />
+        </fieldset>
+      </form>
+    </>
+  )
+}
+
+<div class:list={['send', props.rail ? 'send--rail' : ['block', 'block--end', 'column-only']]}>
+  <p class="aside-note">{request.disclaimer}</p>
+  <div class="actions">
+    <button class="btn btn--primary" type="submit" form={formId}> Send it </button>
+    <a class="btn btn--secondary" href={`tel:${primaryPhone.tel}`}>Call instead</a>
+  </div>
+  <p class="note">{request.urgent}</p>
+</div>
+
+<style>
+  /* A fieldset is the right element for a set of choices; the browser's box
+     around it is not. The min-width reset is what lets the chips wrap on a
+     narrow phone. */
+  .group {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-inline-size: 0;
+  }
+
+  .group > legend {
+    padding: 0 0 var(--space-xs);
+  }
+
+  .send {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  /* In the column everything in the block sits one step apart, the two
+     buttons included. */
+  .send > .actions {
+    gap: var(--space-sm);
+  }
+
+  /* In the rail the note stands apart from the buttons, and the buttons and
+     the warning under them sit closer together. */
+  .send--rail,
+  .send--rail > .actions {
+    gap: var(--space-xs);
+  }
+
+  .send--rail > .aside-note {
+    margin-block-end: calc(var(--space-lg) - var(--space-xs));
+  }
+</style>

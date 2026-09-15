@@ -1,0 +1,66 @@
+---
+/**
+ * Sign in.
+ *
+ * For corporate accounts with several properties. "Email me a link instead"
+ * sits under the password, because anyone arriving here from a bookmark has
+ * forgotten it.
+ *
+ * There is no backend behind this form yet. Neither input carries a `name`, so
+ * nothing a person types is ever put in a URL or a request; submitting simply
+ * opens the demo garden, with JavaScript or without it. Real sign-in needs a
+ * server that issues sessions and emails links, and that is the next planning
+ * cycle, not a change to this screen.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import ScreenHead from '@components/portal/ScreenHead.astro';
+import { routes } from '@data/portal/routes';
+import { primaryPhone } from '@data/site';
+---
+
+<PortalLayout title="Sign in" footerTagline>
+  <ScreenHead kicker="Sign in" title="Sign in to your properties" long>
+    <p class="body note--lead">
+      For accounts that hold more than one property. One garden, one project: use the link we email
+      you.
+    </p>
+  </ScreenHead>
+
+  <form class="block stack--lg signin" action={routes.garden} method="get">
+    <div class="field">
+      <label class="label" for="email">Email</label>
+      <input id="email" type="email" autocomplete="username" placeholder="you@company.com" />
+    </div>
+    <div class="field">
+      <label class="label" for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password" />
+      <a class="link-action" href={routes.linkExpired}>Email me a link instead</a>
+    </div>
+    <button class="btn btn--primary" type="submit">Sign in</button>
+  </form>
+
+  <section class="block block--xl sect">
+    <h2 class="kicker">Trouble getting in</h2>
+    <p class="body">Call the office and we will read you anything the portal would show you.</p>
+    <a class="link-phone" href={`tel:${primaryPhone.tel}`}>{primaryPhone.display}</a>
+  </section>
+</PortalLayout>
+
+<style>
+  .signin {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .note--lead {
+    color: var(--color-text-muted);
+  }
+
+  .block--xl {
+    margin-block-start: var(--space-xl);
+  }
+
+  .sect .link-phone {
+    margin-block-start: var(--space-2xs);
+  }
+</style>

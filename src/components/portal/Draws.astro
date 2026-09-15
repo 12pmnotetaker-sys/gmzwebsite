@@ -1,0 +1,35 @@
+---
+/**
+ * The draw schedule. One row per milestone, in dollars and cents, each naming
+ * what triggers it. Never a percentage. The row that moves with the allowance
+ * says so in its own trigger text.
+ */
+import type { Draw } from '@data/portal/project';
+
+interface Props {
+  draws: readonly Draw[];
+}
+
+const { draws } = Astro.props;
+---
+
+<div class="draws">
+  {
+    draws.map((d) => (
+      <div class="draw">
+        <div class="draw__head">
+          <span>{d.label}</span>
+          <span>{d.amount}</span>
+        </div>
+        <p class="note">{d.trigger}</p>
+      </div>
+    ))
+  }
+</div>
+
+<style>
+  .draws {
+    display: flex;
+    flex-direction: column;
+  }
+</style>

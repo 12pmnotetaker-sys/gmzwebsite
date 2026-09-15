@@ -327,6 +327,10 @@ export const licenseShort = `CSLB #${company.license.number}`;
 /** "the Peninsula", for use mid-sentence where the capital would read oddly. */
 export const serviceRegionInline = company.serviceRegion.replace(/^The\b/, 'the');
 export const hoursInline = `${company.hours.daysShort} ${company.hours.time}`;
+/** "Monday to Friday, 8am – 4pm", for the portal's footer and its recovery screen. */
+export const hoursSentence = `${company.hours.days}, ${company.hours.time}`;
+/** The same, with the offer the portal makes beside it. One home for both screens. */
+export const portalHoursLine = `${hoursSentence}. We can read you anything the portal would show you.`;
 export const foundedLine = `since ${company.founded}`;
 
 export const site = {
@@ -416,8 +420,9 @@ export interface NavItem {
  * derives `noindex` from `isGatedPath`, robots.txt disallows the prefix, and
  * the sitemap excludes it, all from the route rather than from this list.
  *
- * `/portal` is deliberately absent. The route is reserved for the client
- * portal and the nav slot goes in when there is something behind it.
+ * The client portal is not in this list on purpose. It is a different kind of
+ * link, for a different visitor, and Header.astro sets it beside the call to
+ * action from `portalNav` in src/data/portal/routes.ts.
  */
 export const primaryNav: NavItem[] = [
   { label: 'The Work', href: '/work' },

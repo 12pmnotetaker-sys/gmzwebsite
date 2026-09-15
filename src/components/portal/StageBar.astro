@@ -1,0 +1,42 @@
+---
+/**
+ * The stage bar.
+ *
+ * Twelve segments for a project, seven for a garden, three for a one-off
+ * visit. The current segment is thicker rather than a different colour so it
+ * survives a screenshot or a print. The caption names the stages; nothing
+ * here is a percentage.
+ */
+interface Props {
+  total: number;
+  /** How many segments are complete. */
+  done: number;
+  /** The 1-based index of the current segment. */
+  now: number;
+  caption: string;
+}
+
+const { total, done, now, caption } = Astro.props;
+const segments = Array.from({ length: total }, (_, i) => {
+  const n = i + 1;
+  if (n === now) return 'now';
+  if (n <= done) return 'done';
+  return 'todo';
+});
+---
+
+<div class="stagebar">
+  <div class="stagebar__track" role="img" aria-label={caption}>
+    {
+      segments.map((s) => (
+        <div
+          class:list={[
+            'stagebar__seg',
+            { 'stagebar__seg--done': s === 'done', 'stagebar__seg--now': s === 'now' },
+          ]}
+        />
+      ))
+    }
+  </div>
+  <p class="note">{caption}</p>
+</div>
