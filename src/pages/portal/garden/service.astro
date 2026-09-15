@@ -1,46 +1,40 @@
 ---
 /**
- * Your service: the cadence, the month ahead, and the agreement.
- *
- * The answer is "Weekly on Wednesdays". Under it, September as a list of
- * visits, each with its status; the one that is more than routine says so in
- * its own note. Then the last visit, for anyone who came here to read what
- * the crew wrote, and the agreement as five facts and one sentence.
- *
- * On desktop the agreement moves to the rail, which is why it renders twice:
- * once in the column with `column-only`, once in the rail. The steps are the
- * same; there is just room beside them.
+ * Your service: the calendar for the month and the agreement.
  */
 import PortalLayout from '@layouts/PortalLayout.astro';
 import ScreenHead from '@components/portal/ScreenHead.astro';
 import Row from '@components/portal/Row.astro';
 import Facts from '@components/portal/Facts.astro';
 import { routes } from '@data/portal/routes';
-import {
-  client,
-  september,
-  lastVisit,
-  agreement,
-  agreementNote,
-  service,
-} from '@data/portal/garden';
+import { gardenScreen } from '../../../server/screen';
+
+export const prerender = false;
+
+const screen = await gardenScreen(Astro, {});
+if (screen instanceof Response) return screen;
+const { garden } = screen;
 ---
 
 <PortalLayout
   title="Your service"
-  property={client.property}
+  property={garden.display.property}
   backHref={routes.garden}
   backLabel="Back"
   footerKicker=""
   footerTagline
 >
-  <ScreenHead kicker={`${client.name}, ${client.town}`} title={service.headline} long />
+  <ScreenHead
+    kicker={`${garden.display.name}, ${garden.display.town}`}
+    title={garden.service.headline}
+    long
+  />
 
   <section class="block calendar stack stack--md">
-    <h2 class="kicker">September</h2>
+    <h2 class="kicker">{garden.calendar.month}</h2>
     <div class="rows">
       {
-        september.map((day) => (
+        garden.calendar.days.map((day) => (
           <Row
             title={day.label}
             note={day.note}
@@ -51,7 +45,7 @@ import {
     </div>
     <a class="row row--bare" href={routes.visit}>
       <span class="row__text">
-        <span class="row__title">{lastVisit.kicker}</span>
+        <span class="row__title">{garden.lastVisit.kicker}</span>
         <span class="row__note">Read what the crew wrote</span>
       </span>
       <span class="row__go" aria-hidden="true">&rsaquo;</span>
@@ -62,8 +56,8 @@ import {
     <div class="sect">
       <h2 class="kicker" id="your-agreement">Your agreement</h2>
     </div>
-    <Facts rows={agreement} />
-    <p class="note">{agreementNote}</p>
+    <Facts rows={garden.agreement} />
+    <p class="note">{garden.agreementNote}</p>
     <a class="link-action" href={routes.documents}>Open the signed agreement</a>
   </section>
 
@@ -76,7 +70,7 @@ import {
       <div class="sect">
         <h2 class="kicker">Your agreement</h2>
       </div>
-      <Facts rows={agreement} />
+      <Facts rows={garden.agreement} />
       <a class="link-action" href={routes.documents}>Open the signed agreement</a>
     </section>
   </Fragment>

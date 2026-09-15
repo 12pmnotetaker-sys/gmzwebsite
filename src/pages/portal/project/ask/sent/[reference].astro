@@ -1,0 +1,39 @@
+---
+/**
+ * The project client's receipt, in the project's chrome, with the project's
+ * own words and a way back to the project.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import RequestSent from '@components/portal/RequestSent.astro';
+import { routes } from '@data/portal/routes';
+import { loadRequest } from '../../../../../server/records';
+import { projectScreen } from '../../../../../server/screen';
+
+export const prerender = false;
+
+const screen = await projectScreen(Astro, {});
+if (screen instanceof Response) return screen;
+const { client, project } = screen;
+
+const request = await loadRequest(client, Astro.params.reference ?? '');
+if (!request) return Astro.redirect(routes.project, 302);
+
+const sent = {
+  reference: request.reference,
+  about: request.about,
+  wrote: request.body || 'Nothing written; the choices you made are on the request.',
+  body: project.requestAck.body,
+  next: project.requestAck.next,
+};
+---
+
+<PortalLayout
+  title="Request sent"
+  property={project.display.property}
+  footerKicker="Something urgent"
+>
+  <RequestSent sent={sent} backHref={routes.project} backLabel="Back to your project" />
+  <Fragment slot="rail">
+    <RequestSent sent={sent} backHref={routes.project} backLabel="Back to your project" rail />
+  </Fragment>
+</PortalLayout>

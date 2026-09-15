@@ -5,10 +5,10 @@ deployed to Vercel at `gmzlandscape.com`.
 
 This repo carries all three of GMZ's surfaces in one site: the public marketing
 pages, the private portfolio under `/portfolio` behind its veil, and the client
-portal under `/portal` with its sign-in in the nav. The marketing routes are
-still being written and the whole site is `noindex` until Phase 2; the portal
-is the design built for real, with the brief's example clients as content,
-ahead of the server side that will sign a client in.
+portal under `/portal` with its sign-in in the nav. The marketing pages are
+built and stay `noindex` until the domain moves (`docs/go-live.md`); the
+portal signs a client in by an emailed link, reads their own record from the
+`gmz-client-portal` database, and keeps what they send.
 
 The live `gmz-portfolio` deployment is untouched and still serving prospects.
 Nothing switches over until the Phase 3 cutover.
@@ -52,8 +52,8 @@ committed with coordinates in it stays that way even after it is deleted.
 
 ## The intake form
 
-`/start` posts to `api/enquiry.ts`, a Vercel Function. It is the one part of
-this site that can fail silently, so it is built not to.
+`/start` posts to `src/pages/api/enquiry.ts`, an endpoint rendered on demand.
+It is the one part of this site that can fail silently, so it is built not to.
 
 **A static host answers `200` to a form POST whether or not anything is
 listening.** The thank-you panel would report success, the client would believe
@@ -81,30 +81,58 @@ The field lists and the validation live in `src/data/enquiry.ts` and are
 imported by both the form and the function, so the browser and the server cannot
 disagree about what a valid answer is.
 
+## The client portal
+
+`/portal` is rendered on demand for one signed-in client. The same two
+Supabase variables above turn it on, plus the mail provider for sign-in links
+(`PORTAL_FROM` and `PORTAL_OFFICE_TO`, which fall back to the `ENQUIRY_*`
+values). Until they are set the sign-in screen says the portal is not switched
+on and gives the phone number.
+
+The office works the portal from the command line:
+
+```sh
+npm run portal -- seed                      # the brief's two example clients
+npm run portal -- add --email … --name … --kind garden|project
+npm run portal -- record --email … --file record.json
+npm run portal -- plants --email … --file plants.json
+npm run portal -- link --email …            # a sign-in link, without sending it
+npm run portal -- requests                  # anything the office was not emailed about
+```
+
+A record is checked against `src/data/portal/shapes.ts` and the house style
+rules on the way in, and again on the way out, so a screen never renders one
+that breaks either. `docs/portal-handoff.md` is the design record and
+`docs/go-live.md` the runbook.
+
 ## What is where
 
 ```
 src/
-  pages/portal/          the client portal, one route per screen
+  pages/portal/          the client portal, one route per screen, rendered on demand
   layouts/PortalLayout.astro
   styles/portal.css      the portal's repeated patterns, on top of global.css
-  data/portal/           the portal's copy, routes and status states
-  content/plants/        one record per plant in a client's garden
+  data/portal/           routes, the record shapes, and the seed records
+  server/                sessions and links, mail, record loaders, requests
+  middleware.ts          who is asking, on every portal request
+  pages/api/enquiry.ts   the intake endpoint; see "The intake form" above
   data/site.ts           every company fact, once
   data/publication.ts    the search-indexing switch
   data/canonical.ts      the canonical URL form
   styles/tokens.css      the palette; names stable, values swappable
   styles/global.css      fonts, reset, and the repeated design patterns
-  content.config.ts      schemas: projects (town only), services, testimonials,
-                         faqs, and portfolio (gated, street names)
+  content.config.ts      schemas: projects (town only), services, reviews,
+                         faqs, articles, towns, and portfolio (gated, street names)
   content/portfolio/     the seven gated project entries
   pages/portfolio/       the gated index, project pages and walkthroughs
   layouts/               BaseLayout
   data/enquiry.ts        the intake form's fields, and the shared validation
   components/            Header, Footer, Logo, SEO, PageHeader, EnquiryForm, Gate
   pages/                 the routes
-api/enquiry.ts           the intake endpoint; see "The intake form" above
-scripts/content-lint.mjs the written rules, checked against built HTML
+supabase/migrations/     the portal's tables, as applied to gmz-client-portal
+scripts/portal-admin.ts  the office's command line for the portal
+scripts/content-lint.mjs the written rules, checked against the built site
+scripts/lib/copy-rules.mjs the house style as regexes, shared with the portal
 ```
 
 ## Design

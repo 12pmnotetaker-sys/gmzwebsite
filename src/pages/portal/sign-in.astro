@@ -2,47 +2,195 @@
 /**
  * Sign in.
  *
- * For corporate accounts with several properties. "Email me a link instead"
- * sits under the password, because anyone arriving here from a bookmark has
+ * Two ways in, one screen. Most clients type their address and get a link;
+ * accounts that hold more than one property have a password as well, and the
+ * password field is there for them. Leaving it empty asks for a link, which
+ * is the right default because anyone arriving here from a bookmark has
  * forgotten it.
  *
- * There is no backend behind this form yet. Neither input carries a `name`, so
- * nothing a person types is ever put in a URL or a request; submitting simply
- * opens the demo garden, with JavaScript or without it. Real sign-in needs a
- * server that issues sessions and emails links, and that is the next planning
- * cycle, not a change to this screen.
+ * The screen has states rather than pages. After a link is asked for it says
+ * so, with the address it went to; after a wrong password it says that; when
+ * the portal has no database or no mail it says that too, with the phone
+ * number, rather than pretending. Every state is a redirect back to this
+ * route, so a refresh never re-sends anything and nothing typed lands in a URL.
  */
 import PortalLayout from '@layouts/PortalLayout.astro';
 import ScreenHead from '@components/portal/ScreenHead.astro';
+import StatusChip from '@components/portal/StatusChip.astro';
 import { routes } from '@data/portal/routes';
-import { primaryPhone } from '@data/site';
+import { status } from '@data/portal/status';
+import { primaryPhone, portalHoursLine } from '@data/site';
+import {
+  createSession,
+  issueSignInLink,
+  landingFor,
+  maskEmail,
+  setNotice,
+  setSessionCookie,
+  signInWithPassword,
+  takeNotice,
+} from '../../server/auth';
+import { mailConfigured, portalConfigured } from '../../server/env';
+
+export const prerender = false;
+
+const configured = portalConfigured();
+
+// Already in. There is nothing on this screen for them.
+if (Astro.locals.client) return Astro.redirect(landingFor(Astro.locals.client), 302);
+
+if (Astro.request.method === 'POST' && configured) {
+  const form = await Astro.request.formData();
+  const email = String(form.get('email') ?? '')
+    .trim()
+    .slice(0, 200);
+  const password = String(form.get('password') ?? '');
+
+  if (email && password) {
+    const client = await signInWithPassword(email, password);
+    if (client) {
+      setSessionCookie(Astro.cookies, Astro.url, await createSession(client.id));
+      return Astro.redirect(landingFor(client), 303);
+    }
+    return Astro.redirect(`${routes.signIn}?state=mismatch`, 303);
+  }
+
+  if (email) {
+    const { outcome } = await issueSignInLink(email, Astro.url.origin);
+    if (outcome === 'failed') return Astro.redirect(`${routes.signIn}?state=failed`, 303);
+    setNotice(Astro.cookies, Astro.url, { kind: 'link-sent', masked: maskEmail(email) });
+    return Astro.redirect(routes.signIn, 303);
+  }
+  return Astro.redirect(`${routes.signIn}?state=empty`, 303);
+}
+
+const notice = takeNotice(Astro.cookies, Astro.url);
+const query = Astro.url.searchParams.get('state');
+
+type State = 'form' | 'sent' | 'mismatch' | 'empty' | 'failed' | 'off' | 'nomail' | 'signed-out';
+let state: State = 'form';
+if (!configured) state = 'off';
+else if (notice?.kind === 'link-sent') state = 'sent';
+else if (notice?.kind === 'signed-out') state = 'signed-out';
+else if (query === 'mismatch') state = 'mismatch';
+else if (query === 'failed') state = 'failed';
+else if (query === 'empty') state = 'empty';
+else if (!mailConfigured()) state = 'nomail';
+
+const showForm = state !== 'off' && state !== 'sent';
+const hasError =
+  state === 'mismatch' || state === 'empty' || state === 'failed' || state === 'nomail';
 ---
 
-<PortalLayout title="Sign in" footerTagline>
-  <ScreenHead kicker="Sign in" title="Sign in to your properties" long>
-    <p class="body note--lead">
-      For accounts that hold more than one property. One garden, one project: use the link we email
-      you.
-    </p>
-  </ScreenHead>
+<PortalLayout title="Sign in" footerTagline footerHours={state === 'off' || state === 'nomail'}>
+  {
+    state === 'sent' ? (
+      <>
+        <h1 class="visually-hidden">A link is on its way</h1>
+        <section class="block panel panel--done" aria-labelledby="link-sent">
+          <span class="kicker kicker--muted" id="link-sent">
+            Check your email
+          </span>
+          <p class="answer">A link is on its way</p>
+          <p class="body">
+            If {notice?.masked} is on file with us, a link to your portal arrives in a minute or
+            two. It stays live for seven days.
+          </p>
+          <StatusChip tone={status.done.key} label={status.done.label} />
+        </section>
+        <section class="block sect">
+          <h2 class="kicker">Nothing arrived</h2>
+          <p class="body">
+            Check the address, and the folder your email keeps things it is unsure about.
+          </p>
+          <a class="link-action" href={routes.signIn}>
+            Try a different address
+          </a>
+        </section>
+      </>
+    ) : state === 'off' ? (
+      <ScreenHead kicker="Sign in" title="The portal is not switched on yet" long>
+        <p class="body note--lead">
+          Your garden and your documents are safe; the screens that show them are not open yet. Call
+          the office and we will read you anything the portal would show you.
+        </p>
+      </ScreenHead>
+    ) : (
+      <ScreenHead kicker="Sign in" title="Sign in to your garden or project" long>
+        <p class="body note--lead">
+          Type the email address we have for you and we will send a link. Accounts that hold more
+          than one property can use their password instead.
+        </p>
+      </ScreenHead>
+    )
+  }
 
-  <form class="block stack--lg signin" action={routes.garden} method="get">
-    <div class="field">
-      <label class="label" for="email">Email</label>
-      <input id="email" type="email" autocomplete="username" placeholder="you@company.com" />
-    </div>
-    <div class="field">
-      <label class="label" for="password">Password</label>
-      <input id="password" type="password" autocomplete="current-password" />
-      <a class="link-action" href={routes.linkExpired}>Email me a link instead</a>
-    </div>
-    <button class="btn btn--primary" type="submit">Sign in</button>
-  </form>
+  {
+    state === 'signed-out' && (
+      <p class="block--tight note" role="status">
+        You are signed out. Ask for a new link whenever you want back in.
+      </p>
+    )
+  }
+
+  {
+    showForm && (
+      <form class="block stack--lg signin" action={routes.signIn} method="post" novalidate>
+        {state === 'mismatch' && (
+          <p class="field__error" role="alert" id="signin-error">
+            That email and password do not match what we have. Leave the password empty and we will
+            email you a link instead.
+          </p>
+        )}
+        {state === 'empty' && (
+          <p class="field__error" role="alert" id="signin-error">
+            Type the email address we have for you.
+          </p>
+        )}
+        {state === 'failed' && (
+          <p class="field__error" role="alert" id="signin-error">
+            We could not send the link just now. Try again in a minute, or call the office.
+          </p>
+        )}
+        {state === 'nomail' && (
+          <p class="field__error" role="alert" id="signin-error">
+            Links cannot be sent at the moment. Accounts with a password can still sign in; everyone
+            else, call the office.
+          </p>
+        )}
+        <div class="field">
+          <label class="label" for="email">
+            Email
+          </label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autocomplete="username"
+            placeholder="you@example.com"
+            required
+            aria-describedby={hasError ? 'signin-error' : undefined}
+          />
+        </div>
+        <div class="field">
+          <label class="label" for="password">
+            Password, if you have one
+          </label>
+          <input id="password" name="password" type="password" autocomplete="current-password" />
+          <p class="note">Leave it empty and we email you a link instead.</p>
+        </div>
+        <button class="btn btn--primary" type="submit">
+          Sign in
+        </button>
+      </form>
+    )
+  }
 
   <section class="block block--xl sect">
     <h2 class="kicker">Trouble getting in</h2>
     <p class="body">Call the office and we will read you anything the portal would show you.</p>
     <a class="link-phone" href={`tel:${primaryPhone.tel}`}>{primaryPhone.display}</a>
+    {(state === 'off' || state === 'nomail') && <p class="note">{portalHoursLine}</p>}
   </section>
 </PortalLayout>
 

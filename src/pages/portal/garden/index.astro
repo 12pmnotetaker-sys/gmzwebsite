@@ -10,96 +10,140 @@
  * On desktop the next-visit panel and the offer move to the rail, which is
  * why they render twice: once in the column with `column-only`, once in the
  * rail. The steps are the same; there is just room beside them.
+ *
+ * This is the one garden screen that renders for a client whose record is
+ * not written yet. It says so, with the phone number, rather than showing
+ * somebody else's garden.
  */
 import PortalLayout from '@layouts/PortalLayout.astro';
+import ScreenHead from '@components/portal/ScreenHead.astro';
 import StatusChip from '@components/portal/StatusChip.astro';
 import Row from '@components/portal/Row.astro';
 import Plate from '@components/portal/Plate.astro';
 import { routes } from '@data/portal/routes';
-import { client, nextVisit, lastVisit, offer, service } from '@data/portal/garden';
-import { getLandingPlants } from '@data/portal/plants';
-import { plantHref } from '@data/portal/plants';
+import { primaryPhone, portalHoursLine } from '@data/site';
+import { landingPlants } from '../../../server/records';
+import { gardenScreen } from '../../../server/screen';
 
-const plants = await getLandingPlants();
+export const prerender = false;
+
+const screen = await gardenScreen(Astro, { allowMissing: true });
+if (screen instanceof Response) return screen;
+const { client, garden, plants } = screen;
+const shortlist = landingPlants(plants);
 ---
 
-<PortalLayout title="Your garden" property={client.property} footerTagline>
-  <Plate caption="Garden photo" height={170} bleed />
+{
+  garden ? (
+    <PortalLayout title="Your garden" property={garden.display.property} footerTagline>
+      <Plate caption={garden.display.photoCaption} height={170} bleed />
 
-  <header class="head stack">
-    <h1 class="kicker">{client.kicker}</h1>
-    <div class="rule-accent rule-mark" aria-hidden="true"></div>
-  </header>
+      <header class="head stack">
+        <h1 class="kicker">{garden.display.kicker}</h1>
+        <div class="rule-accent rule-mark" aria-hidden="true" />
+      </header>
 
-  <section class="panel panel--calm column-only" aria-labelledby="next-visit">
-    <span class="kicker kicker--muted" id="next-visit">Next visit</span>
-    <p class="answer">{nextVisit.date}</p>
-    <p class="body">{nextVisit.window}</p>
-    <StatusChip tone={nextVisit.status} label={nextVisit.statusLabel} />
-  </section>
+      <section class="panel panel--calm column-only" aria-labelledby="next-visit">
+        <span class="kicker kicker--muted" id="next-visit">
+          Next visit
+        </span>
+        <p class="answer">{garden.nextVisit.date}</p>
+        <p class="body">{garden.nextVisit.window}</p>
+        <StatusChip tone={garden.nextVisit.status} label={garden.nextVisit.statusLabel} />
+      </section>
 
-  <section class="block sect">
-    <h2 class="kicker">{lastVisit.kicker}</h2>
-    <p class="body">{lastVisit.summary}</p>
-    <StatusChip tone={lastVisit.status} label={lastVisit.statusLabel} />
-  </section>
+      <section class="block sect">
+        <h2 class="kicker">{garden.lastVisit.kicker}</h2>
+        <p class="body">{garden.lastVisit.summary}</p>
+        <StatusChip tone={garden.lastVisit.status} label={garden.lastVisit.statusLabel} />
+      </section>
 
-  <nav class="block rows rows--open" aria-label="Your service">
-    <Row href={routes.service} title="Your service" note={service.rowNote} />
-    <Row href={routes.visit} title="Past visits" note="What was done, visit by visit" />
-  </nav>
+      <nav class="block rows rows--open" aria-label="Your service">
+        <Row href={routes.service} title="Your service" note={garden.service.rowNote} />
+        <Row href={routes.visit} title="Past visits" note="What was done, visit by visit" />
+      </nav>
 
-  <section class="block stack--md">
-    <div class="sect">
-      <h2 class="kicker">Plants in your garden</h2>
-      <p class="note">The trees and plants we keep a record of, and what each one needs from us.</p>
-    </div>
-    <div class="rows">
-      {
-        plants.map((plant) => (
-          <Row
-            href={plantHref(plant)}
-            title={plant.data.name}
-            note={plant.data.landingNote ?? plant.data.summary}
-            chip={plant.data.status.tone === 'done' ? undefined : plant.data.status}
-          />
-        ))
-      }
-    </div>
-    <a class="link-action" href={routes.plants}>See every plant on record</a>
-  </section>
+      {shortlist.length > 0 && (
+        <section class="block stack--md">
+          <div class="sect">
+            <h2 class="kicker">Plants in your garden</h2>
+            <p class="note">
+              The trees and plants we keep a record of, and what each one needs from us.
+            </p>
+          </div>
+          <div class="rows">
+            {shortlist.map((plant) => (
+              <Row
+                href={routes.plant(plant.slug)}
+                title={plant.data.name}
+                note={plant.data.landingNote ?? plant.data.summary}
+                chip={plant.data.status.tone === 'done' ? undefined : plant.data.status}
+              />
+            ))}
+          </div>
+          <a class="link-action" href={routes.plants}>
+            See every plant on record
+          </a>
+        </section>
+      )}
 
-  <nav class="block rows" aria-label="More">
-    <a class="row column-only" href={routes.offer}>
-      <span class="row__text">
-        <span class="row__title">{offer.rowTitle}</span>
-        <span class="row__note">{offer.rowNote}</span>
-      </span>
-      <span class="chip chip--scheduled">{offer.rowChip}</span>
-    </a>
-    <Row href={routes.documents} title="Documents" note="Agreement, insurance, plans" />
-  </nav>
+      <nav class="block rows" aria-label="More">
+        {garden.offer && (
+          <a class="row column-only" href={routes.offer(garden.offer.slug)}>
+            <span class="row__text">
+              <span class="row__title">{garden.offer.rowTitle}</span>
+              <span class="row__note">{garden.offer.rowNote}</span>
+            </span>
+            <span class="chip chip--scheduled">{garden.offer.rowChip}</span>
+          </a>
+        )}
+        <Row href={routes.documents} title="Documents" note="Agreement, insurance, plans" />
+      </nav>
 
-  <div class="block block--end actions">
-    <a class="btn btn--primary" href={routes.ask}>Ask for something</a>
-  </div>
+      <div class="block block--end actions">
+        <a class="btn btn--primary" href={routes.ask}>
+          Ask for something
+        </a>
+      </div>
 
-  <Fragment slot="rail">
-    <section class="panel panel--calm" aria-label="Next visit">
-      <span class="kicker kicker--muted">Next visit</span>
-      <p class="answer">{nextVisit.date}</p>
-      <p class="body">{nextVisit.window}</p>
-      <StatusChip tone={nextVisit.status} label={nextVisit.statusLabel} />
-    </section>
-    <a class="offer-card" href={routes.offer}>
-      <span class="kicker">{offer.kicker}</span>
-      <span class="offer-card__line">{offer.rowNote}</span>
-      <span class="link-action link-action--sm">
-        Open the offer <span aria-hidden="true">&rsaquo;</span>
-      </span>
-    </a>
-  </Fragment>
-</PortalLayout>
+      <Fragment slot="rail">
+        <section class="panel panel--calm" aria-label="Next visit">
+          <span class="kicker kicker--muted">Next visit</span>
+          <p class="answer">{garden.nextVisit.date}</p>
+          <p class="body">{garden.nextVisit.window}</p>
+          <StatusChip tone={garden.nextVisit.status} label={garden.nextVisit.statusLabel} />
+        </section>
+        {garden.offer && (
+          <a class="offer-card" href={routes.offer(garden.offer.slug)}>
+            <span class="kicker">{garden.offer.kicker}</span>
+            <span class="offer-card__line">{garden.offer.rowNote}</span>
+            <span class="link-action link-action--sm">
+              Open the offer <span aria-hidden="true">&rsaquo;</span>
+            </span>
+          </a>
+        )}
+      </Fragment>
+    </PortalLayout>
+  ) : (
+    <PortalLayout title="Your garden" footerTagline footerHours>
+      <ScreenHead kicker={`${client.name}, your garden`} title="Your record is being set up" long>
+        <p class="body">
+          You are signed in, and your garden's record is still being written. It will show your
+          visits, your plants and your documents here once it is.
+        </p>
+      </ScreenHead>
+      <section class="block panel panel--calm" aria-labelledby="call-office">
+        <span class="kicker kicker--muted" id="call-office">
+          In the meantime, call the office
+        </span>
+        <a class="link-phone link-phone--answer" href={`tel:${primaryPhone.tel}`}>
+          {primaryPhone.display}
+        </a>
+        <p class="note">{portalHoursLine}</p>
+      </section>
+    </PortalLayout>
+  )
+}
 
 <style>
   .head {

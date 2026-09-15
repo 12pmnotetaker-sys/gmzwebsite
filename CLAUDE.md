@@ -105,6 +105,13 @@ the teal chrome), `aria-current` on the active nav item, one `h1` per page, the
 `prefers-reduced-motion` block, and real semantics on interactive pieces all
 stay. A redesign that drops one is a regression, not a style change.
 
+**Two kinds of page, one build.** The marketing site and the portfolio are
+prerendered; everything under `/portal` and the intake endpoint declare
+`prerender = false` and run in one Vercel function through `@astrojs/vercel`.
+The build lands in `dist/client` (the files) and `.vercel/output` (the
+function), and `content-lint` reads both: the pages as HTML, the function's
+templates as the string literals they compile to.
+
 **Scripts survive the client router.** Public pages navigate through Astro's
 `ClientRouter`, so a component's `<script>` runs once per session, not once per
 page. Every script initialises on `astro:page-load` as well as on first paint,
@@ -116,9 +123,29 @@ a new script on a public page does.
 visit duration, an ETA, a map, a crew location or a progress percentage. Draws
 are dollars and cents naming their trigger, never percentages. Nothing is
 credited toward a later stage. No client is told they have a "design/build" or
-"maintenance" account; they have a project or a garden. A form input that a
-person types into carries no `name` until there is a server to receive it, so
-nothing typed ever lands in a URL.
+"maintenance" account; they have a project or a garden. Every form posts to
+its own route and redirects, so nothing typed ever lands in a URL, and a
+receipt is shown only once the database has the row.
+
+**The portal's data.** Every portal page is rendered on demand for the
+signed-in client (`src/middleware.ts` reads the session cookie and puts the
+client on `locals`). Every query in `src/server/` is scoped by that client's
+id, taken from the session and never from a request. The tables have row
+level security on and no policies, so only the service role can read them,
+and the service role key lives in a server environment variable and nowhere
+else. A record is one JSON document whose shape is written once, in
+`src/data/portal/shapes.ts`, and parsed on the way in (the admin script) and
+on the way out (the loaders) against that shape and against the same house
+style regexes `content-lint` runs, from `scripts/lib/copy-rules.mjs`. A record
+with an em dash in it does not reach a screen. Photographs a client attaches
+are re-encoded before they are stored, so no metadata, and no coordinates,
+survive the upload.
+
+**The portal is honest about being off.** With no database the sign-in screen
+says so and gives the phone number; with no mail provider it says a link
+cannot be sent. A request or an approval is acknowledged only once the row
+exists; the email to the office is a notification, and `npm run portal --
+requests` lists anything the office was not told about.
 
 **House style for client-facing prose.**
 
@@ -145,15 +172,21 @@ nothing typed ever lands in a URL.
 | The last check before live | `scripts/content-lint.mjs`                                                     |
 | Photograph intake          | `scripts/photo-intake.mjs`                                                     |
 | The intake form's fields   | `src/data/enquiry.ts`                                                          |
-| The intake endpoint        | `api/enquiry.ts`                                                               |
+| The intake endpoint        | `src/pages/api/enquiry.ts`                                                     |
 | The veil                   | `gate` in `src/data/site.ts`, `Gate.astro`                                     |
 | Which routes are gated     | `gatedPrefixes` in `src/data/publication.ts`                                   |
 | Which of those are veiled  | `veiledPrefixes` in `src/data/publication.ts`                                  |
 | Gated content              | `src/content/portfolio/`, `src/pages/portfolio/`                               |
 | The client portal          | `src/pages/portal/`, `src/layouts/PortalLayout.astro`, `src/styles/portal.css` |
-| Portal copy and routes     | `src/data/portal/`                                                             |
-| Plant records              | `src/content/plants/`, `plants` in `src/content.config.ts`                     |
+| Portal routes and shapes   | `src/data/portal/routes.ts`, `src/data/portal/shapes.ts`                       |
+| Portal seed records        | `src/data/portal/garden.ts`, `src/data/portal/project.ts`                      |
+| Sessions, links, mail      | `src/server/auth.ts`, `src/server/mail.ts`, `src/middleware.ts`                |
+| Records and requests       | `src/server/records.ts`, `src/server/requests.ts`, `src/server/screen.ts`      |
+| The portal's tables        | `supabase/migrations/`                                                         |
+| The office's command line  | `scripts/portal-admin.ts` (`npm run portal`)                                   |
+| House style, as regexes    | `scripts/lib/copy-rules.mjs`                                                   |
 | Portal design record       | `docs/portal-handoff.md`                                                       |
+| Going live                 | `docs/go-live.md`, `docs/decisions-before-launch.md`                           |
 
 ## Restyling
 
@@ -178,10 +211,12 @@ things that have to agree: the `noindex` meta tag in `BaseLayout.astro`,
 `Disallow: /` in `src/pages/robots.txt.ts`, and whether a sitemap is generated at
 all in `astro.config.mjs`.
 
-It is **off**. This is a scaffold, and a placeholder page that Google indexes is
-worse than no page because it ranks for the business's own name and shows a
-visitor nothing. Flip it in Phase 2, when there is a site behind it.
-`content-lint` fails the build if the three ever disagree.
+It follows one environment variable, `SEARCH_INDEXING`, and is on only when
+that is `on`. Nothing in the repository turns it on: the flip is a setting on
+the production deployment, made on the day the domain moves, so a preview, a
+branch build and a local build all stay `noindex`. CI builds the site in both
+states on every push and `content-lint` fails either build if the three
+signals disagree. `docs/go-live.md` is the runbook.
 
 ## The build is the gate
 
@@ -211,14 +246,19 @@ a note in a style guide.
   _Still outstanding:_ the public `/work` split. It needs GMZ to pick which
   projects go public and to supply a town for each, since the gated entries
   carry street names and the public schema will not accept one.
-- **Phase 2.** The marketing site: home, services, process, about, answers,
-  intake. Indexing goes on.
-- **Phase 3.** Cutover: redirects, DNS, then Wix.
-- **Phase 4 (design landed).** The client portal under `/portal`: every screen
-  of the Claude Design prototype built as a real route, phone to desktop, light
-  and dark, with the brief's example clients as static content. The nav links
-  to its sign-in. What remains is the server side: magic links, sessions, real
-  records and the request endpoint. See `docs/portal-handoff.md`.
+- **Phase 2 (built, waiting on decisions).** The marketing site: home,
+  services, process, about, answers, intake, the public `/work` section and
+  the reviews page, all without placeholders. Indexing is one environment
+  variable away. What is missing is decisions, not pages:
+  `docs/decisions-before-launch.md` lists them, and the build gate keeps an
+  undecided answer unpublished.
+- **Phase 3.** Cutover: redirects, DNS, then the old site. `docs/go-live.md`.
+- **Phase 4 (landed).** The client portal under `/portal`, rendered on demand
+  for a signed-in client: emailed sign-in links and passwords, sessions, real
+  records in the `gmz-client-portal` database, requests with photographs,
+  approvals of the proposal and of each change order, and the office's
+  command line. The brief's example clients are seeded so it can be walked
+  end to end. See `docs/portal-handoff.md`.
 
 ## Open questions for GMZ
 

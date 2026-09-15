@@ -1,30 +1,27 @@
 ---
 /**
- * The application record: the after state of the application pair.
- *
- * The crew treated the roses on Wednesday morning, and this screen says when
- * the beds were safe to walk on again. That is the answer, on the done panel
- * with the Done chip under it, because the one thing a parent or a dog owner
- * opens this screen to learn is whether it is over. Under it, the record as
- * five facts, how long we keep it, and the way to the safety sheet.
- *
- * On desktop the answer panel moves to the rail, which is why it renders
- * twice: once in the column with `column-only`, once in the rail. The steps
- * are the same; there is just room beside them.
+ * The application record: what was applied, and the line the client came
+ * for, which is when it was safe again for children and pets.
  */
 import PortalLayout from '@layouts/PortalLayout.astro';
 import StatusChip from '@components/portal/StatusChip.astro';
 import Facts from '@components/portal/Facts.astro';
 import { routes } from '@data/portal/routes';
-import { client, application } from '@data/portal/garden';
 import { status } from '@data/portal/status';
+import { gardenScreen } from '../../../../server/screen';
 
-const record = application.after;
+export const prerender = false;
+
+const screen = await gardenScreen(Astro, {});
+if (screen instanceof Response) return screen;
+const { garden } = screen;
+const record = garden.application.after;
+if (!record) return Astro.redirect(routes.documents, 302);
 ---
 
 <PortalLayout
   title="Application record"
-  property={client.property}
+  property={garden.display.property}
   backHref={routes.visit}
   backLabel="Visit report"
   footerKicker=""

@@ -1,29 +1,67 @@
 ---
 /**
- * Ask for something, from the project.
- *
- * The same form the garden client uses, entered from the project: AskForm
- * with the project client's kicker, and the back link to the project. On
- * desktop the send block moves to the rail, so AskForm renders a second time
- * there with `rail`, and its button submits the form in the column.
+ * Ask for something, from the project. The same form as the garden's, with
+ * the project's categories, posting here and landing on the project's own
+ * receipt.
  */
 import PortalLayout from '@layouts/PortalLayout.astro';
 import AskForm from '@components/portal/AskForm.astro';
 import { company } from '@data/site';
 import { routes } from '@data/portal/routes';
-import { client } from '@data/portal/project';
+import { RequestRejected, createRequest } from '../../../server/requests';
+import { chosen, field, files, projectScreen } from '../../../server/screen';
+
+export const prerender = false;
+
+const screen = await projectScreen(Astro, {});
+if (screen instanceof Response) return screen;
+const { client, project } = screen;
+
+let error: string | undefined;
+let previous: { about?: string; what?: string } | undefined;
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const about = field(form, 'about', 60);
+  const what = field(form, 'what');
+  previous = { about, what };
+  try {
+    const { reference } = await createRequest(client, {
+      kind: 'ask',
+      about: chosen(project.request.categories, about),
+      body: what,
+      photos: files(form, 'photos'),
+    });
+    return Astro.redirect(routes.projectAsked(reference), 303);
+  } catch (cause) {
+    if (!(cause instanceof RequestRejected)) throw cause;
+    console.error(cause.message);
+    error =
+      cause.reason === 'photo-too-large'
+        ? 'One of the photos is too large to send. A photo straight from the phone is fine; a scan or a file over twelve megabytes is not.'
+        : cause.reason === 'photo-unreadable'
+          ? 'One of the files attached is not a photo we can read. Try another, or send without it.'
+          : 'This did not reach us. Try once more, or call the office; nothing you typed is lost.';
+  }
+}
 ---
 
 <PortalLayout
   title="Ask for something"
-  property={client.property}
+  property={project.display.property}
   backHref={routes.project}
   backLabel="Back"
   footerKicker={company.legalName}
 >
-  <AskForm kicker={`${client.name}, ${client.town}`} sentHref={routes.projectAsked} />
+  <AskForm
+    kicker={`${project.display.name}, ${project.display.town}`}
+    action={routes.projectAsk}
+    copy={project.request}
+    error={error}
+    previous={previous}
+  />
 
   <Fragment slot="rail">
-    <AskForm rail />
+    <AskForm rail copy={project.request} />
   </Fragment>
 </PortalLayout>

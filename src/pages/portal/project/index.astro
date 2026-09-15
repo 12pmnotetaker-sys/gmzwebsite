@@ -1,74 +1,155 @@
 ---
 /**
- * The project landing: the screen a project client with a proposal waiting
- * arrives at.
+ * The project landing: the proposal, its total, and the one decision waiting.
  *
- * One question, one answer: what the proposal comes to. That figure is the
- * largest thing on the screen, on the amber panel, with the two things the
- * client can do about it directly beneath. Everything else is secondary, in
- * reading order: the estimate number, the priced lines with their total, and
- * the one line that will move, with why it will and what happens when it does.
- *
- * On desktop the proposal panel and the two buttons move to the rail, which
- * is why they render twice: once in the column with `column-only`, once in
- * the rail. The steps are the same; there is just room beside them.
+ * Once the proposal is approved the attention panel becomes the calm one and
+ * the buttons change: there is nothing left to approve, only the proposal to
+ * read again. This is the one project screen that renders for a client whose
+ * record is not written yet.
  */
 import PortalLayout from '@layouts/PortalLayout.astro';
+import ScreenHead from '@components/portal/ScreenHead.astro';
 import StatusChip from '@components/portal/StatusChip.astro';
 import Money from '@components/portal/Money.astro';
 import { routes } from '@data/portal/routes';
-import { client, proposal } from '@data/portal/project';
 import { status } from '@data/portal/status';
+import { primaryPhone, portalHoursLine } from '@data/site';
+import { loadApproval } from '../../../server/records';
+import { projectScreen } from '../../../server/screen';
+
+export const prerender = false;
+
+const screen = await projectScreen(Astro, { allowMissing: true });
+if (screen instanceof Response) return screen;
+const { client, project } = screen;
+const approval = project ? await loadApproval(client, 'proposal') : null;
+const firstChange = project?.changeOrders[0];
 ---
 
-<PortalLayout
-  title="Your project"
-  property={client.property}
-  footerKicker="Questions on this proposal"
->
-  <header class="head stack">
-    <h1 class="kicker">{client.kicker}</h1>
-    <div class="rule-accent rule-mark" aria-hidden="true"></div>
-  </header>
+{
+  project ? (
+    <PortalLayout
+      title="Your project"
+      property={project.display.property}
+      footerKicker="Questions on this proposal"
+    >
+      <header class="head stack">
+        <h1 class="kicker">{project.display.kicker}</h1>
+        <div class="rule-accent rule-mark" aria-hidden="true" />
+      </header>
 
-  <section class="panel panel--attention column-only" aria-labelledby="your-proposal">
-    <span class="kicker" id="your-proposal">Your proposal</span>
-    <p class="answer answer--figure">{proposal.total}</p>
-    <p class="body">{proposal.summary}</p>
-    <StatusChip tone={status.needs.key} label={status.needs.label} />
-  </section>
+      <section
+        class:list={['panel', 'column-only', approval ? 'panel--done' : 'panel--attention']}
+        aria-labelledby="your-proposal"
+      >
+        <span class:list={['kicker', { 'kicker--muted': approval }]} id="your-proposal">
+          Your proposal
+        </span>
+        <p class="answer answer--figure">{project.proposal.total}</p>
+        <p class="body">
+          {approval
+            ? 'Approved. The contract comes by email for signature; nothing is due until you have signed it.'
+            : project.proposal.summary}
+        </p>
+        {approval ? (
+          <StatusChip tone={status.done.key} label="Approved" />
+        ) : (
+          <StatusChip tone={status.needs.key} label={status.needs.label} />
+        )}
+      </section>
 
-  <div class="block block--tight actions column-only">
-    <a class="btn btn--primary" href={routes.proposal}>Review and approve</a>
-    <a class="btn btn--secondary" href={routes.projectAsk}>Ask for a change</a>
-  </div>
+      <div class="block block--tight actions column-only">
+        {approval ? (
+          <a class="btn btn--primary" href={routes.approved}>
+            What happens next
+          </a>
+        ) : (
+          <a class="btn btn--primary" href={routes.proposal}>
+            Review and approve
+          </a>
+        )}
+        <a class="btn btn--secondary" href={routes.projectAsk}>
+          Ask for a change
+        </a>
+      </div>
 
-  <section class="block stack stack--md">
-    <div class="sect">
-      <h2 class="kicker">Estimate</h2>
-      <p class="estimate-no">{proposal.estimateNo}</p>
-    </div>
-    <Money lines={proposal.lines} total={proposal.total} />
-    <section class="panel panel--calm" aria-labelledby="allowance">
-      <span class="kicker kicker--muted" id="allowance">{proposal.allowance.kickerShort}</span>
-      <p class="body">{proposal.allowance.short}</p>
-      <a class="link-action" href={routes.change}>How a change is priced</a>
-    </section>
-  </section>
+      <section class="block stack stack--md">
+        <div class="sect">
+          <h2 class="kicker">Estimate</h2>
+          <p class="estimate-no">{project.proposal.estimateNo}</p>
+        </div>
+        <Money lines={project.proposal.lines} total={project.proposal.total} />
+        <section class="panel panel--calm" aria-labelledby="allowance">
+          <span class="kicker kicker--muted" id="allowance">
+            {project.proposal.allowance.kickerShort}
+          </span>
+          <p class="body">{project.proposal.allowance.short}</p>
+          {firstChange && (
+            <a class="link-action" href={routes.change(firstChange.id)}>
+              How a change is priced
+            </a>
+          )}
+        </section>
+      </section>
 
-  <Fragment slot="rail">
-    <section class="panel panel--attention" aria-label="Your proposal">
-      <span class="kicker">Your proposal</span>
-      <p class="answer answer--figure">{proposal.total}</p>
-      <p class="body">{proposal.summary}</p>
-      <StatusChip tone={status.needs.key} label={status.needs.label} />
-    </section>
-    <div class="actions">
-      <a class="btn btn--primary" href={routes.proposal}>Review and approve</a>
-      <a class="btn btn--secondary" href={routes.projectAsk}>Ask for a change</a>
-    </div>
-  </Fragment>
-</PortalLayout>
+      <Fragment slot="rail">
+        <section
+          class:list={['panel', approval ? 'panel--done' : 'panel--attention']}
+          aria-label="Your proposal"
+        >
+          <span class:list={['kicker', { 'kicker--muted': approval }]}>Your proposal</span>
+          <p class="answer answer--figure">{project.proposal.total}</p>
+          <p class="body">
+            {approval
+              ? 'Approved. The contract comes by email for signature; nothing is due until you have signed it.'
+              : project.proposal.summary}
+          </p>
+          {approval ? (
+            <StatusChip tone={status.done.key} label="Approved" />
+          ) : (
+            <StatusChip tone={status.needs.key} label={status.needs.label} />
+          )}
+        </section>
+        <div class="actions">
+          {approval ? (
+            <a class="btn btn--primary" href={routes.approved}>
+              What happens next
+            </a>
+          ) : (
+            <a class="btn btn--primary" href={routes.proposal}>
+              Review and approve
+            </a>
+          )}
+          <a class="btn btn--secondary" href={routes.projectAsk}>
+            Ask for a change
+          </a>
+        </div>
+      </Fragment>
+    </PortalLayout>
+  ) : (
+    <PortalLayout title="Your project" footerTagline footerHours>
+      <ScreenHead
+        kicker={`${client.name}, your project`}
+        title="Your proposal is being prepared"
+        long
+      >
+        <p class="body">
+          You are signed in, and the proposal is still being written. It will show the price, the
+          payment schedule and the notices here once it is.
+        </p>
+      </ScreenHead>
+      <section class="block panel panel--calm" aria-labelledby="call-office">
+        <span class="kicker kicker--muted" id="call-office">
+          In the meantime, call the office
+        </span>
+        <a class="link-phone link-phone--answer" href={`tel:${primaryPhone.tel}`}>
+          {primaryPhone.display}
+        </a>
+        <p class="note">{portalHoursLine}</p>
+      </section>
+    </PortalLayout>
+  )
+}
 
 <style>
   /* No photo band above this one: the head takes the block step on top and

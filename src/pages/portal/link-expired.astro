@@ -1,26 +1,53 @@
 ---
 /**
- * The expired link.
+ * The expired link. A first-class screen, because it is the one that decides
+ * whether a client gives up.
  *
- * Recovery in one tap. A client who opened last week's email has done nothing
- * wrong, and the screen says so before it asks for anything. The address is
- * already filled in, masked, so the one tap is the amber button; "That is not
- * my email" is the way out to sign-in for anyone it guessed wrong for.
- *
- * There is no backend behind this form yet. The input carries no `name`, so
- * the address is never put in a URL or a request; submitting simply opens the
- * demo garden, with JavaScript or without it. Sending a real link needs the
- * same server sign-in needs, and that is the next planning cycle.
- *
- * `novalidate` is deliberate. The masked address is what the server would
- * show, and the browser's own email check rejects the mask's bullets, which
- * would stop the form dead on the one tap the screen exists for. With nothing
- * behind the form there is nothing to validate against yet.
+ * Arriving from a link that has expired or been spent, the screen already
+ * knows which address the link was for (the callback left a note, never a
+ * URL) and offers to send a new one there in one tap. Arriving any other way,
+ * it asks for the address. Either way the phone number is on the screen.
  */
 import PortalLayout from '@layouts/PortalLayout.astro';
 import ScreenHead from '@components/portal/ScreenHead.astro';
 import { routes } from '@data/portal/routes';
 import { primaryPhone, portalHoursLine } from '@data/site';
+import {
+  clientForToken,
+  issueSignInLink,
+  landingFor,
+  maskEmail,
+  setNotice,
+  takeNotice,
+} from '../../server/auth';
+import { portalConfigured } from '../../server/env';
+
+export const prerender = false;
+
+if (Astro.locals.client) return Astro.redirect(landingFor(Astro.locals.client), 302);
+if (!portalConfigured()) return Astro.redirect(routes.signIn, 302);
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const token = String(form.get('token') ?? '');
+  const typed = String(form.get('email') ?? '')
+    .trim()
+    .slice(0, 200);
+
+  // The expired link names its own address; a typed one is used only without it.
+  const client = token ? await clientForToken(token) : null;
+  const email = client?.email ?? typed;
+  if (!email) return Astro.redirect(`${routes.linkExpired}?state=empty`, 303);
+
+  const { outcome } = await issueSignInLink(email, Astro.url.origin);
+  if (outcome === 'failed') return Astro.redirect(`${routes.signIn}?state=failed`, 303);
+  setNotice(Astro.cookies, Astro.url, { kind: 'link-sent', masked: maskEmail(email) });
+  return Astro.redirect(routes.signIn, 303);
+}
+
+const notice = takeNotice(Astro.cookies, Astro.url);
+const known = notice?.kind === 'link-expired' && notice.masked && notice.token ? notice : null;
+const empty = Astro.url.searchParams.get('state') === 'empty';
 ---
 
 <PortalLayout title="Expired link" footerTagline>
@@ -31,11 +58,37 @@ import { primaryPhone, portalHoursLine } from '@data/site';
     </p>
   </ScreenHead>
 
-  <form action={routes.garden} method="get" novalidate>
+  <form action={routes.linkExpired} method="post" novalidate>
+    {
+      empty && (
+        <p class="block--tight field__error" role="alert" id="recover-error">
+          Type the email address we have for you.
+        </p>
+      )
+    }
     <div class="block field">
       <label class="label" for="recover">Send it to</label>
-      <input id="recover" type="email" autocomplete="email" value="k••••@gmail.com" />
-      <a class="link-action link-action--sm" href={routes.signIn}>That is not my email</a>
+      {
+        known ? (
+          <>
+            <input id="recover" type="text" value={known.masked} readonly aria-readonly="true" />
+            <input type="hidden" name="token" value={known.token} />
+            <a class="link-action link-action--sm" href={routes.signIn}>
+              That is not my email
+            </a>
+          </>
+        ) : (
+          <input
+            id="recover"
+            name="email"
+            type="email"
+            autocomplete="email"
+            placeholder="you@example.com"
+            required
+            aria-describedby={empty ? 'recover-error' : undefined}
+          />
+        )
+      }
     </div>
     <div class="block stack--md">
       <button class="btn btn--amber" type="submit">Send me a new link</button>
@@ -55,11 +108,5 @@ import { primaryPhone, portalHoursLine } from '@data/site';
 <style>
   .block--xl {
     margin-block-start: var(--space-xl);
-  }
-
-  /* On this panel the hours are the instruction, not a footnote, so they sit
-     in ink rather than the note's muted grey. */
-  .call .note {
-    color: var(--color-text);
   }
 </style>

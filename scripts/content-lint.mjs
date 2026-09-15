@@ -22,39 +22,26 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { EM_DASH, HOURLY_RATE, INTERNAL_TERMS, MANUFACTURERS } from './lib/copy-rules.mjs';
 
-const DIST = path.resolve('dist');
+/*
+ * The adapter lays the build out as dist/client (the files that ship as
+ * files) and a function bundle under .vercel/output (the pages rendered on
+ * demand). Without the adapter everything is in dist/. Read whichever is there.
+ */
+const DIST = existsSync(path.resolve('dist/client'))
+  ? path.resolve('dist/client')
+  : path.resolve('dist');
+
+/*
+ * Where the on-demand pages' templates end up. The portal's screens are not
+ * HTML in dist/, they are compiled templates in the function, so the writing
+ * they carry is read from the string literals there; see checkScriptProse.
+ * The traced node_modules beside it are not read: they are not our words.
+ */
+const SERVER_BUNDLE = path.resolve('.vercel/output/functions/_render.func/dist/server');
 
 /* ---- Rules ------------------------------------------------------------- */
-
-/**
- * Internal figures. Cost, margin, overhead, burdened rates and crew-day counts
- * are internal to GMZ and must never reach a client.
- *
- * Published prices are NOT this. The consultation fee, the maintenance walk and
- * the travel charge are prices to a client and belong on the site; what is
- * forbidden is the cost structure behind them. So this looks for the vocabulary
- * of internal costing, not for dollar signs.
- */
-const INTERNAL_TERMS =
-  /\b(crew[-\s]?days?|truck[-\s]?days?|burdened|PMM|gross margin|profit margin|margin per day|overhead (?:rate|percent|percentage)|markup|cost[-\s]?plus|build[-\s]?up factor)\b/gi;
-
-/** An hourly rate for labour. "$40/hr", "$45 per hour". */
-const HOURLY_RATE = /\$\s?\d{1,4}(?:\.\d{2})?\s*(?:\/\s*(?:hr|hour)|per\s+hour)\b/gi;
-
-/**
- * Manufacturer and model names, which house style keeps out of prose: describe
- * the thing, not the SKU. A supplier logo strip is a deliberate, separate
- * exception and lives in markup rather than in a sentence.
- *
- * Deliberately excluded as too ambiguous to match on: Hunter, Vista, Toro.
- * They are ordinary words and a regex cannot tell which sense is meant.
- */
-const MANUFACTURERS =
-  /\b(Belgard|Calstone|Rain\s?Bird|Netafim|Rachio|Irritrol|FX\s?Luminaire|Unilock|Techo-?Bloc|Smart\s?Rain)\b/g;
-
-/** Em-dash. House style uses a comma, a semicolon or a colon instead. */
-const EM_DASH = /—/g;
 
 /**
  * Prose elements. The rules about writing apply to writing, not to markup.
@@ -425,6 +412,15 @@ for (const file of pages) {
 // Bundled client scripts, which are not pages and so are not read above.
 for (const file of files.filter((f) => f.endsWith('.js'))) {
   checkScriptProse(file, await readFile(file, 'utf8'));
+}
+
+// The on-demand pages: the portal's screens and the endpoints, compiled into
+// the function. Their prose is string literals in the bundle, and it gets the
+// same rules as prose in a page.
+if (existsSync(SERVER_BUNDLE)) {
+  for (const file of (await walk(SERVER_BUNDLE)).filter((f) => /\.m?js$/.test(f))) {
+    checkScriptProse(file, await readFile(file, 'utf8'));
+  }
 }
 checkTownPagesDiffer(pages, bodies);
 await checkIndexingConsistency(files);
