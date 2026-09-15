@@ -121,7 +121,9 @@ export const documents: DocumentRow[] = [
   {
     title: 'Application records',
     note: 'Labels and safety sheets, last three years',
-    href: routes.applicationNotice,
+    /* The shelf opens the completed record. The prototype sent this row to the
+       pending notice, which is an approval prompt rather than an archive. */
+    href: routes.applicationRecord,
   },
 ];
 
