@@ -1,0 +1,104 @@
+---
+/**
+ * The portal footer.
+ *
+ * The phone number is the point of it. The most common complaint about portals
+ * in this industry is people who cannot get through and give up, so the number
+ * is a tap target on every screen rather than something behind a support page.
+ *
+ * `kicker` lets a screen say what the call would be about: "Questions on this
+ * proposal", "Something urgent". That is more useful than the company name
+ * repeated eighteen times. Every fact reads from src/data/site.ts.
+ */
+import { company, primaryPhone, licenseShort } from '@data/site';
+
+interface Props {
+  kicker?: string;
+  /** Show the Design · Build · Maintenance line. */
+  tagline?: boolean;
+  /** Show the licence line instead of the plain tagline. */
+  licence?: boolean;
+  /** Show the office hours. On the screens where a client is stuck. */
+  hours?: boolean;
+}
+
+const { kicker = company.legalName, tagline = false, licence = false, hours = false } = Astro.props;
+
+const hoursLine = `${company.hours.days}, ${company.hours.time}. We can read you anything the portal would show you.`;
+---
+
+<footer class="foot on-dark">
+  <div class="foot__inner">
+    <div class="foot__block">
+      <span class="kicker kicker--on-dark">{kicker}</span>
+      <a class="foot__phone" href={`tel:${primaryPhone.tel}`}>{primaryPhone.display}</a>
+      {
+        licence && (
+          <span class="foot__note">
+            {licenseShort}. {company.tagline}
+          </span>
+        )
+      }
+      {!licence && tagline && <span class="foot__note">{company.tagline}</span>}
+    </div>
+    {hours && <p class="foot__hours">{hoursLine}</p>}
+  </div>
+</footer>
+
+<style>
+  .foot {
+    margin-block-start: auto;
+    background: var(--portal-chrome);
+    color: var(--portal-chrome-text);
+  }
+
+  .foot__inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    padding: var(--space-lg) var(--portal-gutter);
+  }
+
+  @media (min-width: 60rem) {
+    .foot__inner {
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: var(--space-xl);
+      flex-wrap: wrap;
+      padding: var(--space-xl);
+    }
+  }
+
+  .foot__block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  .foot__phone {
+    align-self: flex-start;
+    font-size: var(--text-lg);
+    font-weight: 800;
+    line-height: 1.2;
+    color: var(--portal-chrome-text);
+    text-decoration: none;
+  }
+
+  .foot__phone:hover {
+    color: var(--gmz-amber);
+  }
+
+  .foot__note {
+    font-size: var(--text-xs);
+    line-height: 1.4;
+    color: var(--portal-chrome-muted);
+  }
+
+  .foot__hours {
+    max-width: 20rem;
+    font-size: var(--text-sm);
+    line-height: 1.5;
+    color: var(--portal-chrome-muted);
+  }
+</style>

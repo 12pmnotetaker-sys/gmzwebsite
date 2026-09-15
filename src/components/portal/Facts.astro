@@ -1,0 +1,33 @@
+---
+/**
+ * Fact rows: a label on the left, its value on the right. The plant record,
+ * the agreement summary and the application record all read this way.
+ *
+ * A row may carry a chip instead of a value, for a condition.
+ */
+import StatusChip from '@components/portal/StatusChip.astro';
+import type { StatusKey } from '@data/portal/status';
+
+interface FactRow {
+  label: string;
+  value?: string;
+  chip?: { tone: StatusKey; label: string };
+}
+
+interface Props {
+  rows: readonly FactRow[];
+}
+
+const { rows } = Astro.props;
+---
+
+<dl class="record">
+  {
+    rows.map((r) => (
+      <div class:list={['record__row', { 'record__row--chip': !!r.chip }]}>
+        <dt>{r.label}</dt>
+        <dd>{r.chip ? <StatusChip tone={r.chip.tone} label={r.chip.label} /> : r.value}</dd>
+      </div>
+    ))
+  }
+</dl>

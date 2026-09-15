@@ -1,11 +1,12 @@
 ---
+import { ClientRouter } from 'astro:transitions';
 import '@styles/global.css';
 import SEO from '@components/SEO.astro';
 import Header from '@components/Header.astro';
 import Footer from '@components/Footer.astro';
 import Gate from '@components/Gate.astro';
 import GateFlag from '@components/GateFlag.astro';
-import { searchIndexing, isGatedPath } from '@data/publication';
+import { searchIndexing, isGatedPath, isVeiledPath } from '@data/publication';
 
 interface Props {
   title?: string;
@@ -33,6 +34,8 @@ const { title, description, image, type, noindex = false, chrome = true } = Astr
  * src/data/publication.ts, which is one line in a diff somebody reads.
  */
 const gated = isGatedPath(Astro.url.pathname);
+/** Gated and veiled are not the same set: see `veiledPrefixes`. */
+const veiled = isVeiledPath(Astro.url.pathname);
 
 /**
  * A gated page is never indexable, and neither is anything else while the
@@ -63,7 +66,19 @@ const hideFromSearch = noindex || gated || !searchIndexing.enabled;
     <SEO {title} {description} {image} {type} noindex={hideFromSearch} />
     <slot name="head" />
 
-    {gated && <GateFlag />}
+    {veiled && <GateFlag />}
+
+    {
+      /*
+       * Page-to-page transitions, on the public site and never behind the
+       * veil. A veiled page has no router, so any link into it is a full load
+       * and its own scripts (the veil, the lightbox, the slider) run exactly
+       * as they always have; a link out of it is a full load for the same
+       * reason. Every other script on the site initialises on astro:page-load
+       * as well as on first paint, and guards against running twice.
+       */
+    }
+    {!veiled && <ClientRouter />}
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
@@ -72,6 +87,6 @@ const hideFromSearch = noindex || gated || !searchIndexing.enabled;
       <slot />
     </main>
     {chrome && <Footer />}
-    {gated && <Gate />}
+    {veiled && <Gate />}
   </body>
 </html>

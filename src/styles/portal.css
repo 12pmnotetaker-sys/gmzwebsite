@@ -1,0 +1,817 @@
+/**
+ * The client portal's repeated patterns, on top of global.css.
+ *
+ * PortalLayout imports global.css first (fonts, reset, focus, the kicker, the
+ * amber rule, the buttons) and then this. Everything here is either new to the
+ * portal or a portal-specific variant, and no selector here redefines a class
+ * the marketing site uses. Where the two designs share a name but not a shape
+ * (the section head, the fact list), the portal's version has its own name.
+ *
+ * The character this file holds up is "quiet utility": one question per
+ * screen, high contrast, big targets, nothing moving except to confirm a tap.
+ * The rule for what belongs here is the same as global.css: a pattern the
+ * portal uses on three or more screens. Anything used by one screen stays in
+ * that page's scoped <style>.
+ */
+
+/* ---- Body -------------------------------------------------------------- */
+
+.portal {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  line-height: var(--leading-normal, 1.5);
+  scroll-behavior: auto;
+}
+
+.portal h1,
+.portal h2,
+.portal h3 {
+  font-weight: 800;
+  letter-spacing: var(--tracking-heading);
+  text-wrap: pretty;
+}
+
+/* ---- Layout ------------------------------------------------------------
+ * One column at every width, and the same column on a phone and on a desktop.
+ * What changes with room is the gutter, and whether a secondary panel appears
+ * beside the column.
+ *
+ * The screen is a three-track grid: an empty left gutter, the content column,
+ * and a right gutter that the rail sits in when there is one. Because the two
+ * gutter tracks are equal, THE CONTENT COLUMN IS CENTRED ON THE PAGE whether
+ * or not a rail is present. That is deliberate, and it is the fix for the
+ * prototype, which laid the column and the rail out as one centred pair and
+ * pushed the column left of centre on desktop.
+ */
+
+.screen {
+  flex: 1 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  padding-inline: var(--portal-gutter);
+  padding-block-end: var(--space-xl);
+}
+
+.screen__column {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* The rail is desktop-only. Below that its content is already in the column,
+   in reading order, which is what "same steps, just wider" means. */
+.screen__rail {
+  display: none;
+}
+
+/* Blocks that leave the column for the rail on desktop. */
+.rail-only {
+  display: none;
+}
+
+@media (min-width: 60rem) {
+  .screen {
+    grid-template-columns:
+      minmax(var(--space-lg), 1fr)
+      minmax(0, var(--portal-column))
+      minmax(var(--space-lg), 1fr);
+    column-gap: var(--space-xl);
+    padding-inline: var(--space-xl);
+    padding-block: var(--space-xl) var(--space-2xl);
+  }
+
+  .screen__column {
+    grid-column: 2;
+  }
+
+  .screen__rail {
+    grid-column: 3;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    align-self: start;
+    position: sticky;
+    top: calc(var(--space-xl) + 4rem);
+    max-width: var(--portal-rail);
+  }
+
+  .rail-only {
+    display: flex;
+  }
+
+  .column-only {
+    display: none !important;
+  }
+}
+
+/* Vertical rhythm inside the column. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.stack--sm {
+  gap: var(--space-2xs);
+}
+
+.stack--md {
+  gap: var(--space-sm);
+}
+
+.stack--lg {
+  gap: var(--space-md);
+}
+
+/* Blocks are separated by 24, the step the design uses between every block
+   on a screen. */
+.block {
+  margin-block-start: var(--space-lg);
+}
+
+.block--tight {
+  margin-block-start: var(--space-md);
+}
+
+.block--end {
+  margin-block-end: var(--space-sm);
+}
+
+/* ---- Kicker variants --------------------------------------------------- */
+
+/* On a tint or amber panel the kicker is a quiet label rather than structure,
+   so it drops to the muted ink. */
+.kicker--muted {
+  color: var(--color-text-muted);
+}
+
+.kicker--on-amber {
+  color: var(--gmz-teal);
+}
+
+/* A form label: the kicker's shape, tighter tracking. */
+.label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* ---- Rules and section heads -------------------------------------------
+ * The amber rule under a heading is 56 wide, 64 on a screen whose title is
+ * the answer. A section opens with a 2px blue rule on top, then the kicker,
+ * then the heading at 800.
+ */
+
+.rule-mark {
+  width: 56px;
+}
+
+.rule-mark--long {
+  width: 64px;
+}
+
+.sect {
+  border-block-start: var(--rule-structure) solid var(--color-structure);
+  padding-block-start: var(--space-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.sect > h2,
+.sect > h3 {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+}
+
+/* ---- Type --------------------------------------------------------------- */
+
+/* The one answer on the screen: 26 at weight 800. There is exactly one of
+   these per screen, and it is the largest thing on it. */
+.answer {
+  font-size: var(--text-xl);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: var(--tracking-heading);
+  color: var(--color-text);
+}
+
+/* The same size used for a figure rather than a sentence, tracked tighter. */
+.answer--figure {
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-display);
+}
+
+.sub {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+}
+
+.body {
+  font-size: var(--text-base);
+  line-height: 1.55;
+  color: var(--color-text);
+}
+
+.note {
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.species {
+  font-size: var(--text-base);
+  font-style: italic;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+}
+
+/* The mono stack is for an estimate number and nothing else. */
+.estimate-no {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  color: var(--color-text-muted);
+}
+
+/* ---- Panels --------------------------------------------------------------
+ * The answer panel in its forms. Calm is the pale tint under a 3px amber
+ * rule. Attention is a solid amber fill with teal text, the only way amber is
+ * ever used behind words. Done is the green tint under the amber rule.
+ */
+
+.panel {
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.panel--calm {
+  background: var(--portal-tint);
+  border-block-start: var(--rule-accent) solid var(--color-highlight);
+}
+
+.panel--attention {
+  background: var(--status-needs-bg);
+  color: var(--status-needs-text);
+}
+
+/* Inside an amber panel every part of the type is teal, including the chip,
+   so the panel reads as one object rather than a stack of coloured pieces. */
+.panel--attention .answer,
+.panel--attention .sub,
+.panel--attention .body,
+.panel--attention .note,
+.panel--attention .kicker,
+.panel--attention p,
+.panel--attention h1,
+.panel--attention h2 {
+  color: var(--status-needs-text);
+}
+
+.panel--done {
+  background: var(--status-done-bg);
+  border-block-start: var(--rule-accent) solid var(--color-highlight);
+}
+
+/* A short note set on the tint, for the line above a send button. */
+.aside-note {
+  padding: var(--space-sm);
+  background: var(--portal-tint);
+  border-block-start: var(--rule-accent) solid var(--color-highlight);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-text);
+}
+
+/* The well behind an image, and behind a document plate. */
+.well {
+  background: var(--gmz-well);
+}
+
+/* ---- Rows ----------------------------------------------------------------
+ * The list row: a title, a note under it, and either a chevron or a status
+ * chip on the right. Rows are separated by hairlines, and the list closes
+ * with one, so the last row does not float.
+ */
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  border-block-end: 1px solid var(--portal-hair);
+}
+
+.rows--open {
+  border-block-end: 0;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: var(--tap-target);
+  padding-block: var(--space-md);
+  border-block-start: 1px solid var(--portal-hair);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.row--stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-xs);
+}
+
+.row__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.row__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+
+.row__title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+}
+
+.row__note {
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-muted);
+}
+
+/* The chevron never carries meaning on its own: it always sits beside a word.
+   It is hidden from screen readers because the row's own text is the link. */
+.row__go {
+  flex: none;
+  font-size: var(--text-lg);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--portal-action);
+}
+
+a.row:hover .row__title,
+a.row:focus-visible .row__title {
+  color: var(--portal-action);
+}
+
+/* A row whose right side is an action word rather than a chevron. */
+.row__action {
+  flex: none;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--portal-action);
+}
+
+/* ---- Fact rows -----------------------------------------------------------
+ * A label on the left, its value on the right, right-aligned. The plant
+ * record, the agreement summary and the application record read this way.
+ */
+
+.record {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  border-block-end: 1px solid var(--portal-hair);
+}
+
+.record__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-sm);
+  padding-block: var(--space-sm);
+  border-block-start: 1px solid var(--portal-hair);
+  font-size: var(--text-base);
+  line-height: 1.4;
+}
+
+.record__row--chip {
+  align-items: center;
+}
+
+.record dt {
+  flex: none;
+  color: var(--color-text-muted);
+}
+
+.record dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+  color: var(--color-text);
+}
+
+/* A record row inside an amber panel. */
+.panel--attention .record__row {
+  border-block-start-color: rgb(0 43 55 / 28%);
+  padding-block: var(--space-xs);
+}
+
+.panel--attention .record {
+  border-block-end: 0;
+}
+
+.panel--attention .record dt,
+.panel--attention .record dd {
+  color: var(--status-needs-text);
+}
+
+/* ---- Money rows ----------------------------------------------------------
+ * A priced line: description left, amount right. The total closes with a 2px
+ * ink rule rather than a hairline.
+ */
+
+.money {
+  display: flex;
+  flex-direction: column;
+}
+
+.money__row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding-block: var(--space-sm);
+  border-block-start: 1px solid var(--portal-hair);
+  font-size: var(--text-base);
+  line-height: 1.4;
+  color: var(--color-text);
+}
+
+.money__row > :last-child {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.money__row--total {
+  border-block-start: var(--rule-structure) solid var(--color-text);
+  font-size: var(--text-lg);
+  font-weight: 800;
+  line-height: var(--leading-snug);
+}
+
+/* A draw row: the milestone and its amount, then the trigger under both. */
+.draw {
+  padding-block: var(--space-sm);
+  border-block-start: 1px solid var(--portal-hair);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.draw:last-child {
+  border-block-end: var(--rule-structure) solid var(--color-text);
+}
+
+.draw__head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+}
+
+/* A dated step: when, then what. The approved screen's "what happens next". */
+.step {
+  padding-block: var(--space-sm);
+  border-block-start: 1px solid var(--portal-hair);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+
+.step:last-child {
+  border-block-end: 1px solid var(--portal-hair);
+}
+
+.step__when {
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+}
+
+/* ---- Status chips -------------------------------------------------------- */
+
+.chip {
+  align-self: flex-start;
+  flex: none;
+  padding: var(--space-2xs) var(--space-xs);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.chip--done {
+  background: var(--status-done-bg);
+  color: var(--status-done-text);
+}
+
+.chip--scheduled {
+  background: var(--status-scheduled-bg);
+  color: var(--status-scheduled-text);
+}
+
+.chip--needs {
+  background: var(--status-needs-bg);
+  color: var(--status-needs-text);
+}
+
+/* On a panel that is already the status colour, the chip inverts so it stays
+   legible: a done chip on the green tint, a needs chip on amber. */
+.panel--done .chip--done {
+  background: var(--color-bg);
+}
+
+.panel--attention .chip--needs {
+  background: var(--gmz-teal);
+  color: var(--gmz-amber);
+}
+
+/* The allowance marker: the same chip shape, tighter, sitting under a line
+   item rather than beside a heading. */
+.chip--allowance {
+  padding: 2px var(--space-xs);
+  background: var(--status-needs-bg);
+  color: var(--status-needs-text);
+}
+
+/* ---- Buttons -------------------------------------------------------------
+ * global.css owns .btn, .btn--primary and .btn--amber, with the signature
+ * green-to-amber flip. The portal adds the full-width, 48px-minimum form that
+ * every screen uses, and the outlined secondary.
+ */
+
+.portal .btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: var(--tap-target);
+  line-height: 1.2;
+}
+
+.portal .btn--primary {
+  background: var(--portal-action);
+  color: var(--portal-action-contrast);
+}
+
+.portal .btn--primary:hover {
+  background: var(--color-highlight);
+  color: var(--gmz-teal);
+}
+
+.portal .btn--amber:hover {
+  background: var(--portal-action);
+  color: var(--portal-action-contrast);
+}
+
+.btn--secondary {
+  background: transparent;
+  color: var(--portal-action);
+  box-shadow: inset 0 0 0 2px var(--portal-action);
+}
+
+.btn--secondary:hover {
+  background: var(--portal-action);
+  color: var(--portal-action-contrast);
+}
+
+/* A run of buttons, stacked. Two at most: one thing to do, one way out. */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+/* An inline green link that reads as an action rather than a button. */
+.link-action {
+  align-self: flex-start;
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+  color: var(--portal-action);
+  text-decoration: none;
+}
+
+.link-action:hover {
+  color: var(--color-highlight);
+}
+
+.link-action--sm {
+  font-size: var(--text-sm);
+}
+
+/* A tel: link set large enough to tap in a driveway. */
+.link-phone {
+  align-self: flex-start;
+  font-size: var(--text-lg);
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--portal-action);
+  text-decoration: none;
+}
+
+.link-phone--answer {
+  font-size: var(--text-xl);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-heading);
+}
+
+/* ---- Form fields --------------------------------------------------------- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  padding: 0.9375rem var(--space-sm);
+  border: 2px solid var(--color-text);
+  border-radius: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.2;
+}
+
+.field textarea {
+  line-height: var(--leading-normal, 1.5);
+  resize: vertical;
+}
+
+/* A choice in a set: a word, optionally with a swatch beside it. Never a
+   swatch on its own, because a colour is not a label. */
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.choice {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: var(--tap-target);
+  padding: 0.6875rem var(--space-sm);
+  border: 2px solid var(--portal-hair);
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.choice--wide {
+  justify-content: space-between;
+}
+
+.choice__swatch {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  border: 1px solid rgb(0 0 0 / 25%);
+}
+
+.choice__plus {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--portal-action);
+}
+
+/* The checked state is a filled ink block, not a tint: it has to survive
+   bright sun and a screenshot. */
+.choice input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.choice:has(input:checked) {
+  border-color: var(--color-text);
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-weight: 600;
+}
+
+.choice:has(input:focus-visible) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ---- Stage bar -----------------------------------------------------------
+ * Twelve segments for a project, seven for a garden, three for a one-off
+ * visit. The current segment is THICKER rather than a different colour, so it
+ * survives a screenshot or a print. Stages are named, never scored.
+ */
+
+.stagebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.stagebar__track {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2xs);
+  height: 12px;
+}
+
+.stagebar__seg {
+  flex: 1;
+  height: 6px;
+  background: var(--portal-hair);
+}
+
+.stagebar__seg--done {
+  background: var(--gmz-green);
+}
+
+.stagebar__seg--now {
+  height: 12px;
+  background: var(--gmz-green);
+}
+
+/* ---- Photo wells ---------------------------------------------------------
+ * The design states an absence rather than hiding it. A plate says what the
+ * photograph will be, so a client reading the record knows what is coming and
+ * a developer knows what to drop in.
+ */
+
+.plate {
+  background: var(--gmz-well);
+  display: flex;
+  align-items: flex-end;
+  padding: var(--space-xs);
+}
+
+.plate > span {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+  color: var(--color-text-muted);
+}
+
+.plate--tall {
+  padding: var(--space-sm);
+}
+
+.plates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-xs);
+}
+
+/* ---- Motion --------------------------------------------------------------
+ * Nothing moves except to confirm a tap. The one motion the portal has is the
+ * page transition, which is exactly that: the tap was heard and the next
+ * screen is coming. It is a short cross-fade, and the reduced-motion block in
+ * global.css zeroes it for anyone who has asked for less.
+ */
+
+::view-transition-old(portal-screen),
+::view-transition-new(portal-screen) {
+  animation-duration: 160ms;
+  animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

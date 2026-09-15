@@ -34,7 +34,25 @@ export const searchIndexing = {
  * this work out of a search result is the three signals below. Keep them
  * together; dropping one while keeping the others is a contradictory signal.
  */
-export const gatedPrefixes = ['/portfolio'] as const;
+export const gatedPrefixes = ['/portfolio', '/portal'] as const;
+
+/**
+ * Of the gated prefixes, the ones BaseLayout draws the unlock veil over.
+ *
+ * `/portfolio` is a courtesy screen over a public build. `/portal` is not: it
+ * is the client portal, with its own sign-in screen and its own layout, and it
+ * never renders the veil. It is in `gatedPrefixes` so that robots.txt
+ * disallows it and the sitemap never lists it, and PortalLayout sets noindex
+ * on every page itself. Nothing under /portal uses BaseLayout, so this list
+ * only matters if someone later does.
+ */
+export const veiledPrefixes = ['/portfolio'] as const;
+
+/** True when a path is one the veil belongs over. */
+export function isVeiledPath(pathname: string): boolean {
+  const path = pathname.replace(/\/$/, '') || '/';
+  return veiledPrefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+}
 
 /** True when a path sits behind the veil. Used by BaseLayout and the sitemap. */
 export function isGatedPath(pathname: string): boolean {

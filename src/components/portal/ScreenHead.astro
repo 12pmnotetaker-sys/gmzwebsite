@@ -1,0 +1,40 @@
+---
+/**
+ * The screen head: kicker, the heading at 800, the amber rule under it, and
+ * anything a screen wants directly beneath (an estimate number, a species, a
+ * status chip). One per screen, and it holds the page's single h1.
+ */
+interface Props {
+  kicker: string;
+  title: string;
+  /** 56px by default; 64px on a screen whose title is the answer itself. */
+  long?: boolean;
+  /** Pad the top. Off when a photo band sits directly above. */
+  padTop?: boolean;
+  /** Render the title at the 26px answer size rather than the fluid page size. */
+  asAnswer?: boolean;
+}
+
+const { kicker, title, long = false, padTop = true, asAnswer = true } = Astro.props;
+---
+
+<header class:list={['head', { 'head--pad': padTop }]}>
+  <span class="kicker">{kicker}</span>
+  <h1 class={asAnswer ? 'answer' : 'page-title'}>{title}</h1>
+  <div class:list={['rule-accent', 'rule-mark', { 'rule-mark--long': long }]} aria-hidden="true">
+  </div>
+  <slot />
+</header>
+
+<style>
+  .head {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-xs);
+  }
+
+  .head--pad {
+    padding-block-start: var(--space-lg);
+  }
+</style>

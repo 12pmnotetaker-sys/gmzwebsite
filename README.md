@@ -3,9 +3,12 @@
 The public marketing site for **GMZ Landscaping Inc.** — Astro, static output,
 deployed to Vercel at `gmzlandscape.com`.
 
-This repo is at **Phase 1**: the scaffold works and the private portfolio has
-moved in under `/portfolio`, veil and all. The marketing routes are still
-placeholders and the whole site is `noindex` until Phase 2.
+This repo carries all three of GMZ's surfaces in one site: the public marketing
+pages, the private portfolio under `/portfolio` behind its veil, and the client
+portal under `/portal` with its sign-in in the nav. The marketing routes are
+still being written and the whole site is `noindex` until Phase 2; the portal
+is the design built for real, with the brief's example clients as content,
+ahead of the server side that will sign a client in.
 
 The live `gmz-portfolio` deployment is untouched and still serving prospects.
 Nothing switches over until the Phase 3 cutover.
@@ -82,6 +85,11 @@ disagree about what a valid answer is.
 
 ```
 src/
+  pages/portal/          the client portal, one route per screen
+  layouts/PortalLayout.astro
+  styles/portal.css      the portal's repeated patterns, on top of global.css
+  data/portal/           the portal's copy, routes and status states
+  content/plants/        one record per plant in a client's garden
   data/site.ts           every company fact, once
   data/publication.ts    the search-indexing switch
   data/canonical.ts      the canonical URL form
@@ -113,4 +121,6 @@ rule, blue is structure. Keep the jobs straight and the design holds together.
 
 `CLAUDE.md` carries the rules that are not style preferences: one fact one home,
 nothing internal reaches the site, town not street, undecided policy stays
-unpublished, and the accessibility floor.
+unpublished, and the accessibility floor. `docs/portal-handoff.md` is the record
+of the client portal design: where each part went, what was deliberately not
+copied, and what is still to come.

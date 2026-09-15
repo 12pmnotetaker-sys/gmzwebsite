@@ -1,0 +1,118 @@
+---
+/**
+ * The portal's top bar: the mark on the left, the property on the right.
+ *
+ * Same at every width, which was the call in the second design conversation.
+ * There is no nav in it and there is no bottom tab bar anywhere, because
+ * navigation is derived from what the client has and most clients have one
+ * thing.
+ *
+ * On a screen with a parent, the back link takes the mark's place on the left
+ * and the mark moves to the middle. The link says where it goes, not just
+ * "back", wherever the destination is not the obvious one.
+ *
+ * The lockup is the site's own logo rather than the prototype's text mark, so
+ * a client moving between the marketing site and the portal sees one company.
+ * White artwork on teal is the only ground it is legible on.
+ */
+import Logo from '@components/Logo.astro';
+import { company } from '@data/site';
+
+interface Props {
+  /** The town shown on the right. Omitted on sign-in and the expired link. */
+  property?: string;
+  /** Where the back link goes. Omitted on a screen a client arrives at. */
+  backHref?: string;
+  /** What the back link says, after the chevron. */
+  backLabel?: string;
+}
+
+const { property, backHref, backLabel = 'Back' } = Astro.props;
+---
+
+<div class="bar on-dark">
+  <div class="bar__inner">
+    {
+      backHref ? (
+        <a class="bar__back" href={backHref}>
+          <span aria-hidden="true">&lsaquo;</span>
+          <span>{backLabel}</span>
+        </a>
+      ) : (
+        <a class="bar__home" href="/" aria-label={`${company.name}, home`}>
+          <Logo height={32} />
+        </a>
+      )
+    }
+    {
+      backHref && (
+        <a class="bar__home bar__home--mid" href="/" aria-label={`${company.name}, home`}>
+          <Logo height={28} variant="mark" />
+        </a>
+      )
+    }
+    {property && <span class="bar__property">{property}</span>}
+  </div>
+</div>
+
+<style>
+  .bar {
+    background: var(--portal-chrome);
+    color: var(--portal-chrome-text);
+  }
+
+  .bar__inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-lg);
+    min-height: 4rem;
+    padding: var(--space-sm) var(--portal-gutter);
+  }
+
+  @media (min-width: 60rem) {
+    .bar__inner {
+      padding: var(--space-md) var(--space-xl);
+    }
+  }
+
+  .bar__home {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+  }
+
+  .bar__home--mid {
+    margin-inline: auto;
+  }
+
+  .bar__back {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    min-height: var(--tap-target);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--gmz-amber);
+    text-decoration: none;
+  }
+
+  .bar__back:hover {
+    color: var(--portal-chrome-text);
+  }
+
+  /* One line, always. A wrapped property name in the chrome reads as a bug. */
+  .bar__property {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--gmz-amber);
+  }
+</style>

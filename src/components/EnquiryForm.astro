@@ -242,165 +242,179 @@ import {
 <script>
   import { validate } from '@data/enquiry';
 
-  const form = document.querySelector<HTMLFormElement>('[data-enquiry-form]');
-  const summary = document.querySelector<HTMLElement>('[data-enquiry-summary]');
-  const outcome = document.querySelector<HTMLElement>('[data-enquiry-outcome]');
-  const submit = document.querySelector<HTMLButtonElement>('[data-enquiry-submit]');
+  /*
+   * Runs on first paint and again after every client-side navigation: the
+   * router swaps in fresh markup and this module does not run a second time
+   * on its own. On a page without the router the event never fires and the
+   * direct call is the only one. The `data-ready` guard keeps the two from
+   * doubling up.
+   */
+  function init() {
+    const form = document.querySelector<HTMLFormElement>('[data-enquiry-form]');
+    const summary = document.querySelector<HTMLElement>('[data-enquiry-summary]');
+    const outcome = document.querySelector<HTMLElement>('[data-enquiry-outcome]');
+    const submit = document.querySelector<HTMLButtonElement>('[data-enquiry-submit]');
 
-  if (form && summary && outcome && submit) {
-    const fieldError = (name: string) =>
-      document.getElementById(`${name}-error`) as HTMLElement | null;
+    if (form && summary && outcome && submit) {
+      if (form.dataset.ready) return;
+      form.dataset.ready = '1';
+      const fieldError = (name: string) =>
+        document.getElementById(`${name}-error`) as HTMLElement | null;
 
-    const clearErrors = () => {
-      summary.hidden = true;
-      summary.textContent = '';
-      form.querySelectorAll<HTMLElement>('.field__error').forEach((node) => {
-        node.hidden = true;
-        node.textContent = '';
-      });
-      form.querySelectorAll<HTMLElement>('[aria-invalid]').forEach((node) => {
-        node.removeAttribute('aria-invalid');
-      });
-    };
+      const clearErrors = () => {
+        summary.hidden = true;
+        summary.textContent = '';
+        form.querySelectorAll<HTMLElement>('.field__error').forEach((node) => {
+          node.hidden = true;
+          node.textContent = '';
+        });
+        form.querySelectorAll<HTMLElement>('[aria-invalid]').forEach((node) => {
+          node.removeAttribute('aria-invalid');
+        });
+      };
 
-    const showErrors = (errors: Record<string, string>) => {
-      clearErrors();
-      const names = Object.keys(errors);
+      const showErrors = (errors: Record<string, string>) => {
+        clearErrors();
+        const names = Object.keys(errors);
 
-      for (const name of names) {
-        const node = fieldError(name);
-        const input = form.elements.namedItem(name);
-        if (node) {
-          node.textContent = errors[name] ?? '';
-          node.hidden = false;
-        }
-        if (input instanceof HTMLElement) {
-          input.setAttribute('aria-invalid', 'true');
-          // Point the input at its own message so a screen reader reads the
-          // reason on focus, not just the fact that something is wrong.
-          const described = input.getAttribute('aria-describedby');
-          const id = `${name}-error`;
-          if (!described?.includes(id)) {
-            input.setAttribute('aria-describedby', described ? `${described} ${id}` : id);
+        for (const name of names) {
+          const node = fieldError(name);
+          const input = form.elements.namedItem(name);
+          if (node) {
+            node.textContent = errors[name] ?? '';
+            node.hidden = false;
+          }
+          if (input instanceof HTMLElement) {
+            input.setAttribute('aria-invalid', 'true');
+            // Point the input at its own message so a screen reader reads the
+            // reason on focus, not just the fact that something is wrong.
+            const described = input.getAttribute('aria-describedby');
+            const id = `${name}-error`;
+            if (!described?.includes(id)) {
+              input.setAttribute('aria-describedby', described ? `${described} ${id}` : id);
+            }
           }
         }
-      }
 
-      summary.textContent =
-        names.length === 1
-          ? 'One answer needs another look before this can send.'
-          : `${names.length} answers need another look before this can send.`;
-      summary.hidden = false;
+        summary.textContent =
+          names.length === 1
+            ? 'One answer needs another look before this can send.'
+            : `${names.length} answers need another look before this can send.`;
+        summary.hidden = false;
 
-      const first = form.elements.namedItem(names[0] ?? '');
-      if (first instanceof HTMLElement) first.focus();
-    };
+        const first = form.elements.namedItem(names[0] ?? '');
+        if (first instanceof HTMLElement) first.focus();
+      };
 
-    /*
-     * A failure panel, not a replacement. The form stays on the page with
-     * everything the visitor typed still in it, because the most likely next
-     * thing they do is try again or pick up the phone, and both are worse if
-     * their words are gone.
-     */
-    const showFailure = (message: string) => {
-      outcome.hidden = false;
-      outcome.dataset.tone = 'error';
-      outcome.innerHTML = '';
+      /*
+       * A failure panel, not a replacement. The form stays on the page with
+       * everything the visitor typed still in it, because the most likely next
+       * thing they do is try again or pick up the phone, and both are worse if
+       * their words are gone.
+       */
+      const showFailure = (message: string) => {
+        outcome.hidden = false;
+        outcome.dataset.tone = 'error';
+        outcome.innerHTML = '';
 
-      const paragraph = document.createElement('p');
-      paragraph.textContent = message;
-      paragraph.tabIndex = -1;
+        const paragraph = document.createElement('p');
+        paragraph.textContent = message;
+        paragraph.tabIndex = -1;
 
-      // The number is the whole point of this panel, so it is a link rather
-      // than a sentence telling someone to go and find one.
-      const call = document.createElement('p');
-      const link = document.createElement('a');
-      link.className = 'link-accent';
-      link.href = `tel:${outcome.dataset.phoneTel ?? ''}`;
-      link.textContent = `Call ${outcome.dataset.phone ?? ''}`;
-      call.append(link);
+        // The number is the whole point of this panel, so it is a link rather
+        // than a sentence telling someone to go and find one.
+        const call = document.createElement('p');
+        const link = document.createElement('a');
+        link.className = 'link-accent';
+        link.href = `tel:${outcome.dataset.phoneTel ?? ''}`;
+        link.textContent = `Call ${outcome.dataset.phone ?? ''}`;
+        call.append(link);
 
-      outcome.append(paragraph, call);
-      paragraph.focus();
-      outcome.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    };
+        outcome.append(paragraph, call);
+        paragraph.focus();
+        outcome.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      };
 
-    const showThanks = () => {
-      form.hidden = true;
-      outcome.hidden = false;
-      outcome.dataset.tone = 'ok';
-      outcome.innerHTML = '';
+      const showThanks = () => {
+        form.hidden = true;
+        outcome.hidden = false;
+        outcome.dataset.tone = 'ok';
+        outcome.innerHTML = '';
 
-      const heading = document.createElement('h2');
-      heading.className = 'outcome__title';
-      heading.textContent = 'That reached us.';
+        const heading = document.createElement('h2');
+        heading.className = 'outcome__title';
+        heading.textContent = 'That reached us.';
 
-      const body = document.createElement('p');
-      body.textContent =
-        'Someone will read it and come back to you. If you asked to see the portfolio, the code ' +
-        'comes with the consultation, so it will arrive with the visit rather than by return.';
+        const body = document.createElement('p');
+        body.textContent =
+          'Someone will read it and come back to you. If you asked to see the portfolio, the code ' +
+          'comes with the consultation, so it will arrive with the visit rather than by return.';
 
-      outcome.append(heading, body);
-      heading.tabIndex = -1;
-      heading.focus();
-      outcome.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    };
+        outcome.append(heading, body);
+        heading.tabIndex = -1;
+        heading.focus();
+        outcome.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      };
 
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      if (submit.disabled) return;
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (submit.disabled) return;
 
-      const data = Object.fromEntries(new FormData(form).entries());
-      const checked = validate(data as Record<string, unknown>);
-      if (!checked.ok) {
-        showErrors(checked.errors);
-        return;
-      }
-
-      clearErrors();
-      outcome.hidden = true;
-      submit.disabled = true;
-      submit.textContent = 'Sending';
-
-      try {
-        const response = await fetch(form.action, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
-
-        if (response.ok) {
-          showThanks();
+        const data = Object.fromEntries(new FormData(form).entries());
+        const checked = validate(data as Record<string, unknown>);
+        if (!checked.ok) {
+          showErrors(checked.errors);
           return;
         }
 
-        if (response.status === 422) {
-          const payload = (await response.json()) as { fields?: Record<string, string> };
-          showErrors(payload.fields ?? {});
-          return;
-        }
+        clearErrors();
+        outcome.hidden = true;
+        submit.disabled = true;
+        submit.textContent = 'Sending';
 
-        /*
-         * Everything else is a delivery failure, and the endpoint only ever
-         * reports one when it means it. Say so plainly rather than dressing it
-         * up: a visitor who thinks it sent will wait, and waiting is the
-         * expensive outcome.
-         */
-        showFailure(
-          'This did not send, and we would rather say so than let you wait on a reply that is ' +
-            'not coming. Nothing you typed has been lost.',
-        );
-      } catch {
-        showFailure(
-          'This did not send, most likely a connection problem at one end or the other. Nothing ' +
-            'you typed has been lost, so trying again in a moment costs nothing.',
-        );
-      } finally {
-        submit.disabled = false;
-        submit.textContent = 'Send this to GMZ';
-      }
-    });
+        try {
+          const response = await fetch(form.action, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+          });
+
+          if (response.ok) {
+            showThanks();
+            return;
+          }
+
+          if (response.status === 422) {
+            const payload = (await response.json()) as { fields?: Record<string, string> };
+            showErrors(payload.fields ?? {});
+            return;
+          }
+
+          /*
+           * Everything else is a delivery failure, and the endpoint only ever
+           * reports one when it means it. Say so plainly rather than dressing it
+           * up: a visitor who thinks it sent will wait, and waiting is the
+           * expensive outcome.
+           */
+          showFailure(
+            'This did not send, and we would rather say so than let you wait on a reply that is ' +
+              'not coming. Nothing you typed has been lost.',
+          );
+        } catch {
+          showFailure(
+            'This did not send, most likely a connection problem at one end or the other. Nothing ' +
+              'you typed has been lost, so trying again in a moment costs nothing.',
+          );
+        } finally {
+          submit.disabled = false;
+          submit.textContent = 'Send this to GMZ';
+        }
+      });
+    }
   }
+
+  init();
+  document.addEventListener('astro:page-load', init);
 </script>
 
 <style>

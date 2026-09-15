@@ -239,9 +239,9 @@ function checkScriptProse(file, code) {
  * failure this exists to prevent is turning the marketing site on in Phase 2
  * and dragging private client work into a search result with it.
  *
- * A page counts as gated because it rendered the veil, not because of its
- * path, so a gated page that somehow lost its veil is caught here rather than
- * assumed safe.
+ * A page counts as gated because it rendered the veil or carries the portal
+ * marker, not because of its path, so a gated page that somehow lost its veil
+ * is caught here rather than assumed safe.
  */
 /**
  * Ten town pages carrying the same paragraph with the name swapped is the
@@ -309,7 +309,15 @@ async function checkIndexingConsistency(files) {
       route,
       noindex: /<meta[^>]+name=["']robots["'][^>]+noindex/i.test(source),
     };
-    (source.includes('data-gate-veil') ? gated : open).push(entry);
+    /*
+     * Two kinds of gated page. The portfolio renders the veil; the client
+     * portal marks its body with data-portal and never draws one, because it
+     * has a sign-in screen of its own. Both are private in every state.
+     */
+    (source.includes('data-gate-veil') || /<body\b[^>]*\bdata-portal\b/i.test(source)
+      ? gated
+      : open
+    ).push(entry);
   }
 
   const relative = (file) => path.relative(process.cwd(), file);

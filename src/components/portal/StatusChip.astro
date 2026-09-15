@@ -1,0 +1,16 @@
+---
+/**
+ * A status chip. Three tones, derived from the four jobs rather than invented,
+ * and the word is always shown beside the colour.
+ */
+import type { StatusKey } from '@data/portal/status';
+
+interface Props {
+  tone: StatusKey;
+  label: string;
+}
+
+const { tone, label } = Astro.props;
+---
+
+<span class:list={['chip', `chip--${tone}`]}>{label}</span>

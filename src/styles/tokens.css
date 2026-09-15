@@ -158,3 +158,63 @@
     --gmz-rule: rgb(238 242 242 / 20%);
   }
 }
+
+/* ---- The client portal ------------------------------------------------ */
+/**
+ * Tokens the portal adds to the palette above. Additive: nothing the
+ * marketing site reads changes value.
+ *
+ * One contrast correction. #008C41 measures 4.35:1 on white, under AA, and it
+ * hits twice in the portal: as link text and as a button fill under white
+ * text. `--portal-action` is #00883F at 4.57:1, visually indistinguishable.
+ * The uncorrected green stays for the mark, the rules and the active stage
+ * marker, where it never carries text.
+ *
+ * Three status states, derived from the four jobs rather than invented. Amber
+ * is always a fill with teal text, never amber text.
+ */
+:root {
+  --portal-action: #00883f;
+  --portal-action-contrast: #ffffff;
+  --portal-tint: var(--gmz-green-light);
+  --portal-hair: #d8dcdd;
+  --portal-chrome: var(--gmz-teal);
+  --portal-chrome-text: #ffffff;
+  --portal-chrome-muted: #a8b6b9;
+
+  --status-done-text: #00662f;
+  --status-done-bg: var(--gmz-green-light);
+  --status-scheduled-text: var(--gmz-blue);
+  --status-scheduled-bg: #e8f0f9;
+  --status-needs-text: var(--gmz-teal);
+  --status-needs-bg: var(--gmz-amber);
+
+  /* Every portal tap target clears this: a five-year-old phone, in bright
+     sun, one thumb. */
+  --tap-target: 3rem;
+
+  /* One column at every width; desktop centres it and hangs the secondary
+     panel in the gutter beside it. */
+  --portal-column: 42.5rem; /* 680px */
+  --portal-rail: 21.25rem; /* 340px */
+  --portal-gutter: var(--space-md); /* 18px, symmetrical on a 390 phone */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --portal-action: #3fc47c;
+    --portal-action-contrast: #04171d;
+    --portal-tint: #0c2a26;
+    --portal-hair: #153642;
+    --portal-chrome: #082630;
+    --portal-chrome-text: #eef2f2;
+    --portal-chrome-muted: #a8b6b9;
+
+    --status-done-text: #7fd9a3;
+    --status-done-bg: #0c2a22;
+    --status-scheduled-text: #5aa9ea;
+    --status-scheduled-bg: #0b2436;
+    --status-needs-text: #04171d;
+    --status-needs-bg: #ffb524;
+  }
+}

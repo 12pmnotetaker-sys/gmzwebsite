@@ -402,9 +402,11 @@ export interface NavItem {
 /**
  * Primary navigation, in the order a visitor should meet the site.
  *
- * The Work comes first because the portfolio is what earns the bigger jobs,
- * and Contact comes last because the site's real conversion is /start, which
- * sits in the header as a button rather than a nav link.
+ * The portfolio comes first because it is what earns the bigger jobs. It is
+ * the gated one, under `/portfolio`: a current or prospective client with the
+ * code from their consultation goes through the veil, anyone else meets the
+ * veil's invitation to start a project. The public `/work` split stays off the
+ * nav until GMZ has picked which projects go public (see CLAUDE.md).
  *
  * `/portfolio` is in the list on purpose, and it lands on the veil rather than
  * on the work itself. A visitor who clicks it meets the code prompt, which
@@ -416,8 +418,9 @@ export interface NavItem {
  * derives `noindex` from `isGatedPath`, robots.txt disallows the prefix, and
  * the sitemap excludes it, all from the route rather than from this list.
  *
- * `/portal` is deliberately absent. The route is reserved for the client
- * portal and the nav slot goes in when there is something behind it.
+ * The client portal is not in this list on purpose. It is a different kind of
+ * link, for a different visitor, and Header.astro sets it beside the call to
+ * action from `portalNav` in src/data/portal/routes.ts.
  */
 export const primaryNav: NavItem[] = [
   { label: 'The Work', href: '/work' },

@@ -1,5 +1,6 @@
 ---
 import { primaryNav, primaryCta, primaryPhone } from '@data/site';
+import { portalNav } from '@data/portal/routes';
 import Logo from '@components/Logo.astro';
 
 /**
@@ -33,6 +34,13 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
           </a>
         ))
       }
+      <a
+        class="masthead__portal"
+        href={portalNav.href}
+        aria-current={isCurrent('/portal') ? 'page' : undefined}
+      >
+        {portalNav.label}
+      </a>
       <a class="btn btn--amber masthead__cta" href={primaryCta.href}>{primaryCta.label}</a>
     </nav>
 
@@ -71,6 +79,7 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
   </nav>
 
   <a class="btn btn--amber drawer__cta" href={primaryCta.href}>{primaryCta.label}</a>
+  <a class="drawer__portal" href={portalNav.href}>{portalNav.label}</a>
   <a class="drawer__call" href={`tel:${primaryPhone.tel}`}>Call {primaryPhone.display}</a>
 </div>
 
@@ -82,11 +91,13 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
    * genuinely out of the accessibility tree when closed, and focus moves into
    * it on open and back to the burger on close.
    */
-  const burger = document.querySelector<HTMLButtonElement>('[data-menu-open]');
-  const drawer = document.querySelector<HTMLElement>('[data-menu]');
-  const close = document.querySelector<HTMLButtonElement>('[data-menu-close]');
+  function initMenu() {
+    const burger = document.querySelector<HTMLButtonElement>('[data-menu-open]');
+    const drawer = document.querySelector<HTMLElement>('[data-menu]');
+    const close = document.querySelector<HTMLButtonElement>('[data-menu-close]');
+    if (!burger || !drawer || !close || burger.dataset.ready) return;
+    burger.dataset.ready = '1';
 
-  if (burger && drawer && close) {
     const setOpen = (open: boolean) => {
       drawer.hidden = !open;
       burger.setAttribute('aria-expanded', String(open));
@@ -104,6 +115,22 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
       if (event.key === 'Escape' && !drawer.hidden) setOpen(false);
     });
   }
+
+  /*
+   * Once on first paint, and again after every client-side navigation: the
+   * router swaps in a fresh masthead and this module does not run a second
+   * time on its own. On a page without the router the event never fires and
+   * the direct call is the only one. The `data-ready` guard keeps the two
+   * from doubling up.
+   */
+  initMenu();
+  document.addEventListener('astro:page-load', initMenu);
+
+  // The body's overflow lock belongs to the drawer, which is gone after a
+  // navigation; a page must never arrive unable to scroll.
+  document.addEventListener('astro:after-swap', () => {
+    document.documentElement.style.overflow = '';
+  });
 </script>
 
 <style>
@@ -132,10 +159,12 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
   }
 
   /*
-   * Seven items plus the call to action is a lot for one bar. The gap and the
-   * type scale continuously with the viewport rather than stepping at a new
-   * breakpoint, so 760px stays the only structural switch in the site. Without
-   * this the nav wraps at around 1024px and the masthead doubles in height.
+   * Seven items, the portal link and the call to action is a lot for one bar.
+   * The gap and the type scale continuously with the viewport rather than
+   * stepping at a new breakpoint, and below 1120px the whole nav folds into
+   * the drawer: measured on the scale test, that is where the row would
+   * otherwise spill past the viewport by ten pixels and the call to action
+   * would wrap to two lines.
    */
   .masthead__nav {
     display: flex;
@@ -175,6 +204,37 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
     font-size: var(--text-sm);
   }
 
+  /*
+   * The client portal link. A different kind of link for a different visitor:
+   * a client with an account, not a prospect reading the site. It sits beside
+   * the call to action as an outlined button so it reads as a door rather than
+   * a page, and it never takes the amber, which is the prospect's action.
+   */
+  .masthead__portal {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.5rem;
+    padding: 0.5rem 0.9375rem;
+    border: 2px solid rgb(255 255 255 / 55%);
+    color: #fff;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    text-decoration: none;
+    white-space: nowrap;
+    transition:
+      border-color var(--transition),
+      background var(--transition),
+      color var(--transition);
+  }
+
+  .masthead__portal:hover,
+  .masthead__portal[aria-current='page'] {
+    border-color: var(--gmz-amber);
+    color: var(--gmz-amber);
+  }
+
   .masthead__burger {
     display: none;
     flex-direction: column;
@@ -198,7 +258,7 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
     background: var(--gmz-amber);
   }
 
-  @media (width < 1000px) {
+  @media (width < 1120px) {
     .masthead__nav {
       display: none;
     }
@@ -281,6 +341,21 @@ const isCurrent = (href: string) => path === href || path.startsWith(`${href}/`)
   .drawer__cta {
     margin-block-start: 1.75rem;
     padding: 1.0625rem;
+  }
+
+  .drawer__portal {
+    margin-block-start: 0.875rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 3rem;
+    border: 2px solid rgb(255 255 255 / 55%);
+    color: #fff;
+    font-size: var(--text-base);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    text-decoration: none;
   }
 
   .drawer__call {
