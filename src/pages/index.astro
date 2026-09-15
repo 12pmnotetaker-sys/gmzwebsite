@@ -1,7 +1,9 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
 import { Image } from 'astro:assets';
-import gardenImage from '@/assets/home/hero-poster.webp';
+import finishedGarden from '@/assets/portfolio/hamilton/hamilton-after-1.webp';
+import stoneStairs from '@/assets/portfolio/fox-hill/foxhill-stair-lit.webp';
+import plantingDetail from '@/assets/portfolio/fox-hill/foxhill-stump.webp';
 import HeroVideo from '@components/HeroVideo.astro';
 import SupplierStrip from '@components/SupplierStrip.astro';
 import {
@@ -24,21 +26,68 @@ const articles = await getPublishedArticles();
  * remembering to edit the home page too.
  */
 const services = await getServices();
+const serviceChoices: Record<
+  string,
+  { label: string; goal: string; copy: string; action: string; href: string }
+> = {
+  'landscape-design': {
+    label: 'Design',
+    goal: 'Plan a new garden.',
+    copy: 'Turn your ideas into a considered plan for planting, paths and outdoor living.',
+    action: 'Plan your first visit',
+    href: '#first-visit',
+  },
+  'landscape-construction': {
+    label: 'Build',
+    goal: 'Bring your plans to life.',
+    copy: 'Make the plan a place to enjoy, from grading and stonework to the final planting.',
+    action: 'Tell us about your plans',
+    href: primaryCta.href,
+  },
+  'landscape-maintenance': {
+    label: 'Maintenance',
+    goal: 'Care for your garden.',
+    copy: 'Keep your garden growing well with pruning, seasonal care and irrigation attention.',
+    action: 'Ask about garden care',
+    href: '/contact',
+  },
+};
+const workDetails = [
+  {
+    image: finishedGarden,
+    title: 'Room to wander.',
+    description:
+      'Bare ground became a planted garden, with flagstone paths woven around mature trees.',
+    alt: 'Flagstone paths set into low groundcover, winding between flowering beds and mature trees.',
+  },
+  {
+    image: stoneStairs,
+    title: 'Stonework that belongs.',
+    description: 'A hillside terrace became a stone stair, with lighting built into the risers.',
+    alt: 'Illuminated stone stairs between capped walls and clipped hedges at dusk.',
+  },
+  {
+    image: plantingDetail,
+    title: 'Color in the details.',
+    description:
+      'A stone edge became a layered planting of seasonal flowers around an existing stump.',
+    alt: 'Red, orange and white flowers planted among rocks around a tree stump, with taller flowers behind.',
+  },
+];
 ---
 
 <BaseLayout>
   <HeroVideo>
     <p class="kicker kicker--hero">{company.tagline}</p>
     <h1 class="page-title hero__title">
-      Gardens for {serviceRegionInline}.<br />Made for your life.
+      Your garden.<br />Made for living.
     </h1>
     <p class="hero__lede">
-      From the first sketch to the care that follows, our family helps you make the most of your
-      outdoor space.
+      Thoughtful design, skilled construction and ongoing care for gardens on {serviceRegionInline}.
     </p>
     <div class="hero__actions">
       <a class="btn btn--amber" href={primaryCta.href}>{primaryCta.label}</a>
-      <a class="btn hero__secondary" href="#services">Explore our services</a>
+      <a class="btn hero__secondary" href="#our-work">See our work</a>
     </div>
     <p class="hero__footnote">A family company in {company.address.locality}, {foundedLine}.</p>
   </HeroVideo>
@@ -50,6 +99,51 @@ const services = await getServices();
       <li>{company.license.display}</li>
     </ul>
   </div>
+
+  <section class="section" id="our-work" aria-labelledby="work-title">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <p class="kicker">A look at our work</p>
+          <h2 class="section-title" id="work-title">Gardens to live in. Details to enjoy.</h2>
+        </div>
+        <p class="section-head__note">
+          From a whole garden to the steps and planting that make it yours.
+        </p>
+      </div>
+      <ul class="work-grid">
+        {
+          workDetails.map((work) => (
+            <li>
+              <figure>
+                <Image
+                  src={work.image}
+                  alt={work.alt}
+                  widths={[400, 640, 960]}
+                  sizes="(max-width: 759px) calc(100vw - 3rem), (max-width: 1200px) 30vw, 400px"
+                  width={960}
+                  loading="lazy"
+                />
+                <figcaption>
+                  <>
+                    <h3>{work.title}</h3>
+                    <p>{work.description}</p>
+                  </>
+                </figcaption>
+              </figure>
+            </li>
+          ))
+        }
+      </ul>
+      <div class="work-footer">
+        <p>
+          See more finished spaces, design drawings and before-and-after views in our private
+          portfolio. Consultation code required.
+        </p>
+        <a class="btn btn--primary" href="/portfolio">Open the private portfolio</a>
+      </div>
+    </div>
+  </section>
 
   <section class="section" id="services" aria-labelledby="services-title">
     <div class="container">
@@ -65,56 +159,29 @@ const services = await getServices();
 
       <ul class="stages">
         {
-          services.map((service, index) => (
-            <li class="stage">
-              <span class="stage__number" aria-hidden="true">
-                0{index + 1}
-              </span>
-              <h3 class="stage__name">
-                <a href={serviceHref(service)}>{service.data.title}</a>
-              </h3>
-              <p class="stage__what">{service.data.summary}</p>
-            </li>
-          ))
+          services.map((service, index) => {
+            const choice = serviceChoices[service.id];
+            return (
+              <li class="stage">
+                <span class="stage__number" aria-hidden="true">
+                  0{index + 1}
+                </span>
+                <h3 class="stage__name">
+                  <a href={serviceHref(service)}>{choice?.label ?? service.data.title}</a>
+                </h3>
+                <p class="stage__goal">{choice?.goal}</p>
+                <p class="stage__what">{choice?.copy ?? service.data.summary}</p>
+                <a class="stage__action" href={choice?.href ?? serviceHref(service)}>
+                  {choice?.action ?? 'Learn more'}
+                </a>
+              </li>
+            );
+          })
         }
       </ul>
       <p class="stages__more">
         Not sure where to begin? <a href="#first-visit">Find the right first visit.</a>
       </p>
-    </div>
-  </section>
-
-  <section class="section portfolio-intro on-dark" aria-labelledby="portfolio-title">
-    <div class="container portfolio-intro__grid">
-      <figure class="portfolio-intro__image">
-        <Image
-          src={gardenImage}
-          alt="Grasses being planted around a river-rock dry creek and stone path on a hillside."
-          widths={[480, 768, 1200]}
-          sizes="(min-width: 900px) 48vw, 100vw"
-          loading="lazy"
-        />
-        <figcaption>A closer look at the gardens we create.</figcaption>
-      </figure>
-      <div class="portfolio-intro__copy">
-        <p class="kicker kicker--on-dark">Inside the portfolio</p>
-        <h2 class="section-title" id="portfolio-title">
-          See the thinking.<br />Then see the garden.
-        </h2>
-        <p class="portfolio-intro__lede">
-          Explore finished spaces, the drawings that shaped them, and before-and-after comparisons
-          that bring the transformation into focus.
-        </p>
-        <ul class="portfolio-intro__details">
-          <li>Design drawings and alternatives</li>
-          <li>Finished gardens and construction details</li>
-          <li>Before-and-after views and walkthrough films</li>
-        </ul>
-        <a class="btn btn--amber" href="/portfolio">Open the private portfolio</a>
-        <p class="portfolio-intro__note">
-          Consultation code required. We share access at your visit.
-        </p>
-      </div>
     </div>
   </section>
 
@@ -300,64 +367,65 @@ const services = await getServices();
     font-weight: 600;
   }
 
+  #our-work,
   #services,
   #first-visit {
     scroll-margin-block-start: 7rem;
   }
 
-  .portfolio-intro {
-    background: var(--gmz-teal);
-    color: var(--color-text-inverse);
-  }
-
-  .portfolio-intro__grid {
+  .work-grid {
+    list-style: none;
+    padding: 0;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    align-items: center;
-    gap: var(--space-3xl);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-lg);
   }
 
-  .portfolio-intro__image {
-    min-width: 0;
+  .work-grid figure {
+    margin: 0;
   }
-
-  .portfolio-intro__image img {
+  .work-grid img {
+    display: block;
     width: 100%;
-    aspect-ratio: 5 / 4;
+    height: auto;
+    aspect-ratio: 4 / 3;
     object-fit: cover;
   }
-
-  .portfolio-intro__image figcaption {
+  .work-grid figcaption {
     border-block-start: var(--rule-accent) solid var(--gmz-amber);
-    padding-block-start: var(--space-sm);
+    padding-block-start: var(--space-md);
     margin-block-start: var(--space-sm);
-    font-size: var(--text-sm);
   }
-
-  .portfolio-intro .section-title {
-    color: var(--color-text-inverse);
-    font-size: var(--text-4xl);
+  .work-grid h3 {
+    font-size: var(--text-xl);
+    color: var(--color-structure);
   }
-
-  .portfolio-intro__lede {
-    margin-block-start: var(--space-md);
-    max-width: 46ch;
+  .work-grid p {
+    margin-block-start: var(--space-xs);
+    color: var(--color-text-muted);
   }
-
-  .portfolio-intro__details {
-    list-style: none;
-    margin-block: var(--space-lg);
-    padding: 0;
+  .work-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    margin-block-start: var(--space-xl);
+    padding-block-start: var(--space-lg);
+    border-block-start: 1px solid var(--color-border);
   }
-
-  .portfolio-intro__details li {
-    border-block-start: 1px solid var(--color-border-inverse);
-    padding-block: var(--space-xs);
+  .work-footer p {
+    max-width: 48ch;
+    color: var(--color-text-muted);
   }
-
-  .portfolio-intro__note {
+  .stage__goal {
+    font-size: var(--text-xl);
     margin-block-start: var(--space-sm);
-    font-size: var(--text-sm);
+  }
+  .stage__action {
+    margin-block-start: auto;
+    padding-block-start: var(--space-lg);
+    font-weight: 700;
   }
 
   .visits {
@@ -430,7 +498,9 @@ const services = await getServices();
   }
 
   .stage {
-    border-block-start: 2px solid var(--color-structure);
+    display: flex;
+    flex-direction: column;
+    border-block-start: var(--rule-accent) solid var(--gmz-amber);
     padding: var(--space-lg);
     background: var(--color-bg-subtle);
   }
@@ -511,18 +581,8 @@ const services = await getServices();
     max-inline-size: var(--width-prose);
   }
 
-  @media (width < 900px) {
-    .portfolio-intro__grid {
-      grid-template-columns: 1fr;
-      gap: var(--space-xl);
-    }
-
-    .portfolio-intro__image img {
-      aspect-ratio: 16 / 9;
-    }
-  }
-
   @media (width < 760px) {
+    .work-grid,
     .stages,
     .visits {
       grid-template-columns: 1fr;
