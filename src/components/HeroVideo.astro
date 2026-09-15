@@ -6,9 +6,8 @@ import posterSource from '@/assets/home/hero-poster.webp';
  * The home hero: a silent clip behind the headline, with the poster frame
  * doing the work whenever the clip should not.
  *
- * The clip plays once and stops on its closing frame rather than looping. A
- * background that loops forever is restless, and this one ends on the lockup,
- * which a loop would snap away every twelve seconds.
+ * The garden portion plays once, then returns to its opening garden frame.
+ * The branded closing sequence is deliberately excluded from the homepage.
  *
  * Nothing is downloaded by the markup. There is no `src` attribute and
  * `preload` is `none`, so the browser fetches the poster and stops there. The
@@ -18,7 +17,7 @@ import posterSource from '@/assets/home/hero-poster.webp';
  *
  * The pause control is not decoration. WCAG 2.2.2 requires a way to stop
  * motion that starts on its own and runs past five seconds, and this runs for
- * twelve.
+ * seven seconds before returning to the garden.
  *
  * Provenance, because this one needs recording. The footage is cut from the
  * Los Charros walkthrough, which lives in the gated portfolio, and putting it
@@ -116,13 +115,31 @@ const poster = await getImage({ src: posterSource, width: 1280, format: 'webp' }
         }
       });
 
-      video.addEventListener('ended', () => label('Replay'));
+      const finish = () => {
+        video.pause();
+        video.currentTime = 0;
+        label('Replay');
+      };
+      // The approved garden footage ends before the closing brand sequence.
+      video.addEventListener('timeupdate', () => {
+        if (video.currentTime >= 7) finish();
+      });
+      video.addEventListener('ended', finish);
 
       start();
       // Someone who turns motion back on, or rotates a tablet into a wide
       // viewport, should get the film without reloading the page.
-      wide.addEventListener('change', start);
-      still.addEventListener('change', start);
+      const preferenceChanged = () => {
+        if (!wide.matches || still.matches) {
+          finish();
+          toggle.hidden = true;
+        } else {
+          toggle.hidden = false;
+          start();
+        }
+      };
+      wide.addEventListener('change', preferenceChanged);
+      still.addEventListener('change', preferenceChanged);
     }
   }
 
@@ -162,8 +179,8 @@ const poster = await getImage({ src: posterSource, width: 1280, format: 'webp' }
     background: linear-gradient(
       100deg,
       color-mix(in srgb, var(--gmz-teal) 88%, transparent) 0%,
-      color-mix(in srgb, var(--gmz-teal) 66%, transparent) 46%,
-      color-mix(in srgb, var(--gmz-teal) 34%, transparent) 100%
+      color-mix(in srgb, var(--gmz-teal) 58%, transparent) 46%,
+      color-mix(in srgb, var(--gmz-teal) 18%, transparent) 100%
     );
   }
 
@@ -182,9 +199,9 @@ const poster = await getImage({ src: posterSource, width: 1280, format: 'webp' }
     font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: #fff;
+    color: var(--color-text-inverse);
     background: color-mix(in srgb, var(--gmz-teal) 78%, transparent);
-    border: 1px solid color-mix(in srgb, #fff 34%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-text-inverse) 34%, transparent);
     border-radius: 0;
     padding: 0.5rem 0.875rem;
     cursor: pointer;
