@@ -7,7 +7,7 @@
  * was done last visit, the service and past visits, the plants on record, the
  * seasonal offer, documents, and one button.
  *
- * On desktop the next-visit panel and the offer move to the rail, which is
+ * On desktop the next-visit panel moves to the rail, which is
  * why they render twice: once in the column with `column-only`, once in the
  * rail. The steps are the same; there is just room beside them.
  *
@@ -42,6 +42,18 @@ const shortlist = landingPlants(plants);
         <h1 class="kicker">{garden.display.kicker}</h1>
         <div class="rule-accent rule-mark" aria-hidden="true" />
       </header>
+
+      {garden.offer && (
+        <a class="offer-banner" href={routes.offer(garden.offer.slug)}>
+          <span class="offer-banner__copy">
+            <span class="offer-banner__kicker">{garden.offer.kicker}</span>
+            <span class="offer-banner__title">{garden.offer.rowNote}</span>
+          </span>
+          <span class="offer-banner__action">
+            View offer <span aria-hidden="true">&rarr;</span>
+          </span>
+        </a>
+      )}
 
       <section class="panel panel--calm column-only" aria-labelledby="next-visit">
         <span class="kicker kicker--muted" id="next-visit">
@@ -88,15 +100,6 @@ const shortlist = landingPlants(plants);
       )}
 
       <nav class="block rows" aria-label="More">
-        {garden.offer && (
-          <a class="row column-only" href={routes.offer(garden.offer.slug)}>
-            <span class="row__text">
-              <span class="row__title">{garden.offer.rowTitle}</span>
-              <span class="row__note">{garden.offer.rowNote}</span>
-            </span>
-            <span class="chip chip--scheduled">{garden.offer.rowChip}</span>
-          </a>
-        )}
         <Row href={routes.documents} title="Documents" note="Agreement, insurance, plans" />
       </nav>
 
@@ -113,15 +116,6 @@ const shortlist = landingPlants(plants);
           <p class="body">{garden.nextVisit.window}</p>
           <StatusChip tone={garden.nextVisit.status} label={garden.nextVisit.statusLabel} />
         </section>
-        {garden.offer && (
-          <a class="offer-card" href={routes.offer(garden.offer.slug)}>
-            <span class="kicker">{garden.offer.kicker}</span>
-            <span class="offer-card__line">{garden.offer.rowNote}</span>
-            <span class="link-action link-action--sm">
-              Open the offer <span aria-hidden="true">&rsaquo;</span>
-            </span>
-          </a>
-        )}
       </Fragment>
     </PortalLayout>
   ) : (
@@ -154,19 +148,49 @@ const shortlist = landingPlants(plants);
     margin-block-start: var(--space-2xs);
   }
 
-  .offer-card {
-    padding-block-start: var(--space-sm);
-    border-block-start: var(--rule-structure) solid var(--color-structure);
+  .offer-banner {
     display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    margin-block: var(--space-md) var(--space-lg);
+    padding: var(--space-lg);
+    background: var(--gmz-amber);
+    color: var(--gmz-teal);
     text-decoration: none;
-    color: var(--color-text);
+    border-radius: 6px;
   }
-
-  .offer-card__line {
-    font-size: var(--text-base);
-    font-weight: 600;
-    line-height: var(--leading-snug);
+  .offer-banner__copy {
+    display: grid;
+    gap: var(--space-xs);
+    flex: 1 1 260px;
+  }
+  .offer-banner__kicker {
+    font-size: var(--text-xs);
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+  .offer-banner__title {
+    font-size: clamp(1.25rem, 2.3vw, 1.625rem);
+    font-weight: 800;
+    line-height: 1.25;
+  }
+  .offer-banner__action {
+    padding: var(--space-sm) var(--space-md);
+    background: var(--gmz-teal);
+    color: var(--gmz-amber);
+    font-weight: 700;
+    white-space: nowrap;
+    border-radius: 4px;
+  }
+  .offer-banner:hover .offer-banner__action {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .offer-banner:focus-visible {
+    outline: 3px solid var(--color-focus);
+    outline-offset: 4px;
   }
 </style>
