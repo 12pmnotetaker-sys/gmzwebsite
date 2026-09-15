@@ -34,6 +34,21 @@ const SITE = process.env.SITE_URL ?? 'https://www.gmzlandscape.com';
 export default defineConfig({
   site: SITE,
   output: 'static',
+  // Trust only this site's hosts when Vercel forwards requests to the function.
+  // Keep Astro's origin check enabled for form submissions.
+  security: {
+    checkOrigin: true,
+    allowedDomains: [
+      ...new Set(
+        [
+          new URL(SITE).hostname,
+          process.env.VERCEL_URL,
+          process.env.VERCEL_BRANCH_URL,
+          'gmzwebsite-git-codex-homepa-8a3419-12pmnotetaker-7527s-projects.vercel.app',
+        ].filter((host) => typeof host === 'string' && host.length > 0),
+      ),
+    ].map((hostname) => ({ hostname })),
+  },
   adapter: vercel({
     // Sharp at build time for the prerendered pages, and in the function for
     // anything rendered on demand. Vercel's own image service is not used, so

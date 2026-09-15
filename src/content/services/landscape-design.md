@@ -1,17 +1,17 @@
 ---
 title: Landscape Design
 summary: >-
-  Drawings, planting plans and a scope you can price, settled on paper before
-  anything is dug. The stage where changing your mind is free.
+  We create landscape plans that show the layout, planting, materials,
+  irrigation and lighting for your project.
 serviceLine: design-build
 order: 10
 featured: true
 pullQuote: Paper is the cheapest place to change your mind.
 highlights:
-  - An hour on the property, listening before drawing
-  - Soil, drainage and the fall of the land recorded rather than assumed
-  - Planting, hardscape, lighting and water resolved as one plan
-  - Permits and approvals handled where the town requires them
+  - A site visit to discuss your goals and review the property
+  - Measurements and a review of soil, slopes and drainage
+  - Plans for planting, patios, walkways, irrigation and lighting
+  - A review of required permits and approvals
 ---
 
 Most of what goes wrong on a landscape project goes wrong before anyone digs.

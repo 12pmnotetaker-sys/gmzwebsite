@@ -27,12 +27,10 @@ import Logo from '@components/Logo.astro';
 
   <div class="veil__bar"></div>
 
-  <p class="veil__intro">
-    This portfolio is private. Please enter the code from your consultation.
-  </p>
+  <p class="veil__intro">This portfolio is private. Please enter your portfolio access code.</p>
 
   <form class="veil__form" data-gate-form>
-    <label class="visually-hidden" for="gate-code">Consultation code</label>
+    <label class="visually-hidden" for="gate-code">Portfolio access code</label>
     <input
       id="gate-code"
       name="code"
@@ -47,19 +45,9 @@ import Logo from '@components/Logo.astro';
 
   <p class="veil__message" role="status" aria-live="polite" data-gate-message></p>
 
-  {
-    /*
-     * Without this the veil is a dead end for the one visitor it is most
-     * worth helping: someone who found the portfolio, wants to see it, and has
-     * no code because they have not spoken to GMZ yet. The code comes with the
-     * consultation, so the honest next step is the intake form, not a
-     * different password.
-     */
-  }
   <p class="veil__route">
-    No code yet? The portfolio opens after a consultation.
-    {' '}<a href="/start">Start a project</a>, or read
-    {' '}<a href="/">more about the company</a> first.
+    Want a closer look at our work? <a href="/portfolio-access">Request portfolio access</a>. Tell
+    us about your garden, and we'll review your request and reply by email.
   </p>
 
   <p class="veil__legal">{licenseShort} · {company.address.locality}, California</p>
@@ -104,7 +92,7 @@ import Logo from '@components/Logo.astro';
         submit.textContent = 'Enter';
 
         if (input.value.trim().toUpperCase() !== code.toUpperCase()) {
-          say("That code isn't right. Please check your consultation notes.", 'error');
+          say("That code isn't right. Please check the code in your email.", 'error');
           input.select();
           return;
         }

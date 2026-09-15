@@ -9,6 +9,10 @@ import {
   propertyTypes,
   timelines,
 } from '@data/enquiry';
+interface Props {
+  maintenance?: boolean;
+}
+const { maintenance = false } = Astro.props;
 
 /**
  * The intake form.
@@ -125,7 +129,13 @@ import {
       <label class="field__label" for="projectType">What are you thinking of</label>
       <select class="field__input" id="projectType" name="projectType" required>
         <option value="">Choose one</option>
-        {projectTypes.map((choice) => <option value={choice.value}>{choice.label}</option>)}
+        {
+          projectTypes.map((choice) => (
+            <option value={choice.value} selected={maintenance && choice.value === 'maintenance'}>
+              {choice.label}
+            </option>
+          ))
+        }
       </select>
       <p class="field__error" id="projectType-error" hidden></p>
     </div>
@@ -194,8 +204,8 @@ import {
         I would like to see the private portfolio
       </label>
       <p class="field__hint check__hint">
-        Finished gardens, the drawings behind them and walkthrough film. It sits behind a code, and
-        the code comes with the consultation rather than with the enquiry.
+        We review portfolio requests and email an access code when approved. A consultation is not
+        required.
       </p>
     </div>
   </fieldset>
@@ -241,6 +251,10 @@ import {
 
 <script>
   import { validate } from '@data/enquiry';
+  interface Props {
+    maintenance?: boolean;
+  }
+  const { maintenance = false } = Astro.props;
 
   /*
    * Runs on first paint and again after every client-side navigation: the
@@ -347,8 +361,8 @@ import {
 
         const body = document.createElement('p');
         body.textContent =
-          'Someone will read it and come back to you. If you asked to see the portfolio, the code ' +
-          'comes with the consultation, so it will arrive with the visit rather than by return.';
+          'We will review your enquiry and contact you. If you requested portfolio access, ' +
+          'we will email a code when approved. No visit has been booked.';
 
         outcome.append(heading, body);
         heading.tabIndex = -1;

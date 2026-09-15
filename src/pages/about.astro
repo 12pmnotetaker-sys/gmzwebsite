@@ -36,29 +36,34 @@ const { people, license, memberships, drawings, address, heritage } = company;
         <div>
           <p class="kicker">The company</p>
           <h2 class="section-title" id="story-title">
-            The company since {company.founded}, the family for longer.
+            Family-owned. Rooted in the Peninsula since {company.founded}.
           </h2>
         </div>
       </div>
 
       <div class="prose story__body">
         <p>
-          {company.founder} started {company.name} in {company.founded} and still owns it. The family
-          had been working in landscaping since {heritage.tradeSince}, so the company is younger
-          than the trade behind it, and {heritage.generations} generations of the family work in it now.
+          {company.founder} founded {company.name} in {company.founded}. Based in
+          {address.locality}, we are a family-owned landscape design, construction and maintenance
+          company serving {serviceRegionInline}. Our family's landscaping experience began in
+          {heritage.tradeSince} and now spans {heritage.generations} generations.
         </p>
         <p>
-          Family owned is a line most landscape companies use, so it is worth saying what it means
-          here rather than leaving it as a feeling. Four people are named below with the job each of
-          them does. The numbers on the contact page are theirs. There is no division to be handed
-          off to, and nobody stands between the person who drew your garden and the person who comes
-          back to look after it.
+          Family members are directly involved in design, project management and maintenance. We
+          work with clients to understand how they use their property, plan the improvements they
+          need, and coordinate the work from the initial design through installation and ongoing
+          care.
         </p>
         <p>
-          The company works one region, {serviceRegionInline}, from a yard in {address.locality}.
-          That is a limit, and a deliberate one. Soil, exposure and what a town will approve change
-          from one of these towns to the next, and knowing that is worth more than being able to
-          drive further.
+          Our work includes planting, patios, paths, retaining walls, irrigation, drainage and
+          landscape lighting. We take on complete garden renovations as well as improvements to
+          individual areas, and we can build from plans prepared by other landscape designers.
+          Maintenance is also available for established gardens, whether we installed them or not.
+        </p>
+        <p>
+          Working locally helps us plan for the conditions that affect Peninsula gardens: sun and
+          shade, slopes, soil, drainage and seasonal water needs. We consider these details
+          alongside the way you want to use the space and the care it will need over time.
         </p>
       </div>
     </section>
@@ -66,13 +71,9 @@ const { people, license, memberships, drawings, address, heritage } = company;
     <section class="section people" aria-labelledby="people-title">
       <div class="section-head">
         <div>
-          <p class="kicker">Who you deal with</p>
-          <h2 class="section-title" id="people-title">Four names, and what each one does.</h2>
+          <p class="kicker">Our team</p>
+          <h2 class="section-title" id="people-title">Meet the Gomez family.</h2>
         </div>
-        <p class="section-head__note">
-          A small company is only an advantage if you can tell who is responsible for what. This is
-          who.
-        </p>
       </div>
 
       <ul class="roster">

@@ -1,0 +1,119 @@
+---
+import { Image, getImage } from 'astro:assets';
+import garden from '@/assets/home/woodside-garden.webp';
+import mobileGarden from '@/assets/home/woodside-mobile.webp';
+const mobile = await getImage({
+  src: mobileGarden,
+  widths: [480, 760, 1200],
+  format: 'webp',
+  quality: 85,
+});
+---
+
+<section class="home-hero on-dark" aria-label="A garden installed by Rafael Gomez">
+  <picture class="home-hero__picture">
+    <source
+      media="(width < 760px)"
+      srcset={mobile.srcSet.attribute}
+      sizes="100vw"
+      width={1200}
+      height={800}
+    />
+    <Image
+      class="home-hero__image"
+      src={garden}
+      alt="A Woodside garden with ornamental grasses, stone paving and mature trees."
+      widths={[640, 960, 1280, 1800]}
+      sizes="100vw"
+      width={1800}
+      quality={85}
+      loading="eager"
+      fetchpriority="high"
+    />
+  </picture>
+  <div class="home-hero__scrim" aria-hidden="true"></div>
+  <div class="home-hero__content container"><slot /></div>
+  <div class="home-hero__credit">
+    <p class="container">
+      Woodside garden · Installation: Rafael Gomez · Design: Chris Jacobson · Photography: © Marion
+      Brenner
+    </p>
+  </div>
+</section>
+
+<style>
+  .home-hero {
+    position: relative;
+    isolation: isolate;
+    background: var(--gmz-teal);
+    display: grid;
+    align-content: end;
+    min-block-size: clamp(34rem, 74vh, 48rem);
+    overflow: hidden;
+  }
+
+  .home-hero__picture {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+  }
+
+  .home-hero__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 58%;
+    z-index: -2;
+  }
+
+  .home-hero__scrim {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--gmz-teal) 34%, transparent) 0%,
+      color-mix(in srgb, var(--gmz-teal) 24%, transparent) 38%,
+      color-mix(in srgb, var(--gmz-teal) 3%, transparent) 75%,
+      transparent 100%
+    );
+  }
+
+  .home-hero__content {
+    width: 100%;
+    padding-block: var(--space-3xl) var(--space-2xl);
+  }
+
+  .home-hero__credit {
+    background: color-mix(in srgb, var(--gmz-teal) 94%, transparent);
+    color: var(--color-text-inverse);
+    padding-block: var(--space-xs);
+    font-size: var(--text-xs);
+  }
+
+  @media (width < 760px) {
+    .home-hero {
+      min-block-size: 0;
+    }
+    .home-hero__picture {
+      position: relative;
+      inset: auto;
+      z-index: auto;
+      display: block;
+      aspect-ratio: 3 / 2;
+    }
+    .home-hero__image {
+      display: block;
+      object-position: center;
+    }
+    .home-hero__scrim {
+      display: none;
+    }
+    .home-hero__content {
+      padding-block: var(--space-xl);
+    }
+    .home-hero__credit {
+      border-block-start: 1px solid var(--color-border-inverse);
+    }
+  }
+</style>

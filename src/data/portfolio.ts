@@ -40,7 +40,11 @@ export const heroPicture = (project: Project) => project.data.hero ?? project.da
  * one still on the drawing board says so rather than overpromising.
  */
 export const indexCta = (project: Project) =>
-  project.data.built.length > 0 ? 'See how it was built' : 'Design still in progress';
+  project.data.built.length > 0
+    ? 'See how it was built'
+    : project.data.photos.length > 0
+      ? 'Explore the garden'
+      : 'Design still in progress';
 
 /** The previous and next project, wrapping at both ends. */
 export function neighbours(projects: Project[], current: Project) {
