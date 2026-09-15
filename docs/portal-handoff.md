@@ -103,8 +103,8 @@ screen has a rail.
 ## Deliberate departures from the prototype
 
 **Every plant has a record.** The prototype had one record screen, the oak's,
-and every other plant row pointed at it. Plants are a content collection now,
-so each row opens its own page. Where the design gave a plant facts (the oak's
+and every other plant row pointed at it. Plants are rows on the client's
+record now, so each row opens its own page. Where the design gave a plant facts (the oak's
 permit, the maple's planting date, the clematis tied in on 26 August) the
 record shows them; where it gave none, the record shows no care history rather
 than an invented one. The crew's notes under each record are new content and
@@ -204,9 +204,13 @@ email; the link carries a token, once, and `/portal/auth/[token]` exchanges it
 for a session row and an HttpOnly cookie scoped to `/portal`. Links last seven
 days, as the recovery screen promises, and keep working for ten minutes after
 first use so a mail scanner that opens one first cannot spend it. An address
-that is not on file, or has asked for too many links in an hour, gets the same
-"a link is on its way" screen as one that is, because the alternative tells a
-stranger which addresses are clients. Accounts that hold more than one
+that is not on file, one that has asked for too many links in a quarter of an
+hour, and one whose message the provider refused all get the same "a link is
+on its way" screen, because any difference tells a stranger which addresses
+are clients; a refused message is logged for the office. Wrong passwords are
+counted against the typed address and refused after ten in a quarter of an
+hour, and a guess against an address that is not on file costs the same time
+as one that is. Accounts that hold more than one
 property can carry a password (scrypt, set from the command line); everyone
 else uses links. Only hashes of tokens and sessions are stored.
 

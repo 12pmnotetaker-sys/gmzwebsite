@@ -10,8 +10,8 @@
  * reader did not ask for, no time on site, no visit duration, and nothing
  * about crew-days, cost, margin or rates. The one price that appears is the
  * monthly figure on the agreement, which the client already signed.
- * `parseRecord` enforces the rules on the way in; a sentence that breaks one
- * fails the seed.
+ * `parseRecord` runs the house style regexes (em dashes, manufacturer names,
+ * internal figures, hourly rates) on the way in; the rest is held by care.
  *
  * Town names only. Never a house number, never a street.
  */
@@ -108,12 +108,12 @@ export const gardenSeed: GardenRecord = {
       /* Not on file yet; the row says so rather than opening this shelf again. */
     },
     {
-      title: 'Warranty',
-      note: 'Planting from the 2024 work, one year',
+      title: 'Irrigation plan',
+      note: 'Zone map, drawn April 2024',
     },
     {
       title: 'Certificate of insurance',
-      note: 'Current, renews January 2027',
+      note: 'Sent on request',
     },
     {
       title: 'Application records',

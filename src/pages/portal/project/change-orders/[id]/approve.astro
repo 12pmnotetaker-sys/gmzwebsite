@@ -149,14 +149,14 @@ if (Astro.request.method === 'POST') {
     width: 70%;
   }
 
-  /* The dimming is the chrome teal at 72%, whatever the theme. */
+  /* The dimming is the chrome, mostly opaque; the token sets it for each theme. */
   .backdrop {
     position: relative;
     z-index: 1;
     display: flex;
     align-items: flex-end;
     justify-content: center;
-    background: rgb(0 43 55 / 72%);
+    background: var(--portal-backdrop);
   }
 
   .sheet {

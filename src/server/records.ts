@@ -134,15 +134,21 @@ export async function loadRequest(
   };
 }
 
-/** The client's most recent answer to an application notice, if any. */
+/**
+ * The client's answer to one application notice, if any. Keyed by the
+ * notice's date, so a notice answered in September does not show a later
+ * notice as already answered.
+ */
 export async function loadApplicationAnswer(
   client: PortalClient,
+  noticeDate: string,
 ): Promise<{ decision: 'go-ahead' | 'skip'; createdAt: Date } | null> {
   const { data, error } = await db()
     .from('portal_requests')
     .select('details, created_at')
     .eq('client_id', client.id)
     .eq('kind', 'application')
+    .eq('details->>date', noticeDate)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -205,7 +211,14 @@ export function recordedLine(approval: ApprovalRecord): string {
     minute: '2-digit',
     hour12: true,
   });
-  const [clock, period] = time.split(' ');
-  const when = period === 'PM' ? 'in the afternoon' : 'in the morning';
+  const [clock] = time.split(' ');
+  const hour = Number(
+    approval.createdAt.toLocaleTimeString('en-US', {
+      timeZone: zone,
+      hour: 'numeric',
+      hour12: false,
+    }),
+  );
+  const when = hour < 12 ? 'in the morning' : hour < 18 ? 'in the afternoon' : 'in the evening';
   return `Recorded ${weekday} ${day} ${month}, ${clock} ${when}, by ${approval.typedName}.`;
 }

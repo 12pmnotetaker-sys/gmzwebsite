@@ -19,7 +19,7 @@ import type { AstroCookies } from 'astro';
 import { company, primaryPhone } from '@data/site';
 import { routes } from '@data/portal/routes';
 import { db } from './db';
-import { hashToken, newToken, verifyPassword } from './crypto';
+import { hashPassword, hashToken, newToken, verifyPassword } from './crypto';
 import { sendMail } from './mail';
 import { mailConfigured } from './env';
 
@@ -42,8 +42,14 @@ const LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
  * be able to spend the link on their behalf.
  */
 const LINK_GRACE_MS = 10 * 60 * 1000;
-/** How many links one address can ask for in an hour before we stop sending. */
-const LINKS_PER_HOUR = 5;
+/**
+ * How many links one address can ask for in a quarter of an hour before we
+ * stop sending. The window is short on purpose: the throttle is there to stop
+ * a stranger filling a client's inbox, and a stranger can trip it, so a
+ * client it locks out is locked out for minutes rather than an hour.
+ */
+const LINKS_PER_WINDOW = 3;
+const LINK_WINDOW_MS = 15 * 60 * 1000;
 /** A session lasts a month of not signing in. */
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -92,19 +98,23 @@ export function maskEmail(email: string): string {
  * Send a sign-in link to an address, if the address is on file and has not
  * asked for too many.
  *
- * An address that is not on file and an address that has asked too often
- * both come back `silent`, and the screen shows "a link is on its way" for
- * both, because the alternative tells a stranger which addresses are
- * clients. `failed` is different: the address is on file and the message
- * could not be sent, and saying so is owed to a real client.
+ * Whatever happens, the screen shows the same "if that address is on file,
+ * a link is on its way". An address that is not on file, one that has asked
+ * too often, and one whose message the provider refused all come back
+ * `silent`, because any difference tells a stranger which addresses are
+ * clients. A refused message is logged for the office, and the sign-in
+ * screen already says, from `mailConfigured()` alone and before any address
+ * is typed, when links cannot be sent at all.
+ *
+ * What the screen cannot hide is time: an address on file costs a row and a
+ * message, one that is not costs a lookup. The throttle bounds how often
+ * anyone can measure it; it does not remove it.
  */
 export type LinkIssue =
   /** A provider accepted the message. */
   | 'sent'
-  /** Nothing was sent and the screen must not say why: the address is not on file, or has asked too often. */
-  | 'silent'
-  /** The address is on file and the provider refused, or there is no provider. The screen says so. */
-  | 'failed';
+  /** Nothing was sent, and the screen must not say why. */
+  | 'silent';
 
 export async function issueSignInLink(
   email: string,
@@ -112,15 +122,18 @@ export async function issueSignInLink(
 ): Promise<{ outcome: LinkIssue }> {
   const client = await findClientByEmail(email);
   if (!client) return { outcome: 'silent' };
-  if (!mailConfigured()) return { outcome: 'failed' };
+  if (!mailConfigured()) {
+    console.error('portal: a sign-in link was asked for with no mail provider configured');
+    return { outcome: 'silent' };
+  }
 
-  const since = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const since = new Date(Date.now() - LINK_WINDOW_MS).toISOString();
   const { count } = await db()
     .from('portal_sign_in_tokens')
     .select('id', { count: 'exact', head: true })
     .eq('client_id', client.id)
     .gte('created_at', since);
-  if ((count ?? 0) >= LINKS_PER_HOUR) return { outcome: 'silent' };
+  if ((count ?? 0) >= LINKS_PER_WINDOW) return { outcome: 'silent' };
 
   const token = newToken();
   const { error } = await db()
@@ -150,7 +163,8 @@ export async function issueSignInLink(
       company.legalName,
     ].join('\n'),
   });
-  return { outcome: sent ? 'sent' : 'failed' };
+  if (!sent) console.error(`portal: the provider refused a sign-in link for client ${client.id}`);
+  return { outcome: sent ? 'sent' : 'silent' };
 }
 
 export type LinkOutcome =
@@ -199,15 +213,45 @@ export async function clientForToken(token: string): Promise<PortalClient | null
 
 /* ---- Passwords ------------------------------------------------------- */
 
-/** The client, when the password matches one on file. Null otherwise, with no reason. */
+/** How many wrong passwords one typed address gets in a quarter of an hour. */
+const PASSWORD_TRIES = 10;
+const PASSWORD_WINDOW_MS = 15 * 60 * 1000;
+
+/**
+ * A hash to check a guess against when the address is not on file or has no
+ * password, so that a wrong guess takes the same time either way and the
+ * clock does not say which addresses are clients. Made once, at startup,
+ * from a password nobody has.
+ */
+const decoyHash: Promise<string> = hashPassword(newToken());
+
+/**
+ * The client, when the password matches one on file. Null otherwise, with
+ * no reason given. Wrong guesses are counted against the typed address,
+ * whether or not it is on file, and after too many in a quarter of an hour
+ * every guess is refused until the window passes.
+ */
 export async function signInWithPassword(
   email: string,
   password: string,
 ): Promise<PortalClient | null> {
-  const client = await findClientByEmail(email);
-  if (!client?.passwordHash) return null;
-  const ok = await verifyPassword(password, client.passwordHash);
-  if (!ok) return null;
+  const typed = email.trim();
+  const since = new Date(Date.now() - PASSWORD_WINDOW_MS).toISOString();
+  const { count } = await db()
+    .from('portal_password_attempts')
+    .select('id', { count: 'exact', head: true })
+    .eq('email', typed)
+    .gte('attempted_at', since);
+  if ((count ?? 0) >= PASSWORD_TRIES) return null;
+
+  const client = await findClientByEmail(typed);
+  const hash = client?.passwordHash ?? (await decoyHash);
+  const ok = (await verifyPassword(password, hash)) && Boolean(client?.passwordHash);
+  if (!ok || !client) {
+    const { error } = await db().from('portal_password_attempts').insert({ email: typed });
+    if (error) console.error(`portal: could not record a failed password try: ${error.message}`);
+    return null;
+  }
   const { passwordHash: _omit, ...rest } = client;
   return rest;
 }

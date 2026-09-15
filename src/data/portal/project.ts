@@ -106,10 +106,9 @@ export const projectSeed: ProjectRecord = {
       /*
        * These render as the PDF that goes on file, not as reflowed HTML. The
        * wording is statutory: what the client reads has to be the document,
-       * page for page. Set `path` to the file in storage when it is on file.
+       * page for page. Set `path` to the file in storage when it is on file;
+       * until then the screen shows a plate that cannot be mistaken for it.
        */
-      designNote:
-        'These pages render as the PDF that goes on file, not as reflowed HTML. The wording is statutory: what the client reads has to be the document, page for page.',
     },
   },
 

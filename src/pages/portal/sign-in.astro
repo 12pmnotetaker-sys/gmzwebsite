@@ -56,8 +56,7 @@ if (Astro.request.method === 'POST' && configured) {
   }
 
   if (email) {
-    const { outcome } = await issueSignInLink(email, Astro.url.origin);
-    if (outcome === 'failed') return Astro.redirect(`${routes.signIn}?state=failed`, 303);
+    await issueSignInLink(email, Astro.url.origin);
     setNotice(Astro.cookies, Astro.url, { kind: 'link-sent', masked: maskEmail(email) });
     return Astro.redirect(routes.signIn, 303);
   }
@@ -67,19 +66,17 @@ if (Astro.request.method === 'POST' && configured) {
 const notice = takeNotice(Astro.cookies, Astro.url);
 const query = Astro.url.searchParams.get('state');
 
-type State = 'form' | 'sent' | 'mismatch' | 'empty' | 'failed' | 'off' | 'nomail' | 'signed-out';
+type State = 'form' | 'sent' | 'mismatch' | 'empty' | 'off' | 'nomail' | 'signed-out';
 let state: State = 'form';
 if (!configured) state = 'off';
 else if (notice?.kind === 'link-sent') state = 'sent';
 else if (notice?.kind === 'signed-out') state = 'signed-out';
 else if (query === 'mismatch') state = 'mismatch';
-else if (query === 'failed') state = 'failed';
 else if (query === 'empty') state = 'empty';
 else if (!mailConfigured()) state = 'nomail';
 
 const showForm = state !== 'off' && state !== 'sent';
-const hasError =
-  state === 'mismatch' || state === 'empty' || state === 'failed' || state === 'nomail';
+const hasError = state === 'mismatch' || state === 'empty' || state === 'nomail';
 ---
 
 <PortalLayout title="Sign in" footerTagline footerHours={state === 'off' || state === 'nomail'}>
@@ -138,18 +135,13 @@ const hasError =
       <form class="block stack--lg signin" action={routes.signIn} method="post" novalidate>
         {state === 'mismatch' && (
           <p class="field__error" role="alert" id="signin-error">
-            That email and password do not match what we have. Leave the password empty and we will
-            email you a link instead.
+            That email and password do not match what we have, or there have been too many tries in
+            a row. Leave the password empty and we will email you a link instead.
           </p>
         )}
         {state === 'empty' && (
           <p class="field__error" role="alert" id="signin-error">
             Type the email address we have for you.
-          </p>
-        )}
-        {state === 'failed' && (
-          <p class="field__error" role="alert" id="signin-error">
-            We could not send the link just now. Try again in a minute, or call the office.
           </p>
         )}
         {state === 'nomail' && (

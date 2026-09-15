@@ -29,6 +29,10 @@ let error: string | undefined;
 if (Astro.request.method === 'POST') {
   const form = await Astro.request.formData();
   const decision = field(form, 'decision', 20) === 'skip' ? 'skip' : 'go-ahead';
+  // A notice is answered once. A second tap, or a second tab, changes nothing.
+  if (await loadApplicationAnswer(client, notice.date)) {
+    return Astro.redirect(routes.applicationNotice, 303);
+  }
   try {
     await createRequest(client, {
       kind: 'application',
@@ -45,11 +49,11 @@ if (Astro.request.method === 'POST') {
   }
 }
 
-const answer = await loadApplicationAnswer(client);
+const answer = await loadApplicationAnswer(client, notice.date);
 const answered = answer
   ? answer.decision === 'go-ahead'
-    ? 'You said go ahead. We will treat the roses on the visit and record what was applied.'
-    : 'You said skip it this visit. We will leave the beds alone and ask again.'
+    ? 'You said go ahead. We will do it on the visit and record what was applied.'
+    : 'You said skip it this visit. We will leave it alone and ask again.'
   : null;
 ---
 

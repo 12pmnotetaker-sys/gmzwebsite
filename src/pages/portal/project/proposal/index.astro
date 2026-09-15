@@ -92,10 +92,10 @@ const noticesSrc = proposal.notices.path ? await signedUrl(proposal.notices.path
       <NoticePages src={noticesSrc} />
       {
         !noticesSrc && (
-          <>
-            <span class="label">Design note</span>
-            <p class="note">{proposal.notices.designNote}</p>
-          </>
+          <p class="note">
+            The notices are shown as the document itself once it is on file. Until then this stands
+            in for it and is not the legal text.
+          </p>
         )
       }
     </div>

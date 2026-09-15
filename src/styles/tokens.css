@@ -178,6 +178,8 @@
   --portal-action-contrast: #ffffff;
   --portal-tint: var(--gmz-green-light);
   --portal-hair: #d8dcdd;
+  /* The dimming behind an approve sheet: the chrome teal, mostly opaque. */
+  --portal-backdrop: rgb(0 43 55 / 72%);
   --portal-chrome: var(--gmz-teal);
   --portal-chrome-text: #ffffff;
   --portal-chrome-muted: #a8b6b9;
@@ -206,6 +208,7 @@
     --portal-action-contrast: #04171d;
     --portal-tint: #0c2a26;
     --portal-hair: #153642;
+    --portal-backdrop: rgb(4 23 29 / 80%);
     --portal-chrome: #082630;
     --portal-chrome-text: #eef2f2;
     --portal-chrome-muted: #a8b6b9;

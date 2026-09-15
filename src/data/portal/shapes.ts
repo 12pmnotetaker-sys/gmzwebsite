@@ -267,7 +267,6 @@ export const projectRecord = z.object({
     notices: z.object({
       kicker: text,
       body: text,
-      designNote: text,
       /** The statutory notices as the PDF on file, in private storage. */
       path: z.string().optional(),
     }),

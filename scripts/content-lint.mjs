@@ -326,8 +326,26 @@ async function checkIndexingConsistency(files) {
     });
   }
 
+  /*
+   * The prefixes to check against robots.txt and the sitemap come from
+   * `gatedPrefixes` in src/data/publication.ts, read from its source, plus
+   * whatever rendered as gated. Deriving them only from built pages would
+   * miss /portal entirely, since its screens are rendered on demand and are
+   * not HTML in dist/.
+   */
+  const declared = (
+    (await readFile(path.resolve('src/data/publication.ts'), 'utf8')).match(
+      /gatedPrefixes\s*=\s*\[([^\]]*)\]/,
+    )?.[1] ?? ''
+  )
+    .split(',')
+    .map((s) => s.trim().replace(/^['"]|['"]$/g, ''))
+    .filter(Boolean);
   const gatedPrefixes = [
-    ...new Set(gated.map((p) => `/${p.route.split('/').filter(Boolean)[0] ?? ''}`)),
+    ...new Set([
+      ...declared,
+      ...gated.map((p) => `/${p.route.split('/').filter(Boolean)[0] ?? ''}`),
+    ]),
   ].filter((prefix) => prefix !== '/');
 
   if (scaffold) {

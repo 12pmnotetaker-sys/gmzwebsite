@@ -22,9 +22,18 @@ import { BUCKET, db } from './db';
 import { env } from './env';
 import { sendMail } from './mail';
 
-/** The most a client can attach: two slots on the form, and a sane ceiling each. */
+/**
+ * The most a client can attach: two slots on the form, and a ceiling each.
+ *
+ * The ceiling is set by the platform, not by us: a function on Vercel will
+ * not read a request body over about four and a half megabytes, and it
+ * refuses one before this code runs. Two photographs at two megabytes each
+ * fit under that with room for the fields. The form's script shrinks a
+ * phone photograph to fit before it is sent, so the ceiling is met in the
+ * ordinary case and only bites with scripting off.
+ */
 export const MAX_PHOTOS = 2;
-export const MAX_PHOTO_BYTES = 12 * 1024 * 1024;
+export const MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 /** What a person writes, at most. Generous for a person, mean for a script. */
 export const MAX_BODY_CHARS = 4000;
 
@@ -47,9 +56,12 @@ async function storePhoto(client: PortalClient, file: File): Promise<string> {
   if (file.size > MAX_PHOTO_BYTES) {
     throw new RequestRejected('photo-too-large', 'A photo is larger than the portal accepts.');
   }
+  if (!file.type.startsWith('image/')) {
+    throw new RequestRejected('photo-unreadable', 'A file attached is not an image.');
+  }
   let encoded: Buffer;
   try {
-    encoded = await sharp(Buffer.from(await file.arrayBuffer()))
+    encoded = await sharp(Buffer.from(await file.arrayBuffer()), { limitInputPixels: 40_000_000 })
       .rotate() // apply the orientation to the pixels, then drop the tag with everything else
       .resize({ width: 2000, height: 2000, fit: 'inside', withoutEnlargement: true })
       .webp({ quality: 82 })

@@ -1,6 +1,7 @@
 # GMZ Landscaping website
 
-The public marketing site for GMZ Landscaping Inc. Astro, static output, no CSS
+The public marketing site and client portal for GMZ Landscaping Inc. Astro:
+the marketing pages prerendered, the portal rendered on demand, no CSS
 framework, deployed to Vercel.
 
 Read this before changing anything.
@@ -24,8 +25,9 @@ in `site.ts`. The rule protects GMZ's cost structure, not its rate card.
 
 **Town only, never a street address.** Public project pages say "Atherton, CA".
 The street name and number stay in the estimating system. This is enforced by the
-`townOnly` schema in `src/content.config.ts`, so the way to break it is to delete
-that refinement on purpose, in a diff someone reviews.
+`townOnly` and `serviceAreaTown` schemas in `src/content.config.ts` (a public
+project must name one of the towns in `serviceArea`), so the way to break it is
+to delete that refinement on purpose, in a diff someone reviews.
 
 **The gated portfolio is the exception, and it is fenced.** The `portfolio`
 collection indexes work _by street name_, which GMZ agreed to explicitly and
@@ -242,10 +244,9 @@ a note in a style guide.
 - **Phase 1 (done).** The portfolio moved in under `/portfolio`, veil and all,
   with the gate config preserved so existing unlocks survive. The live
   `gmz-portfolio` deployment is untouched and still serving prospects; nothing
-  switches over until Phase 3.
-  _Still outstanding:_ the public `/work` split. It needs GMZ to pick which
-  projects go public and to supply a town for each, since the gated entries
-  carry street names and the public schema will not accept one.
+  switches over until Phase 3. The public `/work` section is built and renders
+  an honest empty state until GMZ picks which projects go public and supplies
+  a town for each; see `docs/decisions-before-launch.md`.
 - **Phase 2 (built, waiting on decisions).** The marketing site: home,
   services, process, about, answers, intake, the public `/work` section and
   the reviews page, all without placeholders. Indexing is one environment

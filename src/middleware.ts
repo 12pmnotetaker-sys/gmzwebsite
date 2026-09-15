@@ -23,7 +23,7 @@ import {
   publicPortalPrefixes,
   routes,
 } from '@data/portal/routes';
-import { SESSION_COOKIE, readSession } from './server/auth';
+import { SESSION_COOKIE, readSession, setSessionCookie } from './server/auth';
 import { portalConfigured } from './server/env';
 
 const trimmed = (pathname: string) => pathname.replace(/\/+$/, '') || '/';
@@ -63,7 +63,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   if (portalConfigured()) {
     const token = context.cookies.get(SESSION_COOKIE)?.value;
-    if (token) context.locals.client = await readSession(token);
+    if (token) {
+      context.locals.client = await readSession(token);
+      // The session slides in the database; the cookie has to slide with it.
+      if (context.locals.client) setSessionCookie(context.cookies, context.url, token);
+    }
   }
 
   if (isPublic(pathname)) return next();

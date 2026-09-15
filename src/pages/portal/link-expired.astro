@@ -39,8 +39,7 @@ if (Astro.request.method === 'POST') {
   const email = client?.email ?? typed;
   if (!email) return Astro.redirect(`${routes.linkExpired}?state=empty`, 303);
 
-  const { outcome } = await issueSignInLink(email, Astro.url.origin);
-  if (outcome === 'failed') return Astro.redirect(`${routes.signIn}?state=failed`, 303);
+  await issueSignInLink(email, Astro.url.origin);
   setNotice(Astro.cookies, Astro.url, { kind: 'link-sent', masked: maskEmail(email) });
   return Astro.redirect(routes.signIn, 303);
 }

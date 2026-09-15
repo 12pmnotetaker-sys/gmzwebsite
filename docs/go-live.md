@@ -71,9 +71,9 @@ serves the old site, is a confusion search engines take months to forget.
 The cutover, in order:
 
 1. **Decide the facts that are still open.** `docs/decisions-before-launch.md`
-   lists them. The build gate will not publish an FAQ answer marked
-   `needsDecision`, so the site goes live with those answers absent rather
-   than wrong.
+   lists them. An FAQ answer stays off the site until it is marked
+   `published`, so the site goes live with the undecided answers absent
+   rather than wrong.
 2. **Redirects from the old site.** Export the old site's page list (its
    sitemap, or the pages panel) and write each old path against its new home
    in `vercel.json` under `redirects`, permanent. The old site is not reachable
@@ -88,8 +88,8 @@ The cutover, in order:
    change: the site already builds against `https://www.gmzlandscape.com`.
 5. **Watch the first day.** Runtime logs on the Vercel project show every
    `/api/enquiry` and portal request with a status code and nothing else. A
-   `503` from the intake endpoint means the mail variables are missing; a
-   `502` means the provider refused.
+   `503` from the intake endpoint means neither a mail provider nor the
+   database is configured; a `502` means what is configured refused it.
 6. **Retire the old site** once the redirects have been seen to work from a
    phone on mobile data, not only from the office.
 
@@ -98,8 +98,8 @@ The cutover, in order:
 - `npm run build` fails on a schema violation, a missing alt, an em dash, a
   manufacturer name in prose, a photograph carrying a location, or the three
   search signals disagreeing.
-- Every portal page is `noindex`, every portal request is `no-store`, and
-  `/portal` and `/portfolio` are disallowed and out of the sitemap in both
-  indexing states.
+- Every portal page is `noindex`, every signed-in portal page is `no-store`,
+  and `/portal` and `/portfolio` are disallowed and out of the sitemap in
+  both indexing states.
 - A portal record is checked against the same house style rules as the site,
   on the way in and on the way out.

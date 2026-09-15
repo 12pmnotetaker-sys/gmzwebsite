@@ -41,7 +41,7 @@ if (Astro.request.method === 'POST') {
     console.error(cause.message);
     error =
       cause.reason === 'photo-too-large'
-        ? 'One of the photos is too large to send. A photo straight from the phone is fine; a scan or a file over twelve megabytes is not.'
+        ? 'One of the photos is too large to send. Two megabytes is the most each can be; a photo straight from the phone is shrunk to fit when scripting is on.'
         : cause.reason === 'photo-unreadable'
           ? 'One of the files attached is not a photo we can read. Try another, or send without it.'
           : 'This did not reach us. Try once more, or call the office; nothing you typed is lost.';

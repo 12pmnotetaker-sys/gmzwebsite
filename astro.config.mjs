@@ -7,8 +7,8 @@ import { canonicalPath } from './src/data/canonical.ts';
 
 /**
  * The canonical production origin. Drives canonical link tags, Open Graph
- * tags, the sitemap and the links in portal emails. Nothing else in the repo
- * hardcodes an origin.
+ * tags and the sitemap. Portal emails use the origin of the request that
+ * asked for the link, so a preview deployment sends links to itself.
  */
 const SITE = process.env.SITE_URL ?? 'https://www.gmzlandscape.com';
 
