@@ -4,7 +4,7 @@ import { Image } from 'astro:assets';
 import finishedGarden from '@/assets/portfolio/hamilton/hamilton-after-1.webp';
 import stoneStairs from '@/assets/portfolio/fox-hill/foxhill-stair-lit.webp';
 import plantingDetail from '@/assets/portfolio/fox-hill/foxhill-stump.webp';
-import HeroVideo from '@components/HeroVideo.astro';
+import HomeHero from '@components/HomeHero.astro';
 import SupplierStrip from '@components/SupplierStrip.astro';
 import {
   company,
@@ -77,7 +77,7 @@ const workDetails = [
 ---
 
 <BaseLayout>
-  <HeroVideo>
+  <HomeHero>
     <p class="kicker kicker--hero">{company.tagline}</p>
     <h1 class="page-title hero__title">
       Your garden.<br />Made for living.
@@ -90,7 +90,7 @@ const workDetails = [
       <a class="btn hero__secondary" href="#our-work">See our work</a>
     </div>
     <p class="hero__footnote">A family company in {company.address.locality}, {foundedLine}.</p>
-  </HeroVideo>
+  </HomeHero>
 
   <div class="home-facts">
     <ul class="container home-facts__list" aria-label="About GMZ">
