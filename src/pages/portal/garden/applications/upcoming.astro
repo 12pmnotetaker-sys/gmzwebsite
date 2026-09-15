@@ -1,0 +1,79 @@
+---
+/**
+ * The application notice: the before state of the application pair.
+ *
+ * The crew plans to spray something on Wednesday, and this screen says so
+ * before it happens. The answer is the date, on the amber panel because it
+ * needs a reply. Under it, what we would apply, where and why, as three
+ * facts; then the one thing a parent or a dog owner needs to know, on the
+ * calm panel; then the two ways to answer and the deadline for answering.
+ *
+ * On desktop the buttons and the deadline move to the rail, which is why
+ * they render twice: once in the column with `column-only`, once in the
+ * rail. The steps are the same; there is just room beside them.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import StatusChip from '@components/portal/StatusChip.astro';
+import Facts from '@components/portal/Facts.astro';
+import { routes } from '@data/portal/routes';
+import { client, application } from '@data/portal/garden';
+import { status } from '@data/portal/status';
+
+const notice = application.before;
+---
+
+<PortalLayout
+  title={notice.kicker}
+  property={client.property}
+  backHref={routes.garden}
+  backLabel="Back"
+  footerKicker=""
+>
+  <section class="block panel panel--attention" aria-labelledby="notice">
+    <span class="kicker" id="notice">{notice.kicker}</span>
+    <h1 class="answer">{notice.date}</h1>
+    <p class="body">{notice.intent}</p>
+    <StatusChip tone={status.needs.key} label={status.needs.label} />
+  </section>
+
+  <div class="block">
+    <Facts rows={notice.facts} />
+  </div>
+
+  <section class="block block--tight panel panel--calm" aria-labelledby="safety">
+    <span class="kicker kicker--muted" id="safety">{notice.safety.kicker}</span>
+    <p class="body">{notice.safety.body}</p>
+  </section>
+
+  <div class="block block--end actions column-only">
+    <a class="btn btn--primary" href={routes.applicationRecord}>That works, go ahead</a>
+    <a class="btn btn--secondary" href={routes.ask}>Skip it this visit</a>
+    <p class="note">{notice.deadline}</p>
+  </div>
+
+  <Fragment slot="rail">
+    <section class="sect" aria-labelledby="deadline">
+      <h2 class="kicker" id="deadline">{notice.deadlineLead}</h2>
+      <p class="note">{notice.deadlineNote}</p>
+    </section>
+    <div class="actions">
+      <a class="btn btn--primary" href={routes.applicationRecord}>That works, go ahead</a>
+      <a class="btn btn--secondary" href={routes.ask}>Skip it this visit</a>
+    </div>
+  </Fragment>
+</PortalLayout>
+
+<style>
+  /* The rail's deadline opens with the kicker alone, so the heading takes
+     the kicker's size and colour; `.sect > h2` would otherwise set it in ink. */
+  .sect > h2.kicker {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: var(--tracking-kicker);
+    color: var(--color-structure);
+  }
+
+  .sect .note {
+    margin-block-start: var(--space-2xs);
+  }
+</style>

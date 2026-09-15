@@ -49,7 +49,13 @@ const {
   footerHours,
 } = Astro.props;
 
-const hasRail = Astro.slots.has('rail');
+/*
+ * A screen has a rail when its rail slot renders something. `slots.has` is
+ * true for a slot that exists but is conditionally empty (a plant with no
+ * panel to show), which would leave an empty aside in the gutter.
+ */
+const rail = Astro.slots.has('rail') ? (await Astro.slots.render('rail')).trim() : '';
+const hasRail = rail.length > 0;
 ---
 
 <!doctype html>
@@ -84,13 +90,7 @@ const hasRail = Astro.slots.has('rail');
       <div class="screen__column">
         <slot />
       </div>
-      {
-        hasRail && (
-          <aside class="screen__rail" aria-label="Also on this screen">
-            <slot name="rail" />
-          </aside>
-        )
-      }
+      {hasRail && <aside class="screen__rail" aria-label="Also on this screen" set:html={rail} />}
     </main>
     <PortalFooter
       kicker={footerKicker}

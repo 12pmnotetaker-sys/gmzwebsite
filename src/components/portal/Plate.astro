@@ -13,9 +13,11 @@ interface Props {
   height?: number;
   /** Full-bleed under the top bar, or inset to the column. */
   bleed?: boolean;
+  /** The taller plate's 13px padding, for a 200px record photograph. */
+  tall?: boolean;
 }
 
-const { src, alt, caption, height = 170, bleed = false } = Astro.props;
+const { src, alt, caption, height = 170, bleed = false, tall = false } = Astro.props;
 ---
 
 {
@@ -24,7 +26,10 @@ const { src, alt, caption, height = 170, bleed = false } = Astro.props;
       <img src={src} alt={alt ?? caption} width="780" height={height * 2} loading="lazy" />
     </figure>
   ) : (
-    <div class:list={['plate', { 'photo--bleed': bleed }]} style={`height:${height}px`}>
+    <div
+      class:list={['plate', { 'photo--bleed': bleed, 'plate--tall': tall }]}
+      style={`height:${height}px`}
+    >
       <span>{caption}</span>
     </div>
   )
@@ -47,7 +52,7 @@ const { src, alt, caption, height = 170, bleed = false } = Astro.props;
     margin-inline: calc(-1 * var(--portal-gutter));
   }
 
-  @media (min-width: 60rem) {
+  @media (min-width: 48rem) {
     .photo--bleed {
       margin-inline: 0;
     }

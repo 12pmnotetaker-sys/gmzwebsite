@@ -28,7 +28,7 @@ const ids = pair ? [`${name}-1`, `${name}-2`] : [name];
       <label class="photos__slot" style={`min-height:${height}px`} data-photo-slot>
         <input type="file" id={id} accept="image/*" class="visually-hidden" />
         <span class="photos__label">{label}</span>
-        <img class="photos__preview" alt="" hidden />
+        <img class="photos__preview" alt="" hidden data-alt-set-by-script />
       </label>
     ))
   }
@@ -58,6 +58,10 @@ const ids = pair ? [`${name}-1`, `${name}-2`] : [name];
         }
         url = URL.createObjectURL(file);
         img.src = url;
+        // The preview is the person's own photograph, so the alt says so. It is set
+        // here rather than in the markup because until a file is chosen the image
+        // is hidden and describes nothing.
+        img.alt = 'The photo you chose';
         img.hidden = false;
         label.hidden = true;
         slot.classList.add('photos__slot--filled');

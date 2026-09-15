@@ -1,0 +1,70 @@
+---
+/**
+ * Documents: everything on file for the garden.
+ *
+ * One row per document, and every row opens the document itself. The list is
+ * the data module's, so a document added to the record appears here without
+ * touching the page.
+ *
+ * On desktop the "need something that is not here" panel moves to the rail,
+ * which is why it renders twice: once in the column with `column-only`, once
+ * in the rail. The steps are the same; there is just room beside them.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import ScreenHead from '@components/portal/ScreenHead.astro';
+import Row from '@components/portal/Row.astro';
+import { routes } from '@data/portal/routes';
+import { client, documents } from '@data/portal/garden';
+---
+
+<PortalLayout
+  title="Documents"
+  property={client.property}
+  backHref={routes.garden}
+  backLabel="Back"
+  footerKicker=""
+  footerTagline
+>
+  <ScreenHead kicker={`${client.name}, ${client.town}`} title="Documents" long>
+    <p class="body note--lead">
+      Everything on file for your garden. Each one opens as the document itself, and downloads.
+    </p>
+  </ScreenHead>
+
+  <nav class="block rows" aria-label="Documents on file">
+    {
+      documents.map((doc) => (
+        <Row href={doc.href} title={doc.title} note={doc.note} action="Open" />
+      ))
+    }
+  </nav>
+
+  <section class="block panel panel--calm column-only" aria-labelledby="need-more">
+    <span class="kicker kicker--muted" id="need-more">Need something that is not here</span>
+    <p class="body">
+      Ask and we will add it. Landlords and property managers usually want the insurance certificate
+      and the license on one page.
+    </p>
+    <a class="link-action" href={routes.ask}>Ask for a document</a>
+  </section>
+
+  <Fragment slot="rail">
+    <section class="panel panel--calm" aria-label="Need something that is not here">
+      <span class="kicker kicker--muted">Need something that is not here</span>
+      <p class="body">
+        Ask and we will add it. Landlords and property managers usually want the insurance
+        certificate and the license on one page.
+      </p>
+      <a class="link-action" href={routes.ask}>Ask for a document</a>
+    </section>
+  </Fragment>
+</PortalLayout>
+
+<style>
+  /* The intro under the heading is body size in the muted ink. The same
+     page-scoped rule as sign-in; once a third screen opens this way it belongs
+     in portal.css as a shared body variant, and both pages drop their copy. */
+  .note--lead {
+    color: var(--color-text-muted);
+  }
+</style>

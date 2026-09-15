@@ -1,0 +1,96 @@
+---
+/**
+ * Approved.
+ *
+ * Calm, not celebratory. The screen a project client lands on the moment
+ * they have said yes: the word, when it was recorded and by whom, on the
+ * green tint, with a done chip. Under it the stage bar moves one segment on,
+ * then the dated steps between now and the first day on site, and one quiet
+ * way back to the proposal. There is no back link, because there is nowhere
+ * to go back to; the decision is made.
+ *
+ * On desktop the approved panel, the stage bar and the button move to the
+ * rail, which is why they render twice: once in the column with
+ * `column-only`, once in the rail. The steps are the same; there is just room
+ * beside them.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import StatusChip from '@components/portal/StatusChip.astro';
+import StageBar from '@components/portal/StageBar.astro';
+import { routes } from '@data/portal/routes';
+import { client, approved, projectStages } from '@data/portal/project';
+import { status } from '@data/portal/status';
+---
+
+<PortalLayout title="Approved" property={client.property} footerKicker="Questions before you sign">
+  {
+    /* The one h1, always in the document: on desktop the panel below moves to the rail and is hidden from the column. */
+  }
+  <h1 class="visually-hidden">{approved.answer}</h1>
+  <section class="panel panel--done block column-only" aria-labelledby="approved-project">
+    <span class="kicker kicker--muted" id="approved-project">{client.projectName}</span>
+    <p class="answer">{approved.answer}</p>
+    <p class="body">{approved.recorded}</p>
+    <StatusChip tone={status.done.key} label={status.done.label} />
+  </section>
+
+  <div class="block column-only">
+    <StageBar
+      total={projectStages.total}
+      done={projectStages.atApproved.done}
+      now={projectStages.atApproved.now}
+      caption={projectStages.atApproved.caption}
+    />
+  </div>
+
+  <section class="block stack stack--md">
+    <div class="sect">
+      <h2 class="kicker">What happens next</h2>
+    </div>
+    <div class="steps">
+      {
+        approved.next.map((step) => (
+          <div class="step">
+            <span class="step__when">{step.when}</span>
+            <p class="note">{step.what}</p>
+          </div>
+        ))
+      }
+    </div>
+  </section>
+
+  <div class="block block--end actions column-only">
+    <a class="btn btn--secondary" href={routes.proposal}>See the proposal again</a>
+  </div>
+
+  <Fragment slot="rail">
+    <section class="panel panel--done" aria-label={client.projectName}>
+      <span class="kicker kicker--muted">{client.projectName}</span>
+      <p class="answer">{approved.answer}</p>
+      <p class="body">{approved.recorded}</p>
+      <StatusChip tone={status.done.key} label={status.done.label} />
+    </section>
+    <StageBar
+      total={projectStages.total}
+      done={projectStages.atApproved.done}
+      now={projectStages.atApproved.now}
+      caption={projectStages.atApproved.caption}
+    />
+    <a class="btn btn--secondary" href={routes.proposal}>See the proposal again</a>
+  </Fragment>
+</PortalLayout>
+
+<style>
+  /* The section head's h2 is the kicker here: the design opens this block
+     with the kicker alone, so the heading takes the kicker's size. */
+  .sect > h2.kicker {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: var(--tracking-kicker);
+  }
+
+  .steps {
+    display: flex;
+    flex-direction: column;
+  }
+</style>

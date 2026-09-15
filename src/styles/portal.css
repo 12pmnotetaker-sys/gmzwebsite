@@ -71,7 +71,10 @@
   display: none;
 }
 
-@media (min-width: 60rem) {
+/* Tablet, 768 up: the phone column, wider and centred, with the wider gutter.
+   Both tablet widths in the design (768 portrait, 1024 landscape) are this:
+   the same steps, just wider, with no rail. */
+@media (min-width: 48rem) {
   .screen {
     grid-template-columns:
       minmax(var(--space-lg), 1fr)
@@ -85,6 +88,20 @@
   .screen__column {
     grid-column: 2;
   }
+}
+
+/* Desktop, 1200 up: the rail appears in the right-hand gutter. The outer
+   tracks never drop below 15rem, so the rail always has room and the column
+   gives up a little width first; at 1440 the column is its full 680 and the
+   rail is a shade over 300. Below this width the rail's content is already in
+   the column, in reading order. */
+@media (min-width: 75rem) {
+  .screen {
+    grid-template-columns:
+      minmax(15rem, 1fr)
+      minmax(0, var(--portal-column))
+      minmax(15rem, 1fr);
+  }
 
   .screen__rail {
     grid-column: 3;
@@ -94,6 +111,7 @@
     align-self: start;
     position: sticky;
     top: calc(var(--space-xl) + 4rem);
+    min-width: 0;
     max-width: var(--portal-rail);
   }
 
@@ -106,8 +124,13 @@
   }
 }
 
-/* Vertical rhythm inside the column. */
-.stack {
+/* Vertical rhythm inside the column. Each modifier is a complete stack on
+   its own, so `stack--md` alone lays its children out. */
+.stack,
+.stack--sm,
+.stack--md,
+.stack--lg,
+.stack--xl {
   display: flex;
   flex-direction: column;
   gap: var(--space-xs);
@@ -123,6 +146,10 @@
 
 .stack--lg {
   gap: var(--space-md);
+}
+
+.stack--xl {
+  gap: var(--space-lg);
 }
 
 /* Blocks are separated by 24, the step the design uses between every block
@@ -189,6 +216,21 @@
   font-weight: 800;
   line-height: var(--leading-snug);
   color: var(--color-text);
+}
+
+/* A section that opens with the kicker alone: the heading takes the kicker's
+   size, weight, tracking and blue. Declared after the heading rule and one
+   class more specific, so it wins whatever element carries it. */
+.sect > .kicker {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-kicker);
+  color: var(--color-structure);
+}
+
+.sect > .kicker--muted {
+  color: var(--color-text-muted);
 }
 
 /* ---- Type --------------------------------------------------------------- */
@@ -418,8 +460,10 @@ a.row:focus-visible .row__title {
 
 .record dd {
   margin: 0;
+  min-width: 0;
   font-weight: 600;
   text-align: right;
+  overflow-wrap: anywhere;
   color: var(--color-text);
 }
 

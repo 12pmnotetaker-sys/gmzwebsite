@@ -1,0 +1,104 @@
+---
+/**
+ * The visit report: what the crew did on Wednesday, in their own words.
+ *
+ * The answer is the date, and the Done chip under it says the visit happened.
+ * Then what we did, then the one thing the crew noticed for next time, on the
+ * calm panel so it reads as a note rather than a warning, and who wrote it.
+ * There is no duration and no time on site anywhere here: a report says what
+ * was done, not how long it took.
+ *
+ * On desktop the photos move to the rail, which is why they render twice:
+ * once in the column with `column-only`, once in the rail. The plates say
+ * what the photographs will be until the crew's visit record supplies them.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import ScreenHead from '@components/portal/ScreenHead.astro';
+import StatusChip from '@components/portal/StatusChip.astro';
+import Row from '@components/portal/Row.astro';
+import Plate from '@components/portal/Plate.astro';
+import { routes } from '@data/portal/routes';
+import { client, visitReport } from '@data/portal/garden';
+import { status } from '@data/portal/status';
+---
+
+<PortalLayout
+  title="Visit report"
+  property={client.property}
+  backHref={routes.service}
+  backLabel="Your service"
+  footerKicker=""
+>
+  <ScreenHead kicker="Visit report" title={visitReport.date} long>
+    <StatusChip tone={status.done.key} label={status.done.label} />
+  </ScreenHead>
+
+  <section class="block stack stack--md">
+    <div class="sect">
+      <h2 class="kicker">What we did</h2>
+      <p class="body">{visitReport.body}</p>
+    </div>
+    <section class="panel panel--calm" aria-labelledby="noted">
+      <span class="kicker kicker--muted" id="noted">{visitReport.noted.kicker}</span>
+      <p class="body">{visitReport.noted.body}</p>
+    </section>
+    <p class="note">{visitReport.attribution}</p>
+  </section>
+
+  <section class="block stack stack--md column-only photos" aria-labelledby="visit-photos">
+    <h2 class="kicker" id="visit-photos">Photos from the visit</h2>
+    <div class="plates">
+      {visitReport.photos.map((photo) => <Plate caption={photo.caption} height={130} />)}
+    </div>
+    <p class="note note--xs">
+      Photo plates, not photographs. Real images come from the crew's visit record.
+    </p>
+  </section>
+
+  <nav class="block rows" aria-label="More on this visit">
+    <Row
+      href={routes.applicationNotice}
+      title="Applications on this visit"
+      note="Nothing was applied on 26 August"
+    />
+    <Row href={routes.service} title="Earlier visits" note={visitReport.earlier} />
+  </nav>
+
+  <div class="block block--end actions">
+    <a class="btn btn--secondary" href={routes.ask}>Ask about this visit</a>
+  </div>
+
+  <Fragment slot="rail">
+    <section class="stack stack--lg" aria-label="Photos from the visit">
+      <div class="sect">
+        <h2 class="kicker">Photos from the visit</h2>
+      </div>
+      <div class="stack">
+        {visitReport.photos.map((photo) => <Plate caption={photo.caption} height={150} />)}
+        <p class="note note--xs">Photo plates, not photographs.</p>
+      </div>
+    </section>
+  </Fragment>
+</PortalLayout>
+
+<style>
+  /* Each section head on this screen is its kicker alone, with or without
+     the rule above it, so the heading takes the kicker's size. */
+  .sect > h2.kicker,
+  .photos > h2.kicker {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: var(--tracking-kicker);
+  }
+
+  .sect .body {
+    margin-block-start: var(--space-2xs);
+  }
+
+  /* The line under the plates is the smallest text on the screen: a caption
+     about the captions, not a note a client acts on. */
+  .note--xs {
+    font-size: var(--text-xs);
+    line-height: 1.4;
+  }
+</style>

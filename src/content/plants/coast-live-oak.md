@@ -6,6 +6,7 @@ status:
   tone: needs
   label: Protected
 summary: Front garden, back corner
+listName: Coast live oak, front garden
 onRecordSince: The 2011 survey, already mature
 water: Two deep soaks across the summer, none in winter
 condition:

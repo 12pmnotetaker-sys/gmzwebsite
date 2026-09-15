@@ -10,9 +10,10 @@
  * proposal", "Something urgent". That is more useful than the company name
  * repeated eighteen times. Every fact reads from src/data/site.ts.
  */
-import { company, primaryPhone, licenseShort } from '@data/site';
+import { company, primaryPhone, licenseShort, hoursSentence } from '@data/site';
 
 interface Props {
+  /** The amber line above the number. Omit for the company name; pass "" for none. */
   kicker?: string;
   /** Show the Design · Build · Maintenance line. */
   tagline?: boolean;
@@ -24,18 +25,18 @@ interface Props {
 
 const { kicker = company.legalName, tagline = false, licence = false, hours = false } = Astro.props;
 
-const hoursLine = `${company.hours.days}, ${company.hours.time}. We can read you anything the portal would show you.`;
+const hoursLine = `${hoursSentence}. We can read you anything the portal would show you.`;
 ---
 
 <footer class="foot on-dark">
   <div class="foot__inner">
     <div class="foot__block">
-      <span class="kicker kicker--on-dark">{kicker}</span>
+      {kicker && <span class="kicker kicker--on-dark">{kicker}</span>}
       <a class="foot__phone" href={`tel:${primaryPhone.tel}`}>{primaryPhone.display}</a>
       {
         licence && (
           <span class="foot__note">
-            {licenseShort}. {company.tagline}
+            Licensed landscape contractor, {licenseShort}. {company.tagline}
           </span>
         )
       }
@@ -59,7 +60,7 @@ const hoursLine = `${company.hours.days}, ${company.hours.time}. We can read you
     padding: var(--space-lg) var(--portal-gutter);
   }
 
-  @media (min-width: 60rem) {
+  @media (min-width: 48rem) {
     .foot__inner {
       flex-direction: row;
       justify-content: space-between;

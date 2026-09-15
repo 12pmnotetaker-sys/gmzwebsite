@@ -1,0 +1,165 @@
+---
+/**
+ * The proposal: the longest screen in the portal, and the one a project
+ * client reads slowest.
+ *
+ * It is the contract in the client's language, in reading order: what we will
+ * do, what it costs and which line will move, how the money is paid and what
+ * each payment waits for, and the notices that come with it. The one answer is
+ * the project's name; the price is the first sub-answer under it.
+ *
+ * On desktop the stage bar, the price line and the two buttons move to the
+ * rail, which is why they render twice: once in the column with
+ * `column-only`, once in the rail. The steps are the same; there is just room
+ * beside them.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import ScreenHead from '@components/portal/ScreenHead.astro';
+import StageBar from '@components/portal/StageBar.astro';
+import Money from '@components/portal/Money.astro';
+import Draws from '@components/portal/Draws.astro';
+import NoticePages from '@components/portal/NoticePages.astro';
+import { routes } from '@data/portal/routes';
+import { client, proposal, projectStages } from '@data/portal/project';
+
+const stage = projectStages.atProposal;
+---
+
+<PortalLayout
+  title="Proposal"
+  property={client.property}
+  backHref={routes.project}
+  backLabel="Back"
+  footerKicker="GMZ Landscaping Inc."
+  footerLicence
+>
+  <ScreenHead kicker={`Proposal, ${client.name}, ${client.town}`} title={client.projectName} long>
+    <p class="estimate-no">{proposal.estimateNo}</p>
+  </ScreenHead>
+
+  <div class="block column-only">
+    <StageBar
+      total={projectStages.total}
+      done={stage.done}
+      now={stage.now}
+      caption={stage.caption}
+    />
+  </div>
+
+  <section class="block stack stack--md scope">
+    <div class="sect">
+      <h2 class="kicker">What we will do</h2>
+      <p class="body">{proposal.scope}</p>
+    </div>
+    <div class="stack stack--md">
+      {proposal.scopeLines.map((line) => <p class="body scope__line">{line}</p>)}
+    </div>
+  </section>
+
+  <section class="block stack stack--md">
+    <div class="sect">
+      <h2 class="kicker">The price</h2>
+      <p class="sub">{proposal.priceLine}</p>
+    </div>
+    <Money lines={proposal.lines} total={proposal.total} />
+    <section class="panel panel--calm" aria-labelledby="allowance">
+      <span class="kicker kicker--muted" id="allowance">{proposal.allowance.kicker}</span>
+      <p class="body">{proposal.allowance.why}</p>
+      <p class="body">{proposal.allowance.effect}</p>
+    </section>
+  </section>
+
+  <section class="block stack stack--md">
+    <div class="sect">
+      <h2 class="kicker">Payment schedule</h2>
+      <p class="sub">{proposal.drawsHeadline}</p>
+    </div>
+    <Draws draws={proposal.draws} />
+    <p class="note">{proposal.drawsNote}</p>
+  </section>
+
+  <section class="block stack stack--md">
+    <div class="sect">
+      <h2 class="kicker">{proposal.notices.kicker}</h2>
+      <p class="body">{proposal.notices.body}</p>
+    </div>
+    <div class="well notices-well">
+      <NoticePages />
+      <span class="label">Design note</span>
+      <p class="note">{proposal.notices.designNote}</p>
+    </div>
+  </section>
+
+  <div class="block block--end actions column-only">
+    <a class="btn btn--primary" href={routes.confirm}>Review and approve</a>
+    <a class="btn btn--secondary" href={routes.projectAsk}>Ask for a change</a>
+  </div>
+
+  <Fragment slot="rail">
+    <StageBar
+      total={projectStages.total}
+      done={stage.done}
+      now={stage.now}
+      caption={stage.caption}
+    />
+    <section class="sect sect--rail" aria-labelledby="rail-price">
+      <span class="kicker" id="rail-price">The price</span>
+      <p class="sub">{proposal.priceLine}</p>
+    </section>
+    <div class="actions">
+      <a class="btn btn--primary" href={routes.confirm}>Review and approve</a>
+      <a class="btn btn--secondary" href={routes.projectAsk}>Ask for a change</a>
+    </div>
+  </Fragment>
+</PortalLayout>
+
+<style>
+  /* The section head's h2 is the kicker here: the design opens each block
+     with the kicker alone, so the heading takes the kicker's size. */
+  .sect > h2.kicker {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: var(--tracking-kicker);
+  }
+
+  /* "What we will do" sets its body a step further under the kicker than the
+     other section heads do. */
+  .scope .sect .body {
+    margin-block-start: var(--space-2xs);
+  }
+
+  /* The scope, one claim per line, each set off by a 3px hairline on the
+     left rather than a bullet. */
+  .scope__line {
+    padding-inline-start: var(--space-sm);
+    border-inline-start: var(--rule-accent) solid var(--portal-hair);
+  }
+
+  /* NoticePages brings its own well, padded 18 around the page. The design
+     note sits in the same well beneath it, so this outer well pads only the
+     note's sides and foot, and the label pulls up through the inner well's
+     bottom padding to sit 8 under the page, as the design has it. */
+  .notices-well {
+    padding-block-end: var(--space-md);
+  }
+
+  .notices-well > .label,
+  .notices-well > .note {
+    margin-inline: var(--space-md);
+  }
+
+  .notices-well > .label {
+    display: block;
+    margin-block-start: calc(var(--space-xs) - var(--space-md));
+  }
+
+  .notices-well > .note {
+    margin-block-start: var(--space-xs);
+    color: var(--color-text);
+  }
+
+  /* The rail's price head opens a little wider than the column's. */
+  .sect--rail {
+    gap: var(--space-xs);
+  }
+</style>

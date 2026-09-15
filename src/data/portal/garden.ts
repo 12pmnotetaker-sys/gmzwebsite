@@ -148,6 +148,9 @@ export const application = {
     },
     deadline:
       'Tell us by Tuesday evening. If we do not hear from you we will leave the roses alone and ask again.',
+    /** The same deadline as the rail sets it: the lead as a kicker, the rest as a note. */
+    deadlineLead: 'Tell us by Tuesday evening',
+    deadlineNote: 'If we do not hear from you we will leave the roses alone and ask again.',
   },
   after: {
     kicker: 'Applied',

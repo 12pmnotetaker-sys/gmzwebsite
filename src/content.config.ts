@@ -736,6 +736,8 @@ const plants = defineCollection({
     status: chip,
     /** The one-line summary used on list rows. */
     summary: z.string().min(1),
+    /** How the plants list names it, when that differs from `name`. */
+    listName: z.string().optional(),
     /** When it went in, or when it first appeared on the record. */
     onRecordSince: z.string().optional(),
     /** What it needs from us, in plain words. Never a schedule code. */

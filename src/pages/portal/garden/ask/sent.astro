@@ -1,0 +1,112 @@
+---
+/**
+ * Request sent.
+ *
+ * The confirmation after "Ask for something". The whole answer is one word,
+ * Sent, on the green tint, and under it the reference, the category and the
+ * sentence the client wrote, so they can see we hold the same request they
+ * sent. Nothing here is an approval; the last section says exactly where the
+ * request goes next.
+ *
+ * There is no back link. The form is behind this screen and there is nothing
+ * to return to, so the one button goes back to the garden.
+ *
+ * On desktop the panel and the button move to the rail, which is why they
+ * render twice: once in the column with `column-only`, once in the rail. The
+ * page's h1 is in the column copy; the rail copy is a plain paragraph.
+ */
+import PortalLayout from '@layouts/PortalLayout.astro';
+import StatusChip from '@components/portal/StatusChip.astro';
+import { routes } from '@data/portal/routes';
+import { client, request } from '@data/portal/garden';
+import { status } from '@data/portal/status';
+
+const sent = request.sent;
+---
+
+<PortalLayout title="Request sent" property={client.property} footerKicker="Something urgent">
+  {
+    /* The one h1, always in the document: on desktop the panel below moves to the rail and is hidden from the column. */
+  }
+  <h1 class="visually-hidden">Sent</h1>
+  <section class="block panel panel--done column-only" aria-labelledby="your-request">
+    <span class="kicker kicker--muted" id="your-request">Your request</span>
+    <p class="answer">Sent</p>
+    <p class="body">{sent.body}</p>
+    <StatusChip tone={status.done.key} label={status.done.label} />
+  </section>
+
+  <div class="block">
+    <dl class="record">
+      <div class="record__row">
+        <dt>Reference</dt>
+        <dd class="reference">{sent.reference}</dd>
+      </div>
+      <div class="record__row">
+        <dt>About</dt>
+        <dd>{sent.about}</dd>
+      </div>
+      <div class="record__row record__row--stack">
+        <dt>What you wrote</dt>
+        <dd>{sent.wrote}</dd>
+      </div>
+    </dl>
+  </div>
+
+  <section class="block sect">
+    <h2 class="kicker">Where it goes from here</h2>
+    <p class="body">{sent.next}</p>
+  </section>
+
+  <div class="block block--end actions column-only">
+    <a class="btn btn--primary" href={routes.garden}>Back to your garden</a>
+  </div>
+
+  <Fragment slot="rail">
+    <section class="panel panel--done" aria-label="Your request">
+      <span class="kicker kicker--muted">Your request</span>
+      <p class="answer">Sent</p>
+      <p class="body">{sent.body}</p>
+      <StatusChip tone={status.done.key} label={status.done.label} />
+    </section>
+    <div class="actions">
+      <a class="btn btn--primary" href={routes.garden}>Back to your garden</a>
+    </div>
+  </Fragment>
+</PortalLayout>
+
+<style>
+  /* The reference is the one mono line in the record: the estimate number's
+     stack, but in the ink rather than the muted grey, and not bold. */
+  .reference {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: 400;
+  }
+
+  /* "What you wrote" sets the label over the sentence rather than beside it,
+     because a sentence does not right-align. */
+  .record__row--stack {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2xs);
+  }
+
+  .record__row--stack dd {
+    font-weight: 400;
+    line-height: 1.5;
+    text-align: left;
+  }
+
+  /* The section head's h2 is the kicker here: the design opens this block
+     with the kicker alone, so the heading takes the kicker's size. */
+  .sect > h2.kicker {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: var(--tracking-kicker);
+  }
+
+  .sect .body {
+    margin-block-start: var(--space-2xs);
+  }
+</style>

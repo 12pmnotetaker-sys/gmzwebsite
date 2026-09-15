@@ -1,0 +1,225 @@
+---
+/**
+ * The plant record: one page per plant on record, built from its entry in the
+ * plants collection.
+ *
+ * The name is the heading and the species sits under it in italic. Then the
+ * facts as rows, the thing that needs saying about this plant on amber (a
+ * protected tree's permit, or a decision the crew is waiting on), the care
+ * history as dated steps, the crew's notes, and every other plant on record
+ * as a row into its own page.
+ *
+ * On desktop the amber panel moves to the rail, which is why it renders
+ * twice: once in the column with `column-only`, once in the rail. The steps
+ * are the same; there is just room beside them. A plant with nothing to say
+ * on amber declares no rail content; the layout still draws the empty aside
+ * for it, because a named slot inside an expression registers whether or not
+ * the expression is true.
+ */
+import type { GetStaticPaths } from 'astro';
+import { render } from 'astro:content';
+import PortalLayout from '@layouts/PortalLayout.astro';
+import ScreenHead from '@components/portal/ScreenHead.astro';
+import Facts from '@components/portal/Facts.astro';
+import Row from '@components/portal/Row.astro';
+import Plate from '@components/portal/Plate.astro';
+import { routes } from '@data/portal/routes';
+import { client } from '@data/portal/garden';
+import { getPlants, plantHref } from '@data/portal/plants';
+import type { StatusKey } from '@data/portal/status';
+
+export const getStaticPaths = (async () => {
+  const plants = await getPlants();
+  return plants.map((plant) => ({
+    params: { slug: plant.id },
+    props: { plant, others: plants.filter((entry) => entry.id !== plant.id) },
+  }));
+}) satisfies GetStaticPaths;
+
+const { plant, others } = Astro.props;
+const { data } = plant;
+const { Content } = await render(plant);
+const hasNotes = Boolean(plant.body?.trim());
+
+/* The fact rows, in the record's order. A row only appears when the entry
+   has something to put in it. */
+interface Fact {
+  label: string;
+  value?: string;
+  chip?: { tone: StatusKey; label: string };
+}
+
+const facts: Fact[] = [{ label: 'Where', value: data.where }];
+if (data.onRecordSince) facts.push({ label: 'On record since', value: data.onRecordSince });
+if (data.water) facts.push({ label: 'Water', value: data.water });
+if (data.condition) facts.push({ label: 'Condition', chip: data.condition });
+
+const hasRail = Boolean(data.protectedTree || data.flag);
+---
+
+<PortalLayout
+  title={data.name}
+  property={client.property}
+  backHref={routes.plants}
+  backLabel="Back"
+  footerKicker="Questions about a plant"
+>
+  <ScreenHead kicker={`Your garden, ${client.town}`} title={data.name} long>
+    <span class="species">{data.species}</span>
+  </ScreenHead>
+
+  {
+    data.plate && (
+      <div class="block--tight">
+        <Plate caption={data.plate} height={200} tall />
+      </div>
+    )
+  }
+
+  <div class="block">
+    <Facts rows={facts} />
+  </div>
+
+  {
+    data.protectedTree && (
+      <section
+        class="block--tight panel panel--attention column-only"
+        aria-labelledby="protected-tree"
+      >
+        <span class="kicker" id="protected-tree">
+          Protected tree
+        </span>
+        <p class="sub">{data.protectedTree.headline}</p>
+        <p class="body">{data.protectedTree.body}</p>
+      </section>
+    )
+  }
+
+  {
+    data.flag && (
+      <div class="block--tight stack stack--md column-only">
+        <section class="panel panel--attention" aria-labelledby="waiting-on-you">
+          <span class="kicker" id="waiting-on-you">
+            Waiting on you
+          </span>
+          <p class="sub">{data.flag.action}</p>
+          <p class="body">{data.flag.recommendation}</p>
+        </section>
+        <div class="actions">
+          <a class="btn btn--secondary" href={routes.ask}>
+            Ask about this plant
+          </a>
+        </div>
+      </div>
+    )
+  }
+
+  {
+    data.careHistory && (
+      <section class="block stack stack--md" aria-labelledby="care-history">
+        <div class="sect">
+          <h2 class="kicker" id="care-history">
+            Care history
+          </h2>
+        </div>
+        <div class="steps">
+          {data.careHistory.map((entry) => (
+            <div class="step">
+              <span class="step__when">{entry.when}</span>
+              <p class="note">{entry.what}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  {
+    hasNotes && (
+      <section class="block stack stack--md" aria-labelledby="crew-notes">
+        <div class="sect">
+          <h2 class="kicker" id="crew-notes">
+            Notes from the crew
+          </h2>
+        </div>
+        <div class="notes">
+          <Content />
+        </div>
+      </section>
+    )
+  }
+
+  <section class="block block--end stack stack--md" aria-labelledby="also-on-record">
+    <div class="sect">
+      <h2 class="kicker" id="also-on-record">Also on record</h2>
+    </div>
+    <div class="rows">
+      {
+        others.map((other) => (
+          <Row
+            href={plantHref(other)}
+            title={other.data.name}
+            note={other.data.summary}
+            chip={other.data.status.tone === 'done' ? undefined : other.data.status}
+          />
+        ))
+      }
+    </div>
+  </section>
+
+  {
+    hasRail && (
+      <Fragment slot="rail">
+        {data.protectedTree && (
+          <section class="panel panel--attention" aria-label="Protected tree">
+            <span class="kicker">Protected tree</span>
+            <p class="sub">{data.protectedTree.headline}</p>
+            <p class="body">{data.protectedTree.body}</p>
+          </section>
+        )}
+        {data.flag && (
+          <section class="panel panel--attention" aria-label="Waiting on you">
+            <span class="kicker">Waiting on you</span>
+            <p class="sub">{data.flag.action}</p>
+            <p class="body">{data.flag.recommendation}</p>
+          </section>
+        )}
+        {data.flag && (
+          <a class="btn btn--secondary" href={routes.ask}>
+            Ask about this plant
+          </a>
+        )}
+      </Fragment>
+    )
+  }
+</PortalLayout>
+
+<style>
+  /* Each section head on this screen is its kicker alone, so the heading
+     takes the kicker's size. */
+  .sect > h2.kicker {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: var(--tracking-kicker);
+  }
+
+  .steps {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* The crew's notes come from Markdown, so the paragraphs are styled here
+     rather than by class: the body size, 13 apart. */
+  .notes {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+  }
+
+  .notes :global(p) {
+    margin: 0;
+    font-size: var(--text-base);
+    line-height: 1.55;
+    color: var(--color-text);
+  }
+</style>

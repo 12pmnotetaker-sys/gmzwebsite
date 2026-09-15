@@ -327,6 +327,8 @@ export const licenseShort = `CSLB #${company.license.number}`;
 /** "the Peninsula", for use mid-sentence where the capital would read oddly. */
 export const serviceRegionInline = company.serviceRegion.replace(/^The\b/, 'the');
 export const hoursInline = `${company.hours.daysShort} ${company.hours.time}`;
+/** "Monday to Friday, 8am – 4pm", for the portal's footer and its recovery screen. */
+export const hoursSentence = `${company.hours.days}, ${company.hours.time}`;
 export const foundedLine = `since ${company.founded}`;
 
 export const site = {
