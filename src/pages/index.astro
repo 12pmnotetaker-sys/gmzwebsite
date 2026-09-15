@@ -4,6 +4,8 @@ import { Image } from 'astro:assets';
 import finishedGarden from '@/assets/portfolio/hamilton/hamilton-after-1.webp';
 import stoneStairs from '@/assets/portfolio/fox-hill/foxhill-stair-lit.webp';
 import plantingDetail from '@/assets/portfolio/fox-hill/foxhill-stump.webp';
+import constructionPreview from '@/assets/portfolio/fox-hill/foxhill-lawn.webp';
+import maintenancePreview from '@/assets/portfolio/fox-hill/foxhill-dahlias.webp';
 import designPreview from '@/assets/portfolio/los-charros/loscharros-render.webp';
 import HomeHero from '@components/HomeHero.astro';
 import SupplierStrip from '@components/SupplierStrip.astro';
@@ -59,12 +61,12 @@ const stepPictures = {
     alt: 'Landscape design rendering with hillside steps and planting.',
   },
   'landscape-construction': {
-    src: stoneStairs,
-    alt: 'Completed stone steps with integrated lighting.',
+    src: constructionPreview,
+    alt: 'New lawn installed beside a stone patio and planting beds.',
   },
   'landscape-maintenance': {
-    src: plantingDetail,
-    alt: 'Flower beds with mulch and seasonal planting.',
+    src: maintenancePreview,
+    alt: 'Pink dahlias and colorful seasonal flowers in a garden bed.',
   },
 };
 const workDetails = [
@@ -184,10 +186,10 @@ const workDetails = [
                       class="stage__picture"
                       src={stepPictures[service.id as keyof typeof stepPictures].src}
                       alt={stepPictures[service.id as keyof typeof stepPictures].alt}
-                      width={112}
-                      height={84}
-                      widths={[112, 224]}
-                      sizes="112px"
+                      width={168}
+                      height={126}
+                      widths={[168, 336]}
+                      sizes="168px"
                       fit="cover"
                       loading="lazy"
                     />
@@ -534,8 +536,8 @@ const workDetails = [
 
   .stage__picture {
     display: block;
-    width: 7rem;
-    max-width: 42%;
+    width: 10.5rem;
+    max-width: calc(100% - 7rem);
     height: auto;
     aspect-ratio: 4 / 3;
     object-fit: cover;
