@@ -119,6 +119,12 @@ except to confirm a tap; the short cross-fade between screens is that
 confirmation, and `prefers-reduced-motion` removes it. The portal opts out of
 the marketing site's rise-in.
 
+**The documents shelf opens the record.** The prototype's "Application records"
+row led to the pending notice, which is an approval prompt rather than an
+archive. It opens the completed record now; the visit report's own
+"Applications on this visit" row still leads to the notice, which is the only
+application it has to show.
+
 **Semantics were added everywhere.** One `h1` per screen; `<nav>` around row
 lists; `<dl>` for fact rows; the stage bar is an image with the stage caption
 as its name; every chevron is `aria-hidden` because the words beside it are the
@@ -166,6 +172,10 @@ Before a client is sent a link:
 5. **Requests, approvals and offers reaching the office.** The forms are
    built; they need an endpoint, and the same rule as the intake form applies:
    a thank-you shows only when something accepted the submission.
+6. **Approving a change order.** As in the prototype, "Review and approve" on
+   a change order lands on the proposal's approved screen. A change order
+   needs its own approve sheet, with its own amounts and a typed name, before
+   a real one is sent.
 
 ## Bringing in the next revision
 
