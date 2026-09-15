@@ -45,6 +45,8 @@ export const routes = {
   change: `${PORTAL_PREFIX}/project/change-orders/1`,
   /** The project client's request form is the same form, entered from the project. */
   projectAsk: `${PORTAL_PREFIX}/project/ask`,
+  /** And its receipt, in the project's own chrome. */
+  projectAsked: `${PORTAL_PREFIX}/project/ask/sent`,
 } as const;
 
 /** What the nav calls it. */

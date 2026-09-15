@@ -12,9 +12,9 @@
  * On desktop the amber panel moves to the rail, which is why it renders
  * twice: once in the column with `column-only`, once in the rail. The steps
  * are the same; there is just room beside them. A plant with nothing to say
- * on amber declares no rail content; the layout still draws the empty aside
- * for it, because a named slot inside an expression registers whether or not
- * the expression is true.
+ * on amber declares no rail content, and the layout renders no aside for it:
+ * PortalLayout renders the rail slot first and only draws the aside when the
+ * result is not empty.
  */
 import type { GetStaticPaths } from 'astro';
 import { render } from 'astro:content';
@@ -195,14 +195,6 @@ const hasRail = Boolean(data.protectedTree || data.flag);
 </PortalLayout>
 
 <style>
-  /* Each section head on this screen is its kicker alone, so the heading
-     takes the kicker's size. */
-  .sect > h2.kicker {
-    font-size: var(--text-xs);
-    font-weight: 600;
-    letter-spacing: var(--tracking-kicker);
-  }
-
   .steps {
     display: flex;
     flex-direction: column;

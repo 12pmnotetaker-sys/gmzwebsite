@@ -329,6 +329,8 @@ export const serviceRegionInline = company.serviceRegion.replace(/^The\b/, 'the'
 export const hoursInline = `${company.hours.daysShort} ${company.hours.time}`;
 /** "Monday to Friday, 8am – 4pm", for the portal's footer and its recovery screen. */
 export const hoursSentence = `${company.hours.days}, ${company.hours.time}`;
+/** The same, with the offer the portal makes beside it. One home for both screens. */
+export const portalHoursLine = `${hoursSentence}. We can read you anything the portal would show you.`;
 export const foundedLine = `since ${company.founded}`;
 
 export const site = {
@@ -404,11 +406,9 @@ export interface NavItem {
 /**
  * Primary navigation, in the order a visitor should meet the site.
  *
- * The portfolio comes first because it is what earns the bigger jobs. It is
- * the gated one, under `/portfolio`: a current or prospective client with the
- * code from their consultation goes through the veil, anyone else meets the
- * veil's invitation to start a project. The public `/work` split stays off the
- * nav until GMZ has picked which projects go public (see CLAUDE.md).
+ * The Work comes first because the portfolio is what earns the bigger jobs,
+ * and Contact comes last because the site's real conversion is /start, which
+ * sits in the header as a button rather than a nav link.
  *
  * `/portfolio` is in the list on purpose, and it lands on the veil rather than
  * on the work itself. A visitor who clicks it meets the code prompt, which

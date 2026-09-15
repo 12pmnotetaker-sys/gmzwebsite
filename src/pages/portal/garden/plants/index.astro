@@ -54,7 +54,9 @@ const plants = await getPlants();
               <StatusChip tone={plant.data.status.tone} label={plant.data.status.label} />
             </span>
             <p class="body">{plant.data.flag.recommendation}</p>
-            <span class="link-action link-action--sm">{plant.data.flag.action} &rsaquo;</span>
+            <span class="link-action link-action--sm">
+              {plant.data.flag.action} <span aria-hidden="true">&rsaquo;</span>
+            </span>
           </a>
         ) : (
           <Row

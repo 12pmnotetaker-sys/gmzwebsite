@@ -190,6 +190,18 @@ export const changeOrder = {
 } as const;
 
 /**
+ * The project client's request, once sent. Same shape as the garden client's
+ * receipt, with the project's own chrome and a way back to the project.
+ */
+export const requestSent = {
+  reference: 'R-2026-0312',
+  about: 'A question',
+  wrote: 'Can the second outdoor tap go on the far side of the yard, by the gate?',
+  body: 'We have it. Someone reads it in the office, and if it changes the price we will send you a change order here to approve.',
+  next: 'You will hear back by email or a call before anything on the proposal moves. If it is more than a question, the answer arrives as a priced change for you to approve first.',
+} as const;
+
+/**
  * The stage bar.
  *
  * Twelve segments for a project. The current one is thicker rather than a

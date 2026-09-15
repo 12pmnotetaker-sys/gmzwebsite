@@ -10,7 +10,7 @@
  * proposal", "Something urgent". That is more useful than the company name
  * repeated eighteen times. Every fact reads from src/data/site.ts.
  */
-import { company, primaryPhone, licenseShort, hoursSentence } from '@data/site';
+import { company, primaryPhone, licenseShort, portalHoursLine } from '@data/site';
 
 interface Props {
   /** The amber line above the number. Omit for the company name; pass "" for none. */
@@ -24,8 +24,6 @@ interface Props {
 }
 
 const { kicker = company.legalName, tagline = false, licence = false, hours = false } = Astro.props;
-
-const hoursLine = `${hoursSentence}. We can read you anything the portal would show you.`;
 ---
 
 <footer class="foot on-dark">
@@ -42,7 +40,7 @@ const hoursLine = `${hoursSentence}. We can read you anything the portal would s
       }
       {!licence && tagline && <span class="foot__note">{company.tagline}</span>}
     </div>
-    {hours && <p class="foot__hours">{hoursLine}</p>}
+    {hours && <p class="foot__hours">{portalHoursLine}</p>}
   </div>
 </footer>
 
@@ -77,8 +75,13 @@ const hoursLine = `${hoursSentence}. We can read you anything the portal would s
     gap: var(--space-xs);
   }
 
+  /* The number is the point of the footer, so it clears the 48px tap floor
+     like every other target in the portal. */
   .foot__phone {
+    display: inline-flex;
+    align-items: center;
     align-self: flex-start;
+    min-height: var(--tap-target);
     font-size: var(--text-lg);
     font-weight: 800;
     line-height: 1.2;

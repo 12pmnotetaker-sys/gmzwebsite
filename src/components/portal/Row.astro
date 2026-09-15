@@ -32,7 +32,7 @@ const Tag = href ? 'a' : 'div';
     chip ? (
       <StatusChip tone={chip.tone} label={chip.label} />
     ) : action ? (
-      <span class="row__action">{action}</span>
+      <span class:list={['row__action', { 'row__action--quiet': !href }]}>{action}</span>
     ) : href ? (
       <span class="row__go" aria-hidden="true">
         &rsaquo;
@@ -40,3 +40,11 @@ const Tag = href ? 'a' : 'div';
     ) : null
   }
 </Tag>
+
+<style>
+  /* An action word on a row that goes nowhere yet is a statement, not a
+     link, so it takes the muted ink rather than the action green. */
+  .row__action--quiet {
+    color: var(--color-text-muted);
+  }
+</style>

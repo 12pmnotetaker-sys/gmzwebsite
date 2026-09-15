@@ -125,6 +125,16 @@ archive. It opens the completed record now; the visit report's own
 "Applications on this visit" row still leads to the notice, which is the only
 application it has to show.
 
+**Each client gets their own receipt.** The prototype had one "Sent" screen,
+the garden client's. A project client who asks a question about their
+proposal now lands on a receipt in the project's chrome, with the project's
+own words and a way back to the project, rather than on another client's
+garden.
+
+**A document that is not on file says so.** The prototype's documents shelf
+sent three rows back to the shelf itself. Those rows now read "To come" and
+are not links, until the PDFs are in the record.
+
 **Semantics were added everywhere.** One `h1` per screen; `<nav>` around row
 lists; `<dl>` for fact rows; the stage bar is an image with the stage caption
 as its name; every chevron is `aria-hidden` because the words beside it are the
@@ -150,7 +160,12 @@ link; every photo plate says in words what it stands for.
   percentage, no bottom tab bar.**
 - **The copy rules**: no em dashes, no product names, no raw quantities, scope
   in shape never in figures, nothing credited toward a later stage, never
-  "design/build" to a client. `content-lint` checks what it can.
+  "design/build" to a client. `content-lint` checks what it can, and since the
+  portal sets most of its sentences in spans, links, labels and definition
+  terms, its prose net reads those elements too.
+- **Green text is the corrected green.** `--portal-action` on white, and the
+  deep done-state green inside a calm panel, where the corrected green alone
+  measures under AA.
 - **`/portal` stays in `gatedPrefixes`** and `PortalLayout` keeps `noindex`
   unconditionally. `content-lint` treats a `data-portal` page as gated in every
   indexing state.
@@ -165,7 +180,8 @@ Before a client is sent a link:
    the server is not.
 2. **Real records.** Kate Games and Heron are the brief's example clients. The
    data modules are the shape a real record needs to fill.
-3. **Photographs.** Every plate names the photograph it stands for.
+3. **Photographs and documents.** Every plate names the photograph it stands
+   for, and the three documents without a file behind them say "To come".
 4. **The statutory notices as the PDF on file.** `NoticePages` renders the
    embed when given a `src`; until then it shows a plate that cannot be
    mistaken for the legal text.

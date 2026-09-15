@@ -30,7 +30,6 @@ const stage = projectStages.atProposal;
   property={client.property}
   backHref={routes.project}
   backLabel="Back"
-  footerKicker="GMZ Landscaping Inc."
   footerLicence
 >
   <ScreenHead kicker={`Proposal, ${client.name}, ${client.town}`} title={client.projectName} long>
@@ -114,14 +113,6 @@ const stage = projectStages.atProposal;
 </PortalLayout>
 
 <style>
-  /* The section head's h2 is the kicker here: the design opens each block
-     with the kicker alone, so the heading takes the kicker's size. */
-  .sect > h2.kicker {
-    font-size: var(--text-xs);
-    font-weight: 600;
-    letter-spacing: var(--tracking-kicker);
-  }
-
   /* "What we will do" sets its body a step further under the kicker than the
      other section heads do. */
   .scope .sect .body {

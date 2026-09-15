@@ -4,8 +4,11 @@
  *
  * A real file input with a real preview, and the only JavaScript in the portal.
  * Nothing is uploaded anywhere yet: the form has no backend in this pass, so
- * the preview is the honest extent of it. When the request endpoint exists,
- * the input is already named and multipart-ready.
+ * the preview is the honest extent of it. The input deliberately carries no
+ * `name`, like every other typed-into control in the portal, so a chosen
+ * file's name never lands in the GET the form makes. When the request
+ * endpoint exists, give the input a name and the form `enctype`; the `name`
+ * prop here only builds the ids the labels point at.
  *
  * With JavaScript off it is still a working file picker; the label just does
  * not turn into a thumbnail.
@@ -107,7 +110,7 @@ const ids = pair ? [`${name}-1`, `${name}-2`] : [name];
     font-size: var(--text-sm);
     font-weight: 600;
     line-height: 1.2;
-    color: var(--color-accent);
+    color: var(--portal-action);
   }
 
   .photos__preview {

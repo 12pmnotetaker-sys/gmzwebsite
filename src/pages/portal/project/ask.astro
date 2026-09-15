@@ -21,7 +21,7 @@ import { client } from '@data/portal/project';
   backLabel="Back"
   footerKicker={company.legalName}
 >
-  <AskForm kicker={`${client.name}, ${client.town}`} sentHref={routes.asked} />
+  <AskForm kicker={`${client.name}, ${client.town}`} sentHref={routes.projectAsked} />
 
   <Fragment slot="rail">
     <AskForm rail />

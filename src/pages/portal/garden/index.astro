@@ -16,19 +16,14 @@ import StatusChip from '@components/portal/StatusChip.astro';
 import Row from '@components/portal/Row.astro';
 import Plate from '@components/portal/Plate.astro';
 import { routes } from '@data/portal/routes';
-import { client, nextVisit, lastVisit, offer } from '@data/portal/garden';
+import { client, nextVisit, lastVisit, offer, service } from '@data/portal/garden';
 import { getLandingPlants } from '@data/portal/plants';
 import { plantHref } from '@data/portal/plants';
 
 const plants = await getLandingPlants();
 ---
 
-<PortalLayout
-  title="Your garden"
-  property={client.property}
-  footerKicker="GMZ Landscaping Inc."
-  footerTagline
->
+<PortalLayout title="Your garden" property={client.property} footerTagline>
   <Plate caption="Garden photo" height={170} bleed />
 
   <header class="head stack">
@@ -50,7 +45,7 @@ const plants = await getLandingPlants();
   </section>
 
   <nav class="block rows rows--open" aria-label="Your service">
-    <Row href={routes.service} title="Your service" note="Weekly on Wednesdays, two people" />
+    <Row href={routes.service} title="Your service" note={service.rowNote} />
     <Row href={routes.visit} title="Past visits" note="What was done, visit by visit" />
   </nav>
 
@@ -99,7 +94,9 @@ const plants = await getLandingPlants();
     <a class="offer-card" href={routes.offer}>
       <span class="kicker">{offer.kicker}</span>
       <span class="offer-card__line">{offer.rowNote}</span>
-      <span class="link-action link-action--sm">Open the offer &rsaquo;</span>
+      <span class="link-action link-action--sm">
+        Open the offer <span aria-hidden="true">&rsaquo;</span>
+      </span>
     </a>
   </Fragment>
 </PortalLayout>
@@ -107,23 +104,6 @@ const plants = await getLandingPlants();
 <style>
   .head {
     padding-block: var(--space-md);
-  }
-
-  /* The screen's name is its kicker: the answer lives in the panel below. */
-  h1.kicker {
-    font-size: var(--text-xs);
-    font-weight: 600;
-    letter-spacing: var(--tracking-kicker);
-  }
-
-  .sect > h2.kicker {
-    font-size: var(--text-xs);
-    font-weight: 600;
-    letter-spacing: var(--tracking-kicker);
-  }
-
-  .sect .body {
-    margin-block-start: var(--space-2xs);
   }
 
   .sect .chip {

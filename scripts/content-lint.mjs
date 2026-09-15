@@ -56,8 +56,16 @@ const MANUFACTURERS =
 /** Em-dash. House style uses a comma, a semicolon or a colon instead. */
 const EM_DASH = /—/g;
 
-/** Prose elements. The rules about writing apply to writing, not to markup. */
-const PROSE_ELEMENTS = /<(p|li|blockquote|h1|h2|h3|h4|figcaption|dd)\b[^>]*>([\s\S]*?)<\/\1>/gi;
+/**
+ * Prose elements. The rules about writing apply to writing, not to markup.
+ *
+ * The list is wider than a paragraph because the client portal sets most of
+ * its sentences in spans, links, definition terms, labels and buttons: a row's
+ * note, a chip's word, a draw's trigger. A brand name in a row note is as
+ * shipped as one in a paragraph, so those elements are read too.
+ */
+const PROSE_ELEMENTS =
+  /<(p|li|blockquote|h1|h2|h3|h4|figcaption|dd|dt|span|a|legend|label|button|summary)\b[^>]*>([\s\S]*?)<\/\1>/gi;
 
 /* ---- Helpers ----------------------------------------------------------- */
 

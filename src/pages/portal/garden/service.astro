@@ -16,7 +16,14 @@ import ScreenHead from '@components/portal/ScreenHead.astro';
 import Row from '@components/portal/Row.astro';
 import Facts from '@components/portal/Facts.astro';
 import { routes } from '@data/portal/routes';
-import { client, september, lastVisit, agreement, agreementNote } from '@data/portal/garden';
+import {
+  client,
+  september,
+  lastVisit,
+  agreement,
+  agreementNote,
+  service,
+} from '@data/portal/garden';
 ---
 
 <PortalLayout
@@ -27,7 +34,7 @@ import { client, september, lastVisit, agreement, agreementNote } from '@data/po
   footerKicker=""
   footerTagline
 >
-  <ScreenHead kicker={`${client.name}, ${client.town}`} title="Weekly on Wednesdays" long />
+  <ScreenHead kicker={`${client.name}, ${client.town}`} title={service.headline} long />
 
   <section class="block calendar stack stack--md">
     <h2 class="kicker">September</h2>
@@ -76,15 +83,6 @@ import { client, september, lastVisit, agreement, agreementNote } from '@data/po
 </PortalLayout>
 
 <style>
-  /* Each section head on this screen is its kicker alone, with or without
-     the rule above it, so the heading takes the kicker's size. */
-  .sect > h2.kicker,
-  .calendar > h2.kicker {
-    font-size: var(--text-xs);
-    font-weight: 600;
-    letter-spacing: var(--tracking-kicker);
-  }
-
   /* The last-visit link sits under the closed calendar with a gap, not
      another hairline: the list has already drawn its closing rule. */
   .row--bare {

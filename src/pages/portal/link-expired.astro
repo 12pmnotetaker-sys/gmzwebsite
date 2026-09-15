@@ -20,11 +20,7 @@
 import PortalLayout from '@layouts/PortalLayout.astro';
 import ScreenHead from '@components/portal/ScreenHead.astro';
 import { routes } from '@data/portal/routes';
-import { company, primaryPhone } from '@data/site';
-
-/* The sentence the footer builds, from the same facts, so the hours here can
-   never drift from the hours down there. */
-const hoursLine = `${company.hours.days}, ${company.hours.time}. We can read you anything the portal would show you.`;
+import { primaryPhone, portalHoursLine } from '@data/site';
 ---
 
 <PortalLayout title="Expired link" footerTagline>
@@ -52,7 +48,7 @@ const hoursLine = `${company.hours.days}, ${company.hours.time}. We can read you
     <a class="link-phone link-phone--answer" href={`tel:${primaryPhone.tel}`}>
       {primaryPhone.display}
     </a>
-    <p class="note">{hoursLine}</p>
+    <p class="note">{portalHoursLine}</p>
   </section>
 </PortalLayout>
 

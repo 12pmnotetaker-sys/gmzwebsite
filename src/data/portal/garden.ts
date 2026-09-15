@@ -28,7 +28,8 @@ export interface AgreementRow {
 export interface DocumentRow {
   title: string;
   note: string;
-  href: string;
+  /** Where "Open" goes. Absent while the document is not on file yet. */
+  href?: string;
 }
 
 export const client = {
@@ -51,6 +52,12 @@ export const nextVisit = {
   statusLabel: 'Scheduled',
 } as const;
 
+/** The service, as the landing row and the service screen name it. */
+export const service = {
+  headline: 'Weekly on Wednesdays',
+  rowNote: 'Weekly on Wednesdays, two people',
+} as const;
+
 export const lastVisit = {
   date: 'Wednesday 26 August',
   kicker: 'Last visit, Wednesday 26 August',
@@ -71,6 +78,8 @@ export const visitReport = {
   attribution: 'Written by the crew lead on the day.',
   photos: [{ caption: 'Front beds, edged' }, { caption: 'Clematis, tied in' }],
   earlier: '19 August, 12 August, 5 August',
+  /** The applications row on the report. */
+  applicationsNote: 'Nothing was applied on 26 August',
 } as const;
 
 export const september: VisitDay[] = [
@@ -106,17 +115,20 @@ export const documents: DocumentRow[] = [
   {
     title: 'Planting plan',
     note: 'Front garden, revised April 2024',
-    href: routes.documents,
+    /* Not on file yet; the row says so rather than opening this shelf again. */
+    href: undefined,
   },
   {
     title: 'Warranty',
     note: 'Planting from the 2024 work, one year',
-    href: routes.documents,
+    /* Not on file yet; the row says so rather than opening this shelf again. */
+    href: undefined,
   },
   {
     title: 'Certificate of insurance',
     note: 'Current, renews January 2027',
-    href: routes.documents,
+    /* Not on file yet; the row says so rather than opening this shelf again. */
+    href: undefined,
   },
   {
     title: 'Application records',
@@ -126,6 +138,13 @@ export const documents: DocumentRow[] = [
     href: routes.applicationRecord,
   },
 ];
+
+/** The panel under the documents shelf. */
+export const documentsAsk = {
+  kicker: 'Need something that is not here',
+  body: 'Ask and we will add it. Landlords and property managers usually want the insurance certificate and the license on one page.',
+  link: 'Ask for a document',
+} as const;
 
 /**
  * The application pair: a notice before the visit, a record after it.
