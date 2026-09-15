@@ -1,8 +1,17 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
+import { Image } from 'astro:assets';
+import gardenImage from '@/assets/home/hero-poster.webp';
 import HeroVideo from '@components/HeroVideo.astro';
 import SupplierStrip from '@components/SupplierStrip.astro';
-import { company, fees, foundedLine, serviceRegionInline } from '@data/site';
+import {
+  company,
+  fees,
+  foundedLine,
+  primaryCta,
+  primaryPhone,
+  serviceRegionInline,
+} from '@data/site';
 import { getPublishedArticles } from '@data/articles';
 import { getPublishedTowns, townHref } from '@data/towns';
 import { getServices, serviceHref } from '@data/services';
@@ -20,27 +29,47 @@ const services = await getServices();
 <BaseLayout>
   <HeroVideo>
     <p class="kicker kicker--hero">{company.tagline}</p>
-    <h1 class="page-title hero__title">Gardens for {serviceRegionInline}, {foundedLine}.</h1>
-    <div class="rule-accent rule-accent--short"></div>
-    <p class="hero__lede">A family company, working from {company.address.locality}.</p>
+    <h1 class="page-title hero__title">
+      Gardens for {serviceRegionInline}.<br />Made for your life.
+    </h1>
+    <p class="hero__lede">
+      From the first sketch to the care that follows, our family helps you make the most of your
+      outdoor space.
+    </p>
+    <div class="hero__actions">
+      <a class="btn btn--amber" href={primaryCta.href}>{primaryCta.label}</a>
+      <a class="btn hero__secondary" href="#services">Explore our services</a>
+    </div>
+    <p class="hero__footnote">A family company in {company.address.locality}, {foundedLine}.</p>
   </HeroVideo>
 
-  <section class="section">
+  <div class="home-facts">
+    <ul class="container home-facts__list" aria-label="About GMZ">
+      <li>Family owned, {foundedLine}</li>
+      <li>Design, build and ongoing care</li>
+      <li>{company.license.display}</li>
+    </ul>
+  </div>
+
+  <section class="section" id="services" aria-labelledby="services-title">
     <div class="container">
       <div class="section-head">
         <div>
           <p class="kicker">What we do</p>
-          <h2 class="section-title">Three stages, one company.</h2>
+          <h2 class="section-title" id="services-title">One garden. A team for every stage.</h2>
         </div>
         <p class="section-head__note">
-          The same people carry a garden from the first sketch to the fiftieth visit.
+          Start with a new design, bring a plan to life, or care for the garden you already have.
         </p>
       </div>
 
       <ul class="stages">
         {
-          services.map((service) => (
+          services.map((service, index) => (
             <li class="stage">
+              <span class="stage__number" aria-hidden="true">
+                0{index + 1}
+              </span>
               <h3 class="stage__name">
                 <a href={serviceHref(service)}>{service.data.title}</a>
               </h3>
@@ -49,20 +78,104 @@ const services = await getServices();
           ))
         }
       </ul>
-      <p class="stages__more">More services upon request.</p>
+      <p class="stages__more">
+        Not sure where to begin? <a href="#first-visit">Find the right first visit.</a>
+      </p>
     </div>
   </section>
 
-  <section class="section section--tint">
+  <section class="section portfolio-intro on-dark" aria-labelledby="portfolio-title">
+    <div class="container portfolio-intro__grid">
+      <figure class="portfolio-intro__image">
+        <Image
+          src={gardenImage}
+          alt="Grasses being planted around a river-rock dry creek and stone path on a hillside."
+          widths={[480, 768, 1200]}
+          sizes="(min-width: 900px) 48vw, 100vw"
+          loading="lazy"
+        />
+        <figcaption>A closer look at the gardens we create.</figcaption>
+      </figure>
+      <div class="portfolio-intro__copy">
+        <p class="kicker kicker--on-dark">Inside the portfolio</p>
+        <h2 class="section-title" id="portfolio-title">
+          See the thinking.<br />Then see the garden.
+        </h2>
+        <p class="portfolio-intro__lede">
+          Explore finished spaces, the drawings that shaped them, and before-and-after comparisons
+          that bring the transformation into focus.
+        </p>
+        <ul class="portfolio-intro__details">
+          <li>Design drawings and alternatives</li>
+          <li>Finished gardens and construction details</li>
+          <li>Before-and-after views and walkthrough films</li>
+        </ul>
+        <a class="btn btn--amber" href="/portfolio">Open the private portfolio</a>
+        <p class="portfolio-intro__note">
+          Consultation code required. We share access at your visit.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="first-visit" aria-labelledby="visit-title">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <p class="kicker">Let's begin</p>
+          <h2 class="section-title" id="visit-title">The right first step for your garden.</h2>
+        </div>
+        <p class="section-head__note">
+          Tell us what you have in mind. We'll talk before a visit is booked, so you know what to
+          expect.
+        </p>
+      </div>
+      <div class="visits">
+        <article class="visit">
+          <p class="kicker">For a new space or a fresh start</p>
+          <div class="visit__heading">
+            <h3>Design consultation</h3>
+            <p class="visit__price">{fees.consultation.display}</p>
+          </div>
+          <p>
+            Walk the property together, discuss your ideas, and explore the possibilities. Covers
+            {fees.consultation.covers}.
+          </p>
+          <a class="btn btn--primary" href={primaryCta.href}>Tell us about your project</a>
+        </article>
+        <article class="visit">
+          <p class="kicker">For the garden you already have</p>
+          <div class="visit__heading">
+            <h3>Maintenance walk</h3>
+            <p class="visit__price">{fees.maintenanceWalk.display}</p>
+          </div>
+          <p>
+            Show us your garden and the care it needs. We walk the property to price ongoing
+            maintenance, whether we built it or someone else did.
+          </p>
+          <a class="btn btn--primary" href="/contact">Ask about maintenance</a>
+        </article>
+      </div>
+      <div class="visits__footer">
+        <p>Visits are prepaid. Neither fee is credited toward later work.</p>
+        <p>
+          Prefer a conversation? <a href={`tel:${primaryPhone.tel}`}>Call {primaryPhone.display}</a>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--tint" aria-labelledby="towns-title">
     <div class="container">
       <div class="section-head">
         <div>
           <p class="kicker">Where we work</p>
-          <h2 class="section-title">The Peninsula, from the Redwood City yard.</h2>
+          <h2 class="section-title" id="towns-title">
+            Rooted in {company.address.locality}.<br />At home on {serviceRegionInline}.
+          </h2>
         </div>
         <p class="section-head__note">
-          If you are outside the service area, an accommodation can be made upon request. A
-          {' '}{fees.travel.display} travel charge applies {fees.travel.note}.
+          Explore where we work and the local considerations that help shape your garden.
         </p>
       </div>
 
@@ -79,7 +192,8 @@ const services = await getServices();
         }
       </ul>
       <p class="towns__note">
-        Each town has a page on what its own rules require before design starts.
+        Outside these towns? Ask us about your property. A {fees.travel.display} travel charge applies
+        {fees.travel.note}.
       </p>
     </div>
   </section>
@@ -91,7 +205,7 @@ const services = await getServices();
           <div class="section-head">
             <div>
               <p class="kicker">Answers</p>
-              <h2 class="section-title">The questions worth settling early.</h2>
+              <h2 class="section-title">A little guidance before you begin.</h2>
             </div>
           </div>
           <ul class="answers">
@@ -113,46 +227,6 @@ const services = await getServices();
     <div class="container">
       <div class="section-head">
         <div>
-          <p class="kicker">The work</p>
-          <h2 class="section-title">The portfolio sits behind a code.</h2>
-        </div>
-        <p class="section-head__note">
-          Finished gardens, the drawings behind them and walkthrough film, shown to clients after a
-          consultation rather than published. The code comes with the visit.
-        </p>
-      </div>
-      <p class="portfolio-link">
-        <a class="link-accent" href="/portfolio">Open the portfolio</a>
-      </p>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="container">
-      <div class="section-head">
-        <div>
-          <p class="kicker">What it costs to start</p>
-          <h2 class="section-title">The first visit is a fixed price.</h2>
-        </div>
-      </div>
-      <dl class="fees">
-        <div class="fee">
-          <dt>{fees.consultation.display}</dt>
-          <dd>Design consultation, covering {fees.consultation.covers}.</dd>
-        </div>
-        <div class="fee">
-          <dt>{fees.maintenanceWalk.display}</dt>
-          <dd>Maintenance walk, to price looking after a garden that already exists.</dd>
-        </div>
-      </dl>
-      <p class="fees__note">Neither fee is credited toward a later stage.</p>
-    </div>
-  </section>
-
-  <section class="section section--tint">
-    <div class="container">
-      <div class="section-head">
-        <div>
           <p class="kicker">Materials and equipment</p>
           <h2 class="section-title">What we install.</h2>
         </div>
@@ -166,34 +240,180 @@ const services = await getServices();
 </BaseLayout>
 
 <style>
-  /* The hero now sits on the film, so its type is inverted. The kicker's
-     structural blue does not survive on the teal scrim; amber does, and it is
-     the same accent the masthead rule uses. */
   .kicker--hero {
     color: var(--gmz-amber);
   }
 
-  /*
-   * Smaller than `.page-title` sets it, on purpose. The hero sits over a
-   * photograph, and a headline scaled for a white page covers the picture it
-   * is meant to sit on. The line is short enough now that the smaller step
-   * still reads as the loudest thing on the screen.
-   */
   .hero__title {
     margin-block-start: 0.75rem;
-    font-size: var(--text-3xl);
-    max-width: 34ch;
-    color: #fff;
+    font-size: var(--text-hero);
+    max-width: 22ch;
+    color: var(--color-text-inverse);
   }
 
   .hero__lede {
     margin-block-start: 1rem;
-    color: color-mix(in srgb, #fff 88%, transparent);
-    max-width: 40ch;
+    color: var(--color-text-inverse);
+    max-width: 48ch;
+    font-size: var(--text-lg);
   }
 
-  .portfolio-link {
+  .hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
     margin-block-start: var(--space-lg);
+  }
+
+  .hero__secondary {
+    color: var(--color-text-inverse);
+    border: 1px solid var(--color-border-inverse);
+    background: var(--gmz-teal);
+  }
+
+  .hero__secondary:hover {
+    color: var(--gmz-teal);
+    background: var(--gmz-amber);
+    border-color: var(--gmz-amber);
+  }
+
+  .hero__footnote {
+    margin-block-start: var(--space-md);
+    color: var(--color-text-inverse);
+    font-size: var(--text-sm);
+  }
+
+  .home-facts {
+    border-block-end: 1px solid var(--color-border);
+    background: var(--color-bg-subtle);
+  }
+
+  .home-facts__list {
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-xs) var(--space-lg);
+    padding-block: var(--space-md);
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+
+  #services,
+  #first-visit {
+    scroll-margin-block-start: 7rem;
+  }
+
+  .portfolio-intro {
+    background: var(--gmz-teal);
+    color: var(--color-text-inverse);
+  }
+
+  .portfolio-intro__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+    gap: var(--space-3xl);
+  }
+
+  .portfolio-intro__image {
+    min-width: 0;
+  }
+
+  .portfolio-intro__image img {
+    width: 100%;
+    aspect-ratio: 5 / 4;
+    object-fit: cover;
+  }
+
+  .portfolio-intro__image figcaption {
+    border-block-start: var(--rule-accent) solid var(--gmz-amber);
+    padding-block-start: var(--space-sm);
+    margin-block-start: var(--space-sm);
+    font-size: var(--text-sm);
+  }
+
+  .portfolio-intro .section-title {
+    color: var(--color-text-inverse);
+    font-size: var(--text-4xl);
+  }
+
+  .portfolio-intro__lede {
+    margin-block-start: var(--space-md);
+    max-width: 46ch;
+  }
+
+  .portfolio-intro__details {
+    list-style: none;
+    margin-block: var(--space-lg);
+    padding: 0;
+  }
+
+  .portfolio-intro__details li {
+    border-block-start: 1px solid var(--color-border-inverse);
+    padding-block: var(--space-xs);
+  }
+
+  .portfolio-intro__note {
+    margin-block-start: var(--space-sm);
+    font-size: var(--text-sm);
+  }
+
+  .visits {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-lg);
+    margin-block-start: var(--space-lg);
+  }
+
+  .visit {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: var(--space-xl);
+    border: 1px solid var(--color-border);
+    border-block-start: var(--rule-accent) solid var(--color-accent);
+    background: var(--color-bg-subtle);
+  }
+
+  .visit__heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-xs) var(--space-md);
+    width: 100%;
+    margin-block: var(--space-sm);
+  }
+
+  .visit__heading h3 {
+    font-size: var(--text-xl);
+    letter-spacing: var(--tracking-heading);
+  }
+
+  .visit__price {
+    font-size: var(--text-3xl);
+    font-weight: 800;
+  }
+
+  .visit > p:not(.kicker) {
+    color: var(--color-text-muted);
+    margin-block-end: var(--space-lg);
+  }
+
+  .visit .btn {
+    margin-block-start: auto;
+  }
+
+  .visits__footer {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-sm) var(--space-lg);
+    margin-block-start: var(--space-md);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
   }
 
   .section--tint {
@@ -211,7 +431,16 @@ const services = await getServices();
 
   .stage {
     border-block-start: 2px solid var(--color-structure);
-    padding-block-start: 0.875rem;
+    padding: var(--space-lg);
+    background: var(--color-bg-subtle);
+  }
+
+  .stage__number {
+    display: block;
+    margin-block-end: var(--space-lg);
+    font-size: var(--text-3xl);
+    font-weight: 800;
+    color: var(--color-structure);
   }
 
   .stage__name {
@@ -282,39 +511,37 @@ const services = await getServices();
     max-inline-size: var(--width-prose);
   }
 
-  .fees {
-    margin: var(--space-lg) 0 0;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-lg);
-    max-inline-size: var(--width-prose);
-  }
+  @media (width < 900px) {
+    .portfolio-intro__grid {
+      grid-template-columns: 1fr;
+      gap: var(--space-xl);
+    }
 
-  .fee {
-    border-block-start: 2px solid var(--color-structure);
-    padding-block-start: 0.875rem;
-  }
-
-  .fee dt {
-    font-size: var(--text-2xl);
-    font-weight: 800;
-    letter-spacing: var(--tracking-heading);
-  }
-
-  .fee dd {
-    margin: 0.375rem 0 0;
-    color: var(--color-text-muted);
-  }
-
-  .fees__note {
-    margin-block-start: var(--space-md);
-    color: var(--color-text-muted);
+    .portfolio-intro__image img {
+      aspect-ratio: 16 / 9;
+    }
   }
 
   @media (width < 760px) {
     .stages,
-    .fees {
+    .visits {
       grid-template-columns: 1fr;
+    }
+
+    .home-facts__list {
+      flex-direction: column;
+    }
+
+    .visit {
+      padding: var(--space-lg);
+    }
+
+    .hero__actions .btn {
+      width: 100%;
+    }
+
+    .hero__title {
+      font-size: var(--text-4xl);
     }
   }
 </style>
