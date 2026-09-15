@@ -1,18 +1,17 @@
 ---
 title: Landscape Construction
 summary: >-
-  Grading, hardscape, irrigation and planting, built by the people who drew it.
-  A licensed contractor doing the work rather than subcontracting the whole job
-  out.
+  We build landscapes, including site preparation, drainage, patios,
+  walkways, retaining walls, irrigation, lighting and planting.
 serviceLine: design-build
 order: 20
 featured: true
 pullQuote: Site preparation is the part nobody photographs and everything else depends on.
 highlights:
-  - Grading and drainage resolved before anything is built on top of it
-  - Patios, walkways, retaining walls and structures
-  - Planting placed for the light, the soil and the next ten years
-  - Irrigation laid out by hydrozone, and lighting where it earns its place
+  - Site clearing, grading and drainage installation
+  - Patios, walkways, retaining walls and outdoor structures
+  - Plant selection and installation suited to the sunlight and soil
+  - Irrigation systems and outdoor lighting installation
 ---
 
 Building a garden has an order, and most of the cost of getting it wrong is
