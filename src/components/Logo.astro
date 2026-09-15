@@ -1,5 +1,4 @@
 ---
-import { Image } from 'astro:assets';
 import { company } from '@data/site';
 import mark from '@/assets/brand/gmz-mark.png';
 import wordmark from '@/assets/brand/gmz-wordmark.png';
@@ -47,6 +46,8 @@ const { height, variant = 'lockup', class: className } = Astro.props;
  * carry the intrinsic ratio, which is what stops the masthead shifting as the
  * images decode.
  */
+// Serve the small logo files directly so on-demand portal pages do not need
+// a runtime image transformation to display the brand.
 const MARK_RATIO = 1; // 481 x 481
 const WORD_RATIO = 471 / 199;
 
@@ -57,23 +58,21 @@ const wordHeight = Math.round(height * WORD_SCALE);
 ---
 
 <span class:list={['logo', className]} style={`--logo-h: ${height}px`}>
-  <Image
-    src={mark}
+  <img
+    src={mark.src}
     alt=""
     role="presentation"
     width={Math.round(height * MARK_RATIO)}
     height={height}
-    densities={[1, 2]}
     class="logo__mark"
   />
   {
     variant === 'lockup' && (
-      <Image
-        src={wordmark}
+      <img
+        src={wordmark.src}
         alt={company.name}
         width={Math.round(wordHeight * WORD_RATIO)}
         height={wordHeight}
-        densities={[1, 2]}
         class="logo__word"
       />
     )
