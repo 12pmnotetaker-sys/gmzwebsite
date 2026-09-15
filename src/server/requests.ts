@@ -123,27 +123,29 @@ export async function createRequest(
   }
   const reference = String(data.reference);
 
-  const notified = !isDemoClient(client) && await sendMail({
-    to: env.officeTo,
-    replyTo: client.email,
-    subject: `Portal ${request.kind}: ${client.name}, ${reference}`,
-    text: [
-      `${client.name} sent this through the portal.`,
-      '',
-      `Reference  ${reference}`,
-      `About      ${request.about}`,
-      ...Object.entries(request.details ?? {}).map(
-        ([key, value]) => `${key.padEnd(10)} ${String(value)}`,
-      ),
-      `Photos     ${paths.length === 0 ? 'none' : `${paths.length}, in the portal bucket under ${client.id}/requests/`}`,
-      '',
-      'In their words',
-      '--------------',
-      request.body || '(nothing written)',
-      '',
-      `Reply to this email to answer ${client.name} directly.`,
-    ].join('\n'),
-  });
+  const notified =
+    !isDemoClient(client) &&
+    (await sendMail({
+      to: env.officeTo,
+      replyTo: client.email,
+      subject: `Portal ${request.kind}: ${client.name}, ${reference}`,
+      text: [
+        `${client.name} sent this through the portal.`,
+        '',
+        `Reference  ${reference}`,
+        `About      ${request.about}`,
+        ...Object.entries(request.details ?? {}).map(
+          ([key, value]) => `${key.padEnd(10)} ${String(value)}`,
+        ),
+        `Photos     ${paths.length === 0 ? 'none' : `${paths.length}, in the portal bucket under ${client.id}/requests/`}`,
+        '',
+        'In their words',
+        '--------------',
+        request.body || '(nothing written)',
+        '',
+        `Reply to this email to answer ${client.name} directly.`,
+      ].join('\n'),
+    }));
   if (notified) {
     await db().from('portal_requests').update({ notified: true }).eq('reference', reference);
   } else if (!isDemoClient(client)) {
@@ -199,22 +201,24 @@ export async function recordApproval(
     throw new RequestRejected('storage', `Could not record the approval: ${error?.message}`);
   }
 
-  const notified = !isDemoClient(client) && await sendMail({
-    to: env.officeTo,
-    replyTo: client.email,
-    subject: `Portal approval: ${client.name}, ${approval.summary}`,
-    text: [
-      `${client.name} approved this in the portal.`,
-      '',
-      `What       ${approval.summary}`,
-      `Amount     ${approval.amount}`,
-      `Typed name ${approval.typedName}`,
-      '',
-      'This records their intent to proceed. The contract still goes to them for signature, and nothing is due until they have signed it.',
-      '',
-      company.legalName,
-    ].join('\n'),
-  });
+  const notified =
+    !isDemoClient(client) &&
+    (await sendMail({
+      to: env.officeTo,
+      replyTo: client.email,
+      subject: `Portal approval: ${client.name}, ${approval.summary}`,
+      text: [
+        `${client.name} approved this in the portal.`,
+        '',
+        `What       ${approval.summary}`,
+        `Amount     ${approval.amount}`,
+        `Typed name ${approval.typedName}`,
+        '',
+        'This records their intent to proceed. The contract still goes to them for signature, and nothing is due until they have signed it.',
+        '',
+        company.legalName,
+      ].join('\n'),
+    }));
   if (notified) {
     await db()
       .from('portal_approvals')
