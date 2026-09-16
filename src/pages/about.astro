@@ -2,7 +2,7 @@
 import BaseLayout from '@layouts/BaseLayout.astro';
 import PageHeader from '@components/PageHeader.astro';
 import { company, serviceRegionInline } from '@data/site';
-import { aboutVisuals } from '@data/site-visuals';
+import { aboutHero, aboutVisuals } from '@data/site-visuals';
 
 /**
  * Note what this page does not say, because the omissions are the decisions.
@@ -42,30 +42,35 @@ const { people, license, memberships, drawings, address, heritage } = company;
         </div>
       </div>
 
-      <div class="prose story__body">
-        <p>
-          {company.founder} founded {company.name} in {company.founded}. Based in
-          {address.locality}, we are a family-owned landscape design, construction and maintenance
-          company serving {serviceRegionInline}. Our family's landscaping experience began in
-          {heritage.tradeSince} and now spans {heritage.generations} generations.
-        </p>
-        <p>
-          Family members are directly involved in design, project management and maintenance. We
-          work with clients to understand how they use their property, plan the improvements they
-          need, and coordinate the work from the initial design through installation and ongoing
-          care.
-        </p>
-        <p>
-          Our work includes planting, patios, paths, retaining walls, irrigation, drainage and
-          landscape lighting. We take on complete garden renovations as well as improvements to
-          individual areas, and we can build from plans prepared by other landscape designers.
-          Maintenance is also available for established gardens, whether we installed them or not.
-        </p>
-        <p>
-          Working locally helps us plan for the conditions that affect Peninsula gardens: sun and
-          shade, slopes, soil, drainage and seasonal water needs. We consider these details
-          alongside the way you want to use the space and the care it will need over time.
-        </p>
+      <div class="story__content">
+        <div class="prose story__body">
+          <p>
+            {company.founder} founded {company.name} in {company.founded}. Based in
+            {address.locality}, we are a family-owned landscape design, construction and maintenance
+            company serving {serviceRegionInline}. Our family's landscaping experience began in
+            {heritage.tradeSince} and now spans {heritage.generations} generations.
+          </p>
+          <p>
+            Family members are directly involved in design, project management and maintenance. We
+            work with clients to understand how they use their property, plan the improvements they
+            need, and coordinate the work from the initial design through installation and ongoing
+            care.
+          </p>
+          <p>
+            Our work includes planting, patios, paths, retaining walls, irrigation, drainage and
+            landscape lighting. We take on complete garden renovations as well as improvements to
+            individual areas, and we can build from plans prepared by other landscape designers.
+            Maintenance is also available for established gardens, whether we installed them or not.
+          </p>
+          <p>
+            Working locally helps us plan for the conditions that affect Peninsula gardens: sun and
+            shade, slopes, soil, drainage and seasonal water needs. We consider these details
+            alongside the way you want to use the space and the care it will need over time.
+          </p>
+        </div>
+        <figure class="story__hero">
+          <img src={aboutHero.image.src} alt={aboutHero.alt} loading="eager" />
+        </figure>
       </div>
 
       <ul class="story__visuals" aria-label="A selection of GMZ gardens">
@@ -178,10 +183,28 @@ const { people, license, memberships, drawings, address, heritage } = company;
     margin-block-start: var(--space-lg);
   }
 
+  .story__content {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(18rem, 0.85fr);
+    gap: var(--space-xl);
+    align-items: start;
+  }
+
+  .story__hero {
+    margin: var(--space-lg) 0 0;
+  }
+
+  .story__hero img {
+    display: block;
+    inline-size: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+  }
+
   .story__visuals {
     list-style: none;
     display: grid;
-    grid-template-columns: 1.2fr repeat(2, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--space-sm);
     margin: var(--space-xl) 0 0;
     padding: 0;
@@ -229,6 +252,19 @@ const { people, license, memberships, drawings, address, heritage } = company;
   }
 
   @media (width < 980px) {
+    .story__content {
+      grid-template-columns: 1fr;
+    }
+
+    .story__hero {
+      margin-block-start: var(--space-lg);
+      max-inline-size: 38rem;
+    }
+
+    .story__hero img {
+      aspect-ratio: 16 / 9;
+    }
+
     .roster {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }

@@ -6,6 +6,7 @@ import terracedGarden from '../assets/portfolio/viewridge/viewridge-aerial-full.
 import hillsborough from '../assets/portfolio-preview/hillsborough.webp';
 import menlo from '../assets/portfolio-preview/menlo.webp';
 import woodside from '../assets/portfolio-preview/woodside.webp';
+import redwood from '../assets/portfolio-preview/redwood.webp';
 
 /**
  * Anonymous, public-safe selections from GMZ's portfolio. The public site
@@ -60,5 +61,10 @@ export const processVisuals = [
 export const aboutVisuals = [
   { image: hillsborough, alt: 'Formal garden planting and a stone path at a Peninsula home.' },
   { image: menlo, alt: 'A planted garden arranged around an outdoor living area.' },
-  { image: woodside, alt: 'Layered hillside planting beneath mature trees.' },
+  { image: redwood, alt: 'Mediterranean planting arranged around a garden path.' },
 ] as const;
+
+export const aboutHero = {
+  image: woodside,
+  alt: 'Layered hillside planting beneath mature trees.',
+};
