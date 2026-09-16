@@ -1,0 +1,68 @@
+---
+import Logo from '@components/Logo.astro';
+import '@styles/global.css';
+---
+
+<!doctype html>
+<html lang="en">
+  <head
+    ><meta charset="UTF-8" /><meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    /><meta name="robots" content="noindex,nofollow" /><title>GMZ Admin</title><link
+      rel="icon"
+      href="/favicon.png"
+    /></head
+  ><body
+    ><main class="admin-entry">
+      <a href="/" aria-label="GMZ home"><Logo height={48} /></a><p class="kicker">GMZ TEAM</p><h1>
+        Operations workspace
+      </h1><p>Clients, schedules, requests, and field operations.</p><a
+        class="btn btn--amber"
+        href="https://gmz-operations.gmzhavi.chatgpt.site/">Open GMZ Admin ↗</a
+      ><p class="access-note">
+        Uses the existing private ChatGPT access. GMZ staff accounts will be added later.
+      </p><nav aria-label="Other portals">
+        <a href="/staff">Staff prototype</a><a href="/portal/sign-in">Client portal</a><a href="/"
+          >Back to website</a>
+      </nav>
+    </main></body>
+</html>
+<style>
+  .admin-entry {
+    min-height: 100dvh;
+    background: var(--gmz-teal);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: clamp(28px, 8vw, 120px);
+    gap: 24px;
+  }
+  .admin-entry h1 {
+    font-size: clamp(32px, 5vw, 64px);
+    line-height: 1.08;
+  }
+  .admin-entry p {
+    max-width: 48ch;
+    line-height: 1.6;
+  }
+  .admin-entry .kicker {
+    color: var(--gmz-amber);
+  }
+  .access-note {
+    color: #bdcdd1;
+    font-size: 14px;
+  }
+  .admin-entry nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    margin-top: 24px;
+  }
+  .admin-entry nav a {
+    color: white;
+    font-size: 14px;
+  }
+</style>

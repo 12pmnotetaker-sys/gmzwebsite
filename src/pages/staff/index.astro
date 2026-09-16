@@ -1,0 +1,159 @@
+---
+import Logo from '@components/Logo.astro';
+import '@styles/global.css';
+import '../../staff/staff.css';
+---
+
+<!doctype html>
+<html lang="en">
+  <head
+    ><meta charset="UTF-8" /><meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+    /><meta name="robots" content="noindex,nofollow" /><meta
+      name="theme-color"
+      content="#002b37"
+    /><title>GMZ Staff · Prototype</title><link rel="icon" href="/favicon.png" /></head
+  ><body class="staff-body">
+    <header class="staff-header">
+      <a href="/" aria-label="GMZ home"><Logo height={38} /></a><span>STAFF <b>FIELD DESK</b></span
+      ><a href="/admin">Admin ↗</a>
+    </header>
+    <div class="staff-demo">
+      <strong>Prototype</strong><span
+        >Sample routes. Entries stay in this browser; nothing is sent to payroll or Admin.</span>
+    </div>
+    <main class="staff-shell">
+      <section class="staff-heading">
+        <div>
+          <p class="staff-kicker" id="today-label">GMZ FIELD TEAM</p><h1>Ready for the day.</h1><p>
+            Demo crew member <span>·</span> Peninsula route
+          </p>
+        </div><div class="staff-weather">
+          <span>YOUR DAY</span><strong id="route-progress">0 / 3</strong><small
+            >sample stops complete</small>
+        </div>
+      </section>
+      <section class="shift-bar" aria-label="Shift clock">
+        <div>
+          <span id="clock-status">Off the clock</span><strong id="clock-elapsed">00:00</strong
+          ><small>Working time · breaks excluded</small>
+        </div><div class="clock-actions">
+          <button class="staff-button primary" id="clock-toggle">Clock in</button><button
+            class="staff-button"
+            id="break-toggle"
+            hidden>Start break</button>
+        </div>
+      </section>
+      <nav class="staff-nav" aria-label="Staff sections">
+        <a href="#route" data-section="route" aria-current="page">01 <span>My route</span></a><a
+          href="#timesheets"
+          data-section="timesheets">02 <span>Timesheets</span></a
+        ><a href="#attendance" data-section="attendance">03 <span>Time away</span></a>
+      </nav>
+      <p id="staff-feedback" role="status" aria-live="polite"></p>
+      <section id="section-route" aria-labelledby="route-title">
+        <div class="section-title-row">
+          <div>
+            <p class="staff-kicker">TODAY’S PLAN · SAMPLE</p><h2 id="route-title">
+              Three stops. One route.
+            </h2>
+          </div><span class="staff-badge">Demo truck</span>
+        </div><div class="route-layout">
+          <div id="route-list"></div><aside class="route-aside">
+            <p class="staff-kicker">BEFORE YOU START</p><h3>Read the service notes.</h3><p>
+              Requests added by the office will appear on the matching property’s stop when live
+              staff access is connected.
+            </p><div class="aside-rule"></div><h3>Record your day.</h3><p>
+              Clock in at the start of your shift, record breaks, then review your hours before
+              submitting.
+            </p><a href="#timesheets">Review my timesheet →</a>
+          </aside>
+        </div>
+      </section>
+      <section id="section-timesheets" hidden aria-labelledby="timesheet-title">
+        <div class="section-title-row">
+          <div>
+            <p class="staff-kicker">HOURS & REVIEW</p><h2 id="timesheet-title">My timesheets</h2>
+          </div><label class="staff-field">Week of<input id="week-of" type="date" /></label>
+        </div><div class="time-summary">
+          <div><span>Working hours</span><strong id="total-hours">0.00</strong></div><div>
+            <span>Draft shifts</span><strong id="draft-count">0</strong>
+          </div><div><span>Submitted in demo</span><strong id="submitted-count">0</strong></div>
+        </div><div id="shift-list"></div><button id="submit-week" class="staff-button primary"
+          >Submit week in demo</button
+        ><details class="staff-form-panel">
+          <summary>Add a missed time entry</summary><form id="shift-form">
+            <div class="staff-form-grid">
+              <label class="staff-field">Date<input name="date" type="date" required /></label
+              ><label class="staff-field"
+                >Start · Pacific<input name="start" type="time" required /></label
+              ><label class="staff-field"
+                >End · Pacific<input name="end" type="time" required /></label
+              ><label class="staff-field"
+                >Break minutes<input
+                  name="breakMinutes"
+                  type="number"
+                  min="0"
+                  max="1439"
+                  step="1"
+                  value="30"
+                  required
+                /></label>
+            </div><label class="staff-field"
+              >Work note<textarea
+                name="notes"
+                maxlength="1000"
+                rows="2"
+                placeholder="Use sample notes in this prototype."></textarea></label
+            ><button class="staff-button" type="submit">Save draft entry</button>
+          </form>
+        </details>
+      </section>
+      <section id="section-attendance" hidden aria-labelledby="attendance-title">
+        <div class="section-title-row">
+          <div><p class="staff-kicker">ATTENDANCE</p><h2 id="attendance-title">Time away</h2></div>
+        </div><div class="attendance-layout">
+          <form id="absence-form" class="staff-form-panel">
+            <h3>Report a day away</h3><label class="staff-field"
+              >Type<select name="kind"
+                ><option>Sick day</option><option>Missed day</option><option>Time off</option
+                ></select
+              ></label
+            ><div class="staff-form-grid">
+              <label class="staff-field">From<input name="from" type="date" required /></label
+              ><label class="staff-field">Through<input name="to" type="date" required /></label>
+            </div><label class="staff-field"
+              >Note · optional<textarea
+                name="notes"
+                maxlength="1000"
+                rows="3"
+                placeholder="No medical details needed. Use sample information."></textarea></label
+            ><button class="staff-button primary" type="submit">Save request in demo</button><p
+              class="staff-help"
+            >
+              This previews a request awaiting office review. It does not notify the team.
+            </p>
+          </form><div id="absence-list"></div>
+        </div>
+      </section>
+      <footer class="staff-footer">
+        <span>GMZ LANDSCAPING / STAFF PROTOTYPE</span><button id="reset-demo">Reset demo</button>
+      </footer>
+      <dialog id="confirm-dialog" class="staff-dialog">
+        <form method="dialog">
+          <h2 id="confirm-title">Confirm</h2><p id="confirm-message"></p><div>
+            <button class="staff-button" value="cancel">Cancel</button><button
+              class="staff-button primary"
+              value="confirm">Confirm</button>
+          </div>
+        </form>
+      </dialog>
+    </main><noscript
+      ><p class="staff-demo">Enable JavaScript to try the staff prototype.</p></noscript
+    >
+    <script>
+      import '../../staff/app';
+    </script>
+  </body>
+</html>
