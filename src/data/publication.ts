@@ -43,7 +43,7 @@ export const searchIndexing = {
  * this work out of a search result is the three signals below. Keep them
  * together; dropping one while keeping the others is a contradictory signal.
  */
-export const gatedPrefixes = ['/portfolio', '/portal'] as const;
+export const gatedPrefixes = ['/portfolio', '/portal', '/admin', '/staff'] as const;
 
 /**
  * Of the gated prefixes, the ones BaseLayout draws the unlock veil over.
