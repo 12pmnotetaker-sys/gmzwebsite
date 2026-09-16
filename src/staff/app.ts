@@ -1,3 +1,5 @@
+import { setupLanguage } from './language';
+import { setupLiveRoute } from './live-route';
 import {
   freshState,
   pacificDate,
@@ -150,7 +152,7 @@ function renderShifts() {
     ? shifts
         .map(
           (s) =>
-            `<article class="shift-row"><div><strong>${escape(s.date)}</strong><p>${escape(s.start)}–${escape(s.end)} · ${s.breakMinutes} min break</p>${s.notes ? `<p>${escape(s.notes)}</p>` : ''}</div><strong>${(s.minutes / 60).toFixed(2)} h</strong><span class="staff-badge">${s.status === 'Submitted' ? 'Submitted · demo' : 'Draft'}</span>${s.status === 'Draft' ? `<button class="text-action" data-edit="${escape(s.id)}">Edit</button>` : '<small>Awaiting review in demo</small>'}</article>`,
+            `<article class="shift-row"><div><strong>${escape(s.date)}</strong><p>${escape(s.start)}–${escape(s.end)} · ${s.breakMinutes} min break</p>${s.notes ? `<p data-no-translate>${escape(s.notes)}</p>` : ''}</div><strong>${(s.minutes / 60).toFixed(2)} h</strong><span class="staff-badge">${s.status === 'Submitted' ? 'Submitted · demo' : 'Draft'}</span>${s.status === 'Draft' ? `<button class="text-action" data-edit="${escape(s.id)}">Edit</button>` : '<small>Awaiting review in demo</small>'}</article>`,
         )
         .join('')
     : '<p class="staff-empty">No entries this week. Clock a shift or add a missed time entry.</p>';
@@ -164,7 +166,7 @@ function renderAbsences() {
         .reverse()
         .map(
           (a) =>
-            `<article class="absence-card"><span class="staff-badge">Awaiting review · demo</span><h3>${escape(a.kind)}</h3><p>${escape(a.from)}${a.to === a.from ? '' : ' through ' + escape(a.to)}</p>${a.notes ? `<p>${escape(a.notes)}</p>` : ''}</article>`,
+            `<article class="absence-card"><span class="staff-badge">Awaiting review · demo</span><h3>${escape(a.kind)}</h3><p>${escape(a.from)}${a.to === a.from ? '' : ' through ' + escape(a.to)}</p>${a.notes ? `<p data-no-translate>${escape(a.notes)}</p>` : ''}</article>`,
         )
         .join('')
     : '<p class="staff-empty">No days away recorded in this demo.</p>';
@@ -397,3 +399,6 @@ setInterval(() => {
 }, 15000);
 navigate();
 render();
+
+setupLanguage();
+setupLiveRoute();
