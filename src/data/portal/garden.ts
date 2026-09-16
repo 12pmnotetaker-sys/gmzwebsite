@@ -183,17 +183,17 @@ export const gardenSeed: GardenRecord = {
    */
   offer: {
     slug: 'autumn-planting',
-    kicker: 'Autumn planting, until 31 October',
-    rowTitle: 'Autumn planting',
-    rowNote: 'Cyclamen, $25.00 a flat, planted',
+    kicker: 'Autumn cyclamen, until 31 October',
+    rowTitle: 'Autumn cyclamen',
+    rowNote: 'Cyclamen, $25.00 a flat, plant material only',
     rowChip: 'Until 31 Oct',
-    title: 'Cyclamen, planted for you',
+    title: 'Cyclamen, plant material only',
     intro:
-      'Colour through the wet months, in beds or in pots. They go in on one of your normal Wednesday visits.',
+      'Colour through the wet months, in beds or in pots. This offer covers the cyclamen plants only.',
     price: '$25.00 a flat',
-    priceKicker: 'Price a flat',
+    priceKicker: 'Plant material per flat',
     includes:
-      'The plants, the planting, and the drip line adjusted so they get watered. Nothing else is added.',
+      'Cyclamen plant material only. Planting labor, installation, and irrigation work are not included.',
     colours: [
       { label: 'Red', swatch: '#B4232A' },
       { label: 'Pink', swatch: '#E68BAE' },
@@ -202,18 +202,19 @@ export const gardenSeed: GardenRecord = {
     ],
     quantities: ['One', 'Two', 'Three', 'Not sure'],
     quantityNote:
-      'Not sure how many your beds take? Choose Not sure and the crew will measure it on Wednesday and tell you before they plant.',
-    placeNote: 'In your own words is fine. The crew reads this on Wednesday.',
+      'Not sure how many flats you need? Choose Not sure and we will confirm the quantity before you approve the plant order.',
+    placeNote:
+      'Tell us where you are considering the plants. This does not include planting or installation.',
     recommendLabel: 'Recommend a spot for me',
     recommendNote:
-      'We will walk the garden on Wednesday, suggest where they will do best, and tell you before anything is planted.',
+      'We can suggest a spot. Any planting, installation, or irrigation work requires a separate estimate and your approval.',
     total: {
       kicker: 'What this comes to',
-      line: 'Two flats, red: $50.00',
-      body: 'Added to your next monthly bill, on top of the $480.00. It does not change your agreement.',
+      line: 'Two flats, red: $50.00 for plant material',
+      body: 'The plant material is billed separately from your regular service. Planting labor, installation, and irrigation work are not included.',
     },
     disclaimer:
-      'Sending this is not an approval. We confirm the colour, the number of flats, the spot and the total here before anything is planted.',
+      'Sending this is not an approval. We confirm the colour, number of flats, and plant-material total before you approve the order. Any planting, installation, or irrigation work requires a separate estimate and approval.',
     photoCaption: 'Cyclamen photo',
   },
 
