@@ -19,6 +19,8 @@ import {
 } from '@data/portal/shapes';
 import type { PortalClient } from './auth';
 import { db } from './db';
+import { latestOperationsReport, primaryOperationsProperty } from './operations';
+import { company } from '@data/site';
 
 /** Thrown when a record exists but cannot be shown. The message is for the log. */
 export class RecordUnreadable extends Error {
@@ -50,10 +52,61 @@ async function loadOne<T>(
 }
 
 /** The garden record, or null when this client has no garden. */
-export const loadGarden = (client: PortalClient): Promise<GardenRecord | null> =>
-  loadOne('portal_gardens', client, (raw) =>
+export const loadGarden = async (client: PortalClient): Promise<GardenRecord | null> => {
+  const garden = await loadOne('portal_gardens', client, (raw) =>
     parseRecord(gardenRecord, raw, `garden record for ${client.name}`),
   );
+  if (!garden) return null;
+  const [report, property] = await Promise.all([
+    latestOperationsReport(client),
+    primaryOperationsProperty(client),
+  ]);
+  if (property) {
+    if (property.city) garden.display.town = property.city;
+    if (property.name) garden.display.property = property.name;
+    garden.agreement = garden.agreement.map((row) =>
+      row.label === 'Visits'
+        ? { ...row, value: property.cadence === 'Not set' ? 'To be confirmed' : property.cadence }
+        : row.label === 'Price'
+          ? {
+              ...row,
+              value:
+                property.monthly === null
+                  ? 'To be confirmed'
+                  : new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
+                      property.monthly,
+                    ) + ' a month',
+            }
+          : row,
+    );
+  }
+  if (report) {
+    garden.lastVisit = {
+      ...garden.lastVisit,
+      date: report.date,
+      summary: report.summary,
+      status: 'done',
+      statusLabel: 'Complete',
+    };
+    garden.visitReport = {
+      ...garden.visitReport,
+      date: report.date,
+      body: report.summary,
+      noted: {
+        kicker: 'Completed during your visit',
+        body: report.tasks.length ? report.tasks.join('; ') : 'Your visit is complete.',
+      },
+      attribution: `Recorded by ${company.name}.`,
+      photos: report.photos.map((p: { path: string; caption: string }) => ({
+        path: p.path,
+        caption: p.caption,
+        alt: p.caption,
+      })),
+      earlier: 'See your published visit history.',
+    };
+  }
+  return parseRecord(gardenRecord, garden, 'Garden report');
+};
 
 /** The project record, or null when this client has no project. */
 export const loadProject = (client: PortalClient): Promise<ProjectRecord | null> =>

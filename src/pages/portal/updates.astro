@@ -1,0 +1,95 @@
+---
+import PortalLayout from '@layouts/PortalLayout.astro';
+import ScreenHead from '@components/portal/ScreenHead.astro';
+import Plate from '@components/portal/Plate.astro';
+import { loadOperations } from '../../server/operations';
+import { landingFor } from '../../server/auth';
+export const prerender = false;
+const client = Astro.locals.client;
+if (!client) return Astro.redirect('/portal/sign-in', 302);
+let data: Awaited<ReturnType<typeof loadOperations>> | null = null;
+try {
+  data = await loadOperations(client);
+} catch {
+  Astro.response.status = 503;
+}
+const selected = Astro.url.searchParams.get('property') || '';
+const properties = data?.properties ?? [];
+// A requested property is usable only after matching the signed-in client's list.
+const property = selected ? properties.find((p) => p.id === selected) : null;
+if (selected && !property)
+  return new Response('Property not found', {
+    status: 404,
+    headers: { 'Cache-Control': 'private, no-store' },
+  });
+const reports = data?.reports.filter((r) => !selected || r.propertyId === selected) ?? [];
+---
+
+<PortalLayout
+  title="Your properties and visit history"
+  backHref={landingFor(client)}
+  backLabel="Your portal"
+  hideOperationsUpdates
+>
+  <ScreenHead kicker={client.name} title="Your properties and visit history" long
+    ><p class="body">Published updates from your GMZ team.</p></ScreenHead
+  >
+  {
+    !data ? (
+      <p class="body">Your updates could not be loaded. Please try again shortly.</p>
+    ) : (
+      <>
+        <nav class="block stack" aria-label="Choose a property">
+          <a
+            class="btn btn--secondary"
+            aria-current={!selected ? 'page' : undefined}
+            href="/portal/updates"
+          >
+            All properties
+          </a>
+          {properties.map((p) => (
+            <a
+              class="btn btn--secondary"
+              aria-current={selected === p.id ? 'page' : undefined}
+              href={'/portal/updates?property=' + encodeURIComponent(p.id)}
+            >
+              {p.name}
+              {p.city ? ' · ' + p.city : ''}
+            </a>
+          ))}
+        </nav>
+        {!properties.length && <p class="body">Your properties are being connected.</p>}
+        <section class="block stack stack--lg" aria-label="Visit reports">
+          {reports.length === 0 ? (
+            <p class="body">No visit reports have been published here yet.</p>
+          ) : (
+            reports.map((r) => (
+              <article class="panel stack stack--md" id={'report-' + r.id}>
+                <span class="kicker">{r.report.property}</span>
+                <h2 class="section-title">{r.report.date}</h2>
+                <p class="body report-body">{r.report.summary}</p>
+                <ul class="report-tasks">
+                  {r.report.tasks.map((t) => (
+                    <li>{t}</li>
+                  ))}
+                </ul>
+                {r.report.photos.map((p) => (
+                  <Plate src={p.url} caption={p.caption} alt={p.caption} height={240} />
+                ))}
+              </article>
+            ))
+          )}
+        </section>
+      </>
+    )
+  }
+</PortalLayout>
+<style>
+  .report-body {
+    white-space: pre-wrap;
+  }
+  .report-tasks {
+    padding-inline-start: var(--space-lg);
+    list-style: disc;
+  }
+</style>
