@@ -19,9 +19,16 @@ import '../../staff/staff.css';
       <a href="/" aria-label="GMZ home"><Logo height={38} /></a><span>STAFF <b>FIELD DESK</b></span
       ><a href="/admin">Admin ↗</a>
     </header>
+    <nav class="staff-language" aria-label="Language / Idioma" data-no-translate>
+      <span>Language / Idioma</span><div role="group" aria-label="Choose language / Elegir idioma">
+        <button type="button" data-language="en" lang="en" aria-pressed="true">English</button
+        ><button type="button" data-language="es" lang="es" aria-pressed="false">Español</button>
+      </div>
+    </nav>
     <div class="staff-demo">
       <strong>Prototype</strong><span
-        >Sample routes. Entries stay in this browser; nothing is sent to payroll or Admin.</span>
+        >Sample routes. Entries stay in this browser; nothing is sent to payroll or Admin.</span
+      >
     </div>
     <main class="staff-shell">
       <section class="staff-heading">
@@ -31,7 +38,8 @@ import '../../staff/staff.css';
           </p>
         </div><div class="staff-weather">
           <span>YOUR DAY</span><strong id="route-progress">0 / 3</strong><small
-            >sample stops complete</small>
+            >sample stops complete</small
+          >
         </div>
       </section>
       <section class="shift-bar" aria-label="Shift clock">
@@ -42,7 +50,8 @@ import '../../staff/staff.css';
           <button class="staff-button primary" id="clock-toggle">Clock in</button><button
             class="staff-button"
             id="break-toggle"
-            hidden>Start break</button>
+            hidden>Start break</button
+          >
         </div>
       </section>
       <nav class="staff-nav" aria-label="Staff sections">
@@ -53,6 +62,32 @@ import '../../staff/staff.css';
       </nav>
       <p id="staff-feedback" role="status" aria-live="polite"></p>
       <section id="section-route" aria-labelledby="route-title">
+        <div id="live-route-entry" class="staff-live-entry">
+          <div>
+            <h3>Rutas reales de GMZ / Actual GMZ routes</h3><p>
+              Acceso privado mientras se configuran las cuentas del personal. / Private access while
+              staff accounts are being set up.
+            </p>
+          </div><a
+            class="staff-button primary"
+            href="https://gmz-operations.gmzhavi.chatgpt.site/staff"
+            >Abrir rutas reales / Open actual routes ↗</a>
+        </div>
+        <div id="live-route-controls" hidden>
+          <label class="staff-field"
+            ><span>Fecha / Date</span><input id="live-date" type="date" /></label
+          ><label class="staff-field"
+            ><span>Ruta / Route</span><select id="live-rotation"
+              ><option value="">Elegir miércoles / Choose Wednesday</option><option value="wed-a"
+                >Miércoles A / Wednesday A</option
+              ><option value="wed-b">Miércoles B / Wednesday B</option></select
+            ></label
+          ><button id="live-refresh" class="staff-button">Actualizar / Refresh</button><p
+            id="live-route-status"
+            role="status"
+          >
+          </p>
+        </div>
         <div class="section-title-row">
           <div>
             <p class="staff-kicker">TODAY’S PLAN · SAMPLE</p><h2 id="route-title">
@@ -99,7 +134,8 @@ import '../../staff/staff.css';
                   step="1"
                   value="30"
                   required
-                /></label>
+                /></label
+              >
             </div><label class="staff-field"
               >Work note<textarea
                 name="notes"
@@ -117,8 +153,9 @@ import '../../staff/staff.css';
           <form id="absence-form" class="staff-form-panel">
             <h3>Report a day away</h3><label class="staff-field"
               >Type<select name="kind"
-                ><option>Sick day</option><option>Missed day</option><option>Time off</option
-                ></select
+                ><option value="Sick day">Sick day</option><option value="Missed day"
+                  >Missed day</option
+                ><option value="Time off">Time off</option></select
               ></label
             ><div class="staff-form-grid">
               <label class="staff-field">From<input name="from" type="date" required /></label
@@ -145,7 +182,8 @@ import '../../staff/staff.css';
           <h2 id="confirm-title">Confirm</h2><p id="confirm-message"></p><div>
             <button class="staff-button" value="cancel">Cancel</button><button
               class="staff-button primary"
-              value="confirm">Confirm</button>
+              value="confirm">Confirm</button
+            >
           </div>
         </form>
       </dialog>
