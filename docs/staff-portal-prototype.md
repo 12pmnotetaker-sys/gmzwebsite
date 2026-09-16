@@ -24,4 +24,5 @@ Routes show ordered stops, office instructions, local field notes, and completio
 5. Use request IDs and version checks for duplicate/retry protection. Define cross-midnight shifts and paid/unpaid break rules with GMZ before payroll integration.
 6. Sync stop completion and field notes through authorized work-order commands. Client reports still require office review and explicit publication.
 
-Validation: production build including Astro checks/content/photo gates; time calculation and date tests in `tests/staff-prototype.mjs`; browser checks for route completion, clock/break states, timesheet submission and attendance, desktop/mobile layout.
+Validation: production build including Astro checks/content/photo gates; time calculation and date tests in `tests/staff-prototype.mjs`; rendered-bundle DOM checks for route completion, clock/break states, time-entry calculations, timesheet submission/locking, attendance, and local persistence. Browser automation could not start and its browser download timed out; desktop/mobile visual rendering was not verified.
+
