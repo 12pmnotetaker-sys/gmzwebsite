@@ -1,0 +1,44 @@
+---
+import { loadOperations } from '../../server/operations';
+const client = Astro.locals.client;
+let updates: Awaited<ReturnType<typeof loadOperations>> | null = null;
+let unavailable = false;
+if (client) {
+  try {
+    updates = await loadOperations(client);
+  } catch {
+    unavailable = true;
+  }
+}
+---
+
+{
+  client && (
+    <section class="block stack" aria-label="Client updates">
+      {unavailable ? (
+        <p class="note">Your latest updates are temporarily unavailable.</p>
+      ) : (
+        updates?.announcements.map((a) => (
+          <article class="panel panel--calm stack">
+            <span class="kicker">{a.kind}</span>
+            <h2 class="section-title">{a.title}</h2>
+            <p class="body announcement-body">{a.body}</p>
+            {a.link_url && (
+              <a class="btn btn--secondary" href={a.link_url} rel="noreferrer" target="_blank">
+                {a.link_label}
+              </a>
+            )}
+          </article>
+        ))
+      )}
+      <a class="btn btn--secondary" href="/portal/updates">
+        Your properties and visit history
+      </a>
+    </section>
+  )
+}
+<style>
+  .announcement-body {
+    white-space: pre-wrap;
+  }
+</style>

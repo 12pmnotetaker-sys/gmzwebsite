@@ -19,6 +19,7 @@
  * arrived from a link to see one thing; the portal has one bar, one column
  * and a phone number.
  */
+import OperationsUpdates from '@components/portal/OperationsUpdates.astro';
 import { isDemoClient } from '../server/demo';
 import { ClientRouter } from 'astro:transitions';
 import '@styles/global.css';
@@ -30,6 +31,7 @@ import PortalFooter from '@components/portal/PortalFooter.astro';
 interface Props {
   /** The browser tab. The screen's own h1 is set in the page. */
   title: string;
+  hideOperationsUpdates?: boolean;
   property?: string;
   backHref?: string;
   backLabel?: string;
@@ -97,6 +99,7 @@ const hasRail = rail.length > 0;
             </p>
           )
         }
+        {!Astro.props.hideOperationsUpdates && <OperationsUpdates />}
         <slot />
       </div>
       {hasRail && <aside class="screen__rail" aria-label="Also on this screen" set:html={rail} />}
