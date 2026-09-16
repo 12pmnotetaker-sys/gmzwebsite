@@ -2,6 +2,7 @@
 import BaseLayout from '@layouts/BaseLayout.astro';
 import PageHeader from '@components/PageHeader.astro';
 import { company, serviceRegionInline } from '@data/site';
+import { aboutVisuals } from '@data/site-visuals';
 
 /**
  * Note what this page does not say, because the omissions are the decisions.
@@ -66,6 +67,14 @@ const { people, license, memberships, drawings, address, heritage } = company;
           alongside the way you want to use the space and the care it will need over time.
         </p>
       </div>
+
+      <ul class="story__visuals" aria-label="A selection of GMZ gardens">
+        {
+          aboutVisuals.map((visual) => (
+            <li><img src={visual.image.src} alt={visual.alt} loading="lazy" /></li>
+          ))
+        }
+      </ul>
     </section>
 
     <section class="section people" aria-labelledby="people-title">
@@ -169,6 +178,22 @@ const { people, license, memberships, drawings, address, heritage } = company;
     margin-block-start: var(--space-lg);
   }
 
+  .story__visuals {
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1.2fr repeat(2, 1fr);
+    gap: var(--space-sm);
+    margin: var(--space-xl) 0 0;
+    padding: 0;
+  }
+
+  .story__visuals img {
+    display: block;
+    inline-size: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+  }
+
   .roster {
     list-style: none;
     margin: var(--space-lg) 0 0;
@@ -213,6 +238,10 @@ const { people, license, memberships, drawings, address, heritage } = company;
     .roster {
       grid-template-columns: 1fr;
       gap: var(--space-md);
+    }
+
+    .story__visuals {
+      grid-template-columns: 1fr;
     }
   }
 </style>

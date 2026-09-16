@@ -8,7 +8,8 @@ import {
   projectHref,
   serviceLineLabel,
 } from '@data/projects';
-import { company, fees, primaryCta, serviceRegionInline } from '@data/site';
+import { fees, primaryCta, serviceRegionInline } from '@data/site';
+import { publicWorkTeasers } from '@data/site-visuals';
 
 /**
  * The public half of the work: selected projects, identified by town and
@@ -58,26 +59,34 @@ const projects = await getPublishedProjects();
           ))}
         </ul>
       ) : (
-        <section class="empty">
+        <section class="empty" aria-labelledby="public-work-title">
           <div class="section-head">
             <div>
-              <p class="kicker">Being prepared</p>
-              <h2 class="section-title">Selected projects are on their way to this page.</h2>
+              <p class="kicker">A first look</p>
+              <h2 class="section-title" id="public-work-title">Gardens made for everyday use.</h2>
             </div>
           </div>
-          <div class="empty__body">
-            <p>
-              {company.name} is choosing which finished gardens to show here and checking with each
-              client first. A public project is identified by its town and nothing more, and a
-              project only appears once that has been agreed, so this page lists none rather than
-              standing in with something else.
-            </p>
-            <p>
-              The full portfolio, with the drawings behind each garden and the walkthrough film, is
-              available by request. <a href="/portfolio-access">Request an access code</a>. We
-              review requests and email a code when approved. A consultation is not required.
-            </p>
-          </div>
+          <p class="section-head__note">
+            A small public selection from the GMZ portfolio. Full project stories, drawings and
+            walkthroughs are available by request.
+          </p>
+          <ul class="teasers">
+            {publicWorkTeasers.map((teaser, index) => (
+              <li class="teaser">
+                <Image
+                  src={teaser.image}
+                  alt={teaser.alt}
+                  widths={[480, 768, 1200]}
+                  sizes="(width >= 960px) 33vw, (width >= 640px) 50vw, 100vw"
+                  loading={index === 0 ? 'eager' : 'lazy'}
+                />
+                <div class="teaser__body">
+                  <p class="kicker">{teaser.label}</p>
+                  <p>{teaser.text}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
         </section>
       )
     }
@@ -165,6 +174,35 @@ const projects = await getPublishedProjects();
     max-inline-size: var(--width-prose);
   }
 
+  .teasers {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-lg);
+    margin: var(--space-lg) 0 0;
+    padding: 0;
+  }
+
+  .teaser {
+    background: var(--color-bg-subtle);
+  }
+
+  .teaser :global(img) {
+    display: block;
+    inline-size: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+  }
+
+  .teaser__body {
+    padding: 1rem;
+  }
+
+  .teaser__body p:last-child {
+    margin-block-start: 0.35rem;
+    color: var(--color-text-muted);
+  }
+
   .empty__body > p + p {
     margin-block-start: var(--space-md);
   }
@@ -180,5 +218,11 @@ const projects = await getPublishedProjects();
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-md) var(--space-lg);
+  }
+
+  @media (width < 760px) {
+    .teasers {
+      grid-template-columns: 1fr;
+    }
   }
 </style>

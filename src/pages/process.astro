@@ -3,6 +3,7 @@ import BaseLayout from '@layouts/BaseLayout.astro';
 import PageHeader from '@components/PageHeader.astro';
 import { fees } from '@data/site';
 import { processPhases } from '@data/process';
+import { processVisuals } from '@data/site-visuals';
 ---
 
 <BaseLayout
@@ -44,6 +45,16 @@ import { processPhases } from '@data/process';
           ))
         }
       </ol>
+      <ul class="process-visuals" aria-label="The four stages in pictures">
+        {
+          processVisuals.map((visual) => (
+            <li>
+              <img src={visual.image.src} alt={visual.alt} loading="lazy" />
+              <span>{visual.label}</span>
+            </li>
+          ))
+        }
+      </ul>
     </div>
   </section>
 
@@ -105,6 +116,30 @@ import { processPhases } from '@data/process';
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--space-lg);
+  }
+
+  .process-visuals {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-md);
+    margin: var(--space-xl) 0 0;
+    padding: 0;
+  }
+
+  .process-visuals img {
+    display: block;
+    inline-size: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+  }
+
+  .process-visuals span {
+    display: block;
+    margin-block-start: 0.5rem;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    letter-spacing: var(--tracking-heading);
   }
 
   /*
@@ -186,6 +221,10 @@ import { processPhases } from '@data/process';
     .spine {
       grid-template-columns: 1fr;
       gap: var(--space-md);
+    }
+
+    .process-visuals {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 </style>
