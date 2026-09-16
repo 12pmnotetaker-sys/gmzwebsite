@@ -5,7 +5,7 @@ import Header from '@components/Header.astro';
 import Footer from '@components/Footer.astro';
 import Gate from '@components/Gate.astro';
 import GateFlag from '@components/GateFlag.astro';
-import { searchIndexing, isGatedPath } from '@data/publication';
+import { searchIndexing, isGatedPath, isAdminPath } from '@data/publication';
 
 interface Props {
   title?: string;
@@ -35,12 +35,20 @@ const { title, description, image, type, noindex = false, chrome = true } = Astr
 const gated = isGatedPath(Astro.url.pathname);
 
 /**
+ * The admin tool is never indexable either, on the same permanent basis as
+ * the gated portfolio: it must not depend on the phase switch, because
+ * turning marketing-site indexing on in Phase 2 has nothing to do with
+ * whether the staff leads inbox belongs in a search result (it never does).
+ */
+const admin = isAdminPath(Astro.url.pathname);
+
+/**
  * A gated page is never indexable, and neither is anything else while the
  * marketing site is still a scaffold. The veil cannot enforce this on its own,
  * because a crawler runs no JavaScript and would read straight past it, so
  * noindex is what actually keeps these pages out of a search result.
  */
-const hideFromSearch = noindex || gated || !searchIndexing.enabled;
+const hideFromSearch = noindex || gated || admin || !searchIndexing.enabled;
 ---
 
 <!doctype html>

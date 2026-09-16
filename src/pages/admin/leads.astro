@@ -1,0 +1,342 @@
+---
+import AdminLayout from '@layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Leads" signedIn>
+  <div class="leads">
+    <p class="kicker">GMZ Admin</p>
+    <h1 class="page-title">Leads</h1>
+    <p class="lead" data-leads-summary>Loading&hellip;</p>
+
+    <div class="leads__list" data-leads-list></div>
+  </div>
+</AdminLayout>
+
+<script>
+  import { getSession, clearSession } from '@data/adminSession';
+  import { leadStatuses, defaultLeadStatus } from '@data/leadStatus';
+  import {
+    propertyTypes,
+    projectTypes,
+    timelines,
+    budgetBands,
+    heardVia,
+    labelFor,
+  } from '@data/enquiry';
+
+  interface Lead {
+    id: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    town: string;
+    property_type: string;
+    project_type: string;
+    timeline: string;
+    budget_band: string | null;
+    heard_via: string | null;
+    message: string;
+    wants_portfolio: boolean;
+    status: string;
+    staff_notes: string;
+    created_at: string;
+  }
+
+  const summary = document.querySelector<HTMLElement>('[data-leads-summary]');
+  const list = document.querySelector<HTMLElement>('[data-leads-list]');
+  const signOut = document.querySelector<HTMLButtonElement>('[data-admin-signout]');
+
+  signOut?.addEventListener('click', () => {
+    clearSession();
+    window.location.assign('/admin');
+  });
+
+  const session = getSession();
+  if (!session) {
+    window.location.replace('/admin');
+  }
+
+  const dateFormat = new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+  function contactLine(lead: Lead): string {
+    const parts = [lead.email, lead.phone].filter((part): part is string => Boolean(part));
+    return parts.length > 0 ? parts.join(' · ') : 'no contact given';
+  }
+
+  function factRow(label: string, value: string): HTMLElement {
+    const row = document.createElement('div');
+    row.className = 'facts__row facts__row--inline';
+    const dt = document.createElement('dt');
+    dt.textContent = label;
+    const dd = document.createElement('dd');
+    dd.textContent = value;
+    row.append(dt, dd);
+    return row;
+  }
+
+  async function patchLead(
+    id: string,
+    changes: Partial<{ status: string; staffNotes: string }>,
+  ): Promise<boolean> {
+    if (!session) return false;
+    try {
+      const response = await fetch('/api/admin/leads', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        body: JSON.stringify({ id, ...changes }),
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  function buildCard(lead: Lead): HTMLElement {
+    const card = document.createElement('article');
+    card.className = 'lead-card';
+
+    const head = document.createElement('div');
+    head.className = 'lead-card__head';
+
+    const who = document.createElement('div');
+    const name = document.createElement('p');
+    name.className = 'lead-card__name';
+    name.textContent = lead.name;
+    const meta = document.createElement('p');
+    meta.className = 'lead-card__meta';
+    meta.textContent = `${lead.town} · received ${dateFormat.format(new Date(lead.created_at))}`;
+    who.append(name, meta);
+
+    const status = document.createElement('select');
+    status.className = 'field__input lead-card__status';
+    status.setAttribute('aria-label', `Status for ${lead.name}`);
+    for (const option of leadStatuses) {
+      const el = document.createElement('option');
+      el.value = option.value;
+      el.textContent = option.label;
+      if (option.value === (lead.status || defaultLeadStatus)) el.selected = true;
+      status.append(el);
+    }
+    status.addEventListener('change', async () => {
+      const previous = lead.status;
+      status.disabled = true;
+      const ok = await patchLead(lead.id, { status: status.value });
+      if (!ok) status.value = previous;
+      else lead.status = status.value;
+      status.disabled = false;
+    });
+
+    head.append(who, status);
+
+    const facts = document.createElement('dl');
+    facts.className = 'facts';
+    facts.append(
+      factRow('Contact', contactLine(lead)),
+      factRow('Property', labelFor(propertyTypes, lead.property_type)),
+      factRow('Project', labelFor(projectTypes, lead.project_type)),
+      factRow('Timeline', labelFor(timelines, lead.timeline)),
+      factRow('Budget', lead.budget_band ? labelFor(budgetBands, lead.budget_band) : 'not given'),
+      factRow('Heard via', lead.heard_via ? labelFor(heardVia, lead.heard_via) : 'not given'),
+      factRow('Portfolio', lead.wants_portfolio ? 'asked to see it' : 'did not ask'),
+    );
+
+    const details = document.createElement('details');
+    details.className = 'lead-card__message';
+    const summaryEl = document.createElement('summary');
+    summaryEl.textContent = 'In their words';
+    const message = document.createElement('p');
+    message.textContent = lead.message;
+    details.append(summaryEl, message);
+
+    const notesWrap = document.createElement('div');
+    notesWrap.className = 'lead-card__notes';
+    const notesLabel = document.createElement('label');
+    notesLabel.className = 'field__label';
+    notesLabel.textContent = 'Staff notes';
+    notesLabel.htmlFor = `notes-${lead.id}`;
+    const notes = document.createElement('textarea');
+    notes.className = 'field__input';
+    notes.id = `notes-${lead.id}`;
+    notes.rows = 3;
+    notes.value = lead.staff_notes;
+    const saveRow = document.createElement('div');
+    saveRow.className = 'lead-card__save-row';
+    const save = document.createElement('button');
+    save.type = 'button';
+    save.className = 'link-accent';
+    save.textContent = 'Save notes';
+    const saved = document.createElement('span');
+    saved.className = 'lead-card__saved';
+    saved.hidden = true;
+    saved.textContent = 'Saved';
+    save.addEventListener('click', async () => {
+      save.disabled = true;
+      saved.hidden = true;
+      const ok = await patchLead(lead.id, { staffNotes: notes.value });
+      save.disabled = false;
+      if (ok) {
+        saved.hidden = false;
+        window.setTimeout(() => {
+          saved.hidden = true;
+        }, 2000);
+      }
+    });
+    saveRow.append(save, saved);
+    notesWrap.append(notesLabel, notes, saveRow);
+
+    card.append(head, facts, details, notesWrap);
+    return card;
+  }
+
+  async function load() {
+    if (!session || !summary || !list) return;
+
+    try {
+      const response = await fetch('/api/admin/leads', {
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        clearSession();
+        window.location.replace('/admin');
+        return;
+      }
+
+      if (!response.ok) {
+        summary.textContent = 'Could not load leads. Reloading the page may help.';
+        return;
+      }
+
+      const payload = (await response.json()) as { leads: Lead[] };
+      const leads = payload.leads;
+
+      summary.textContent =
+        leads.length === 0
+          ? 'No enquiries yet.'
+          : `${leads.length} enquir${leads.length === 1 ? 'y' : 'ies'}, most recent first.`;
+
+      list.replaceChildren(...leads.map(buildCard));
+    } catch {
+      summary.textContent = 'Could not reach the server. Check the connection and try again.';
+    }
+  }
+
+  if (session) void load();
+</script>
+
+<style>
+  .leads {
+    max-inline-size: 52rem;
+  }
+
+  .leads__list {
+    margin-block-start: var(--space-xl);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+  }
+</style>
+
+<style is:global>
+  /*
+   * Astro scopes a component's <style> block by stamping a data-astro-cid
+   * attribute onto elements present in its server-rendered template. The
+   * lead cards below don't exist in that template: buildCard() creates them
+   * at runtime from fetched data, so they never receive that attribute and a
+   * scoped rule would silently never match them. is:global is the correct
+   * tool here, not a shortcut around scoping.
+   */
+  .lead-card {
+    border: 1px solid var(--color-border);
+    border-inline-start: var(--rule-accent) solid var(--color-highlight);
+    padding: var(--space-lg);
+  }
+
+  .lead-card__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+  }
+
+  .lead-card__name {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: var(--text-lg);
+  }
+
+  .lead-card__meta {
+    margin-block-start: 0.1875rem;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .lead-card__status {
+    inline-size: auto;
+    margin-block-start: 0;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .lead-card .facts {
+    margin-block-start: var(--space-md);
+  }
+
+  .lead-card__message {
+    margin-block-start: var(--space-md);
+    font-size: var(--text-sm);
+  }
+
+  .lead-card__message summary {
+    font-weight: 600;
+    color: var(--color-accent);
+    cursor: pointer;
+  }
+
+  .lead-card__message p {
+    margin-block-start: 0.5rem;
+    color: var(--color-text);
+    line-height: var(--leading-normal);
+  }
+
+  .lead-card__notes {
+    margin-block-start: var(--space-md);
+    padding-block-start: var(--space-md);
+    border-block-start: 1px solid var(--color-border);
+  }
+
+  .lead-card__notes .field__input {
+    display: block;
+    inline-size: 100%;
+    margin-block-start: 0.375rem;
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    color: var(--color-text);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border-strong);
+    padding: 0.625rem 0.75rem;
+    resize: vertical;
+  }
+
+  .lead-card__save-row {
+    margin-block-start: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .lead-card__saved {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-accent);
+  }
+</style>

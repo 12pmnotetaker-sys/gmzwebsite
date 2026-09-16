@@ -1,23 +1,23 @@
 import type { APIRoute } from 'astro';
-import { searchIndexing, gatedPrefixes } from '@data/publication';
+import { searchIndexing, gatedPrefixes, adminPrefixes } from '@data/publication';
 import { site } from '@data/site';
 
 /**
  * robots.txt, generated so it cannot drift from the rest of the site.
  *
- * The gated portfolio is disallowed in both branches. It is not part of the
- * phase switch: those routes stay out of search whether or not the marketing
- * site is indexable.
+ * The gated portfolio and the admin tool are disallowed in both branches.
+ * Neither is part of the phase switch: those routes stay out of search
+ * whether or not the marketing site is indexable.
  */
 export const GET: APIRoute = ({ site: origin }) => {
   const base = origin ?? new URL(site.url);
-  const gated = gatedPrefixes.map((prefix) => `Disallow: ${prefix}/`);
+  const neverIndexed = [...gatedPrefixes, ...adminPrefixes].map((prefix) => `Disallow: ${prefix}/`);
 
   const body = searchIndexing.enabled
     ? [
-        '# The portfolio is private and stays out of search permanently.',
+        '# The portfolio is private and the admin tool is staff-only; both stay out of search permanently.',
         'User-agent: *',
-        ...gated,
+        ...neverIndexed,
         'Allow: /',
         '',
         `Sitemap: ${new URL('sitemap-index.xml', base).href}`,
@@ -25,7 +25,7 @@ export const GET: APIRoute = ({ site: origin }) => {
       ].join('\n')
     : [
         `# ${searchIndexing.reason}`,
-        '# The portfolio is private and stays out of search permanently.',
+        '# The portfolio is private and the admin tool is staff-only; both stay out of search permanently.',
         'User-agent: *',
         'Disallow: /',
         '',

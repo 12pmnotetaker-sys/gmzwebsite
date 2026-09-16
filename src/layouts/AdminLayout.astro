@@ -1,0 +1,94 @@
+---
+import BaseLayout from '@layouts/BaseLayout.astro';
+import Logo from '@components/Logo.astro';
+import { company } from '@data/site';
+
+interface Props {
+  title: string;
+  /** Show the sign-out button. False on the login page, where there is no session yet. */
+  signedIn?: boolean;
+}
+
+const { title, signedIn = false } = Astro.props;
+
+/**
+ * The shell every /admin page shares: a teal bar carrying the GMZ mark, an
+ * "Admin" label so nobody mistakes this for the public site, and a sign-out
+ * button. No public nav, no CTA: those belong to prospects, not staff.
+ *
+ * Wraps BaseLayout with chrome={false} (no public Header/Footer) rather than
+ * building its own <html> shell, so the admin tool still gets the skip link,
+ * the font preload, focus-visible rings and noindex handling BaseLayout
+ * already provides. `noindex` is also forced here even though BaseLayout
+ * derives it from the path too (`isAdminPath`); belt and braces on a tool
+ * that must never appear in search costs one prop.
+ */
+---
+
+<BaseLayout title={`${title} · Admin`} noindex={true} chrome={false}>
+  <div class="admin">
+    <header class="admin__bar on-dark">
+      <a class="admin__brand" href="/admin/leads" aria-label={`${company.shortName} Admin, leads`}>
+        <Logo height={30} />
+        <span class="admin__kicker">Admin</span>
+      </a>
+      {
+        signedIn && (
+          <button type="button" class="admin__signout" data-admin-signout>
+            Sign out
+          </button>
+        )
+      }
+    </header>
+    <div class="rule-accent"></div>
+    <div class="admin__body wrap">
+      <slot />
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .admin__bar {
+    background: var(--gmz-teal);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.875rem var(--gutter);
+  }
+
+  .admin__brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+  }
+
+  .admin__kicker {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: var(--tracking-kicker);
+    text-transform: uppercase;
+    color: var(--color-highlight);
+  }
+
+  .admin__signout {
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: #fff;
+    background: transparent;
+    border: 1px solid rgb(255 255 255 / 30%);
+    padding: 0.5rem 0.9375rem;
+    cursor: pointer;
+    transition: background var(--transition);
+  }
+
+  .admin__signout:hover {
+    background: rgb(255 255 255 / 12%);
+  }
+
+  .admin__body {
+    padding-block: var(--space-2xl);
+    min-height: 60vh;
+  }
+</style>
