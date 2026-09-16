@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
 import PageHeader from '@components/PageHeader.astro';
-import Placeholder from '@components/Placeholder.astro';
+import { publicWorkTeasers } from '@data/site-visuals';
 ---
 
 <BaseLayout
@@ -13,8 +13,81 @@ import Placeholder from '@components/Placeholder.astro';
     title="The Work"
     lede="Gardens, terraces and outdoor rooms built across the Peninsula."
   />
-  <Placeholder
-    phase="Phase 1"
-    what="The public half of the portfolio: selected projects in full, the rest as teasers. Every public project is identified by town only, which the content schema enforces."
-  />
+  <section class="work section" aria-labelledby="work-teasers-title">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <p class="kicker">A first look</p>
+          <h2 class="section-title" id="work-teasers-title">Built for everyday use.</h2>
+        </div>
+        <p class="section-head__note">
+          A small public selection from the GMZ portfolio. Full project stories, drawings and
+          walkthroughs are shared after a consultation.
+        </p>
+      </div>
+
+      <ul class="teasers">
+        {
+          publicWorkTeasers.map((teaser) => (
+            <li class="teaser">
+              <img src={teaser.image.src} alt={teaser.alt} loading="lazy" />
+              <div class="teaser__body">
+                <p class="kicker">{teaser.label}</p>
+                <p>{teaser.text}</p>
+              </div>
+            </li>
+          ))
+        }
+      </ul>
+
+      <p class="work__next">
+        <a class="link-accent" href="/start">Start a project to see the full portfolio</a>
+      </p>
+    </div>
+  </section>
 </BaseLayout>
+
+<style>
+  .work {
+    padding-block-end: var(--space-3xl);
+  }
+
+  .teasers {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-lg);
+    margin: var(--space-lg) 0 0;
+    padding: 0;
+  }
+
+  .teaser {
+    background: var(--color-bg-subtle);
+  }
+
+  .teaser img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+  }
+
+  .teaser__body {
+    padding: 1rem;
+  }
+
+  .teaser__body p:last-child {
+    margin-block-start: 0.35rem;
+    color: var(--color-text-muted);
+  }
+
+  .work__next {
+    margin-block-start: var(--space-lg);
+  }
+
+  @media (width < 760px) {
+    .teasers {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -2,6 +2,7 @@
 import BaseLayout from '@layouts/BaseLayout.astro';
 import PageHeader from '@components/PageHeader.astro';
 import { getServices, serviceHref } from '@data/services';
+import { serviceVisuals } from '@data/site-visuals';
 
 const services = await getServices();
 ---
@@ -21,6 +22,17 @@ const services = await getServices();
       {
         services.map((service) => (
           <li class="service">
+            {
+              serviceVisuals[service.id as keyof typeof serviceVisuals] && (
+                <img
+                  class="service__image"
+                  src={serviceVisuals[service.id as keyof typeof serviceVisuals].image.src}
+                  alt={serviceVisuals[service.id as keyof typeof serviceVisuals].alt}
+                  loading="lazy"
+                />
+              )
+            }
+            <div class="service__body">
             <h2 class="service__title">
               <a href={serviceHref(service)}>{service.data.title}</a>
             </h2>
@@ -32,6 +44,7 @@ const services = await getServices();
                 ))}
               </ul>
             )}
+            </div>
           </li>
         ))
       }
@@ -52,8 +65,19 @@ const services = await getServices();
   }
 
   .service {
+    display: grid;
+    grid-template-columns: minmax(11rem, 0.72fr) minmax(0, 1fr);
+    gap: var(--space-lg);
+    align-items: start;
     border-block-start: 2px solid var(--color-structure);
     padding-block-start: 0.875rem;
+  }
+
+  .service__image {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    display: block;
   }
 
   .service__title {
@@ -82,5 +106,15 @@ const services = await getServices();
   .services__more {
     margin-block-start: var(--space-xl);
     color: var(--color-text-muted);
+  }
+
+  @media (width < 680px) {
+    .service {
+      grid-template-columns: 1fr;
+    }
+
+    .service__image {
+      max-block-size: 20rem;
+    }
   }
 </style>
