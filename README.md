@@ -78,6 +78,32 @@ The field lists and the validation live in `src/data/enquiry.ts` and are
 imported by both the form and the function, so the browser and the server cannot
 disagree about what a valid answer is.
 
+## The admin panel
+
+`/admin` is a staff-only inbox for the leads the intake form saves to
+Supabase (`website_leads`). It is not a CMS and never edits site content:
+see `CLAUDE.md`, "Nobody edits this site through a CMS." It only manages
+enquiries, using the same Supabase project as the intake form's `SUPABASE_URL`
+above, in a table kept apart from that project's client-portal data.
+
+It needs three more environment variables on the Vercel project:
+
+| Variable                   | What it is                                                                 |
+| -------------------------- | -------------------------------------------------------------------------- |
+| `PUBLIC_SUPABASE_URL`      | same project as `SUPABASE_URL`; `PUBLIC_` so the browser can read it       |
+| `PUBLIC_SUPABASE_ANON_KEY` | the project's anon key; safe to expose, distinct from the service role key |
+| `ADMIN_ALLOWED_EMAILS`     | comma-separated staff emails; who is allowed in, checked on every request  |
+
+Staff accounts are created in the Supabase dashboard (Authentication -> Users
+-> Add user), not by this site. Adding an email to `ADMIN_ALLOWED_EMAILS`
+without a matching Supabase user does nothing; the account has to exist in
+both places.
+
+`/admin` is `noindex`, disallowed in `robots.txt`, and excluded from the
+sitemap unconditionally, the same way the gated portfolio is, but for a
+different reason: it is a real login, not a courtesy veil. See
+`src/data/publication.ts`.
+
 ## What is where
 
 ```
@@ -91,11 +117,15 @@ src/
                          faqs, and portfolio (gated, street names)
   content/portfolio/     the seven gated project entries
   pages/portfolio/       the gated index, project pages and walkthroughs
-  layouts/               BaseLayout
+  layouts/               BaseLayout, AdminLayout
   data/enquiry.ts        the intake form's fields, and the shared validation
+  data/leadStatus.ts     lead status values, shared by /admin/leads and its endpoint
+  data/adminSession.ts   the signed-in staff session, as the browser holds it
   components/            Header, Footer, Logo, SEO, PageHeader, EnquiryForm, Gate
   pages/                 the routes
+  pages/admin/           the staff-only leads inbox; see "The admin panel" above
 api/enquiry.ts           the intake endpoint; see "The intake form" above
+api/admin/leads.ts       the admin panel's endpoint; see "The admin panel" above
 scripts/content-lint.mjs the written rules, checked against built HTML
 ```
 

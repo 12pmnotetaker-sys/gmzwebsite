@@ -41,3 +41,20 @@ export function isGatedPath(pathname: string): boolean {
   const path = pathname.replace(/\/$/, '') || '/';
   return gatedPrefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
+
+/**
+ * Route prefixes for the internal admin tool (the leads inbox, staff-only).
+ *
+ * Never indexed and never in the sitemap, for the same reason as the gated
+ * portfolio but not the same mechanism: this isn't marketing content behind a
+ * courtesy veil, it's an internal ops tool behind a real Supabase login. It
+ * does not render Gate.astro and `isGatedPath` does not cover it, so it needs
+ * its own prefix list rather than being folded into `gatedPrefixes`.
+ */
+export const adminPrefixes = ['/admin'] as const;
+
+/** True when a path is part of the admin tool. Used by BaseLayout and the sitemap. */
+export function isAdminPath(pathname: string): boolean {
+  const path = pathname.replace(/\/$/, '') || '/';
+  return adminPrefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+}

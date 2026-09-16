@@ -1,7 +1,7 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
-import { searchIndexing, isGatedPath } from './src/data/publication.ts';
+import { searchIndexing, isGatedPath, isAdminPath } from './src/data/publication.ts';
 import { canonicalPath } from './src/data/canonical.ts';
 
 /**
@@ -27,9 +27,10 @@ export default defineConfig({
   integrations: searchIndexing.enabled
     ? [
         sitemap({
-          // The gated portfolio never appears in the sitemap, whatever the
-          // marketing site's indexing state.
-          filter: (page) => !isGatedPath(new URL(page).pathname),
+          // The gated portfolio and the admin tool never appear in the
+          // sitemap, whatever the marketing site's indexing state.
+          filter: (page) =>
+            !isGatedPath(new URL(page).pathname) && !isAdminPath(new URL(page).pathname),
           serialize: (item) => ({
             ...item,
             url: new URL(canonicalPath(new URL(item.url).pathname), SITE).href,

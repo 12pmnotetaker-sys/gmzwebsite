@@ -111,22 +111,33 @@ stay. A redesign that drops one is a regression, not a style change.
 
 ## Where things are
 
-| What                       | Where                                            |
-| -------------------------- | ------------------------------------------------ |
-| Company facts              | `src/data/site.ts`                               |
-| Claims not yet allowed     | `claims` in `src/data/site.ts`                   |
-| Search indexing switch     | `src/data/publication.ts`                        |
-| Canonical URL form         | `src/data/canonical.ts`                          |
-| Design tokens              | `src/styles/tokens.css`                          |
-| Repeated patterns          | `src/styles/global.css`                          |
-| Content schemas            | `src/content.config.ts`                          |
-| The last check before live | `scripts/content-lint.mjs`                       |
-| Photograph intake          | `scripts/photo-intake.mjs`                       |
-| The intake form's fields   | `src/data/enquiry.ts`                            |
-| The intake endpoint        | `api/enquiry.ts`                                 |
-| The veil                   | `gate` in `src/data/site.ts`, `Gate.astro`       |
-| Which routes are gated     | `gatedPrefixes` in `src/data/publication.ts`     |
-| Gated content              | `src/content/portfolio/`, `src/pages/portfolio/` |
+| What                        | Where                                            |
+| --------------------------- | ------------------------------------------------ |
+| Company facts               | `src/data/site.ts`                               |
+| Claims not yet allowed      | `claims` in `src/data/site.ts`                   |
+| Search indexing switch      | `src/data/publication.ts`                        |
+| Canonical URL form          | `src/data/canonical.ts`                          |
+| Design tokens               | `src/styles/tokens.css`                          |
+| Repeated patterns           | `src/styles/global.css`                          |
+| Content schemas             | `src/content.config.ts`                          |
+| The last check before live  | `scripts/content-lint.mjs`                       |
+| Photograph intake           | `scripts/photo-intake.mjs`                       |
+| The intake form's fields    | `src/data/enquiry.ts`                            |
+| The intake endpoint         | `api/enquiry.ts`                                 |
+| The veil                    | `gate` in `src/data/site.ts`, `Gate.astro`       |
+| Which routes are gated      | `gatedPrefixes` in `src/data/publication.ts`     |
+| Gated content               | `src/content/portfolio/`, `src/pages/portfolio/` |
+| The admin leads inbox       | `src/pages/admin/`, `api/admin/leads.ts`         |
+| Which routes are admin-only | `adminPrefixes` in `src/data/publication.ts`     |
+
+**The admin panel (`/admin`) is not the CMS the rule above forbids.** It is a
+staff-only inbox for enquiries already sitting in a `website_leads` table in
+Supabase; it never writes to `site.ts`, a content collection, or anything else
+a build reads. It has its own real login (Supabase Auth, plus an email
+allowlist), not the portfolio's veil, and it is `noindex` and disallowed in
+`robots.txt` unconditionally, the same as the gated portfolio, but for a
+different reason: real staff credentials rather than a courtesy screen. See
+README.md, "The admin panel."
 
 ## Restyling
 

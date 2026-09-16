@@ -309,7 +309,16 @@ async function checkIndexingConsistency(files) {
       route,
       noindex: /<meta[^>]+name=["']robots["'][^>]+noindex/i.test(source),
     };
-    (source.includes('data-gate-veil') ? gated : open).push(entry);
+    /*
+     * The admin tool (`/admin`) is never indexed either, same as the gated
+     * portfolio, for a different reason: it's a staff-only ops panel behind a
+     * real login rather than marketing content behind a courtesy veil, so it
+     * renders no `data-gate-veil` marker. It gets the same "gated" bucket
+     * here so it gets the same treatment below: noindex required always, and
+     * its prefix required in robots.txt regardless of phase.
+     */
+    const isAdminRoute = entry.route === '/admin' || entry.route.startsWith('/admin/');
+    (source.includes('data-gate-veil') || isAdminRoute ? gated : open).push(entry);
   }
 
   const relative = (file) => path.relative(process.cwd(), file);
