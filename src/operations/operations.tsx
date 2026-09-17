@@ -1,95 +1,2093 @@
 'use client';
 import mark from '@/assets/brand/gmz-mark.png';
 import wordmark from '@/assets/brand/gmz-wordmark.png';
-import HubWorkflows,{DispatchExport} from './hub-workflows';
-import {serviceTemplates} from '@/operations/lib/operations/hub-workflows';
-import {ScheduleRoutePlan,ScheduleRoutesProvider,CalendarRouteDay,CalendarStopCount} from './schedule-routes';
+import HubWorkflows, { DispatchExport } from './hub-workflows';
+import { serviceTemplates } from '@/operations/lib/operations/hub-workflows';
+import {
+  ScheduleRoutePlan,
+  ScheduleRoutesProvider,
+  CalendarRouteDay,
+  CalendarStopCount,
+} from './schedule-routes';
 import Timesheets from './timesheets';
 import Expansion from './expansion';
 import ClientAccounts from './client-accounts';
-import {PortalInbox,Announcements,portalAction} from './portal-tools';
-import {useEffect,useState,type FormEvent,type ReactNode} from 'react';
-import {LayoutDashboard,Users,CalendarDays,ClipboardList,FolderKanban,Send,ChartNoAxesCombined,Plus,ArrowUpRight,ChevronLeft,ChevronRight,Search,Clock,Truck,Check,ArrowRight,Leaf,ShieldCheck,ImagePlus,Loader2,MapPin} from 'lucide-react';
-import {SidebarProvider,Sidebar,SidebarHeader,SidebarContent,SidebarFooter,SidebarMenu,SidebarMenuItem,SidebarMenuButton,SidebarInset,SidebarTrigger} from '@/operations/components/ui/sidebar';
-import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/operations/components/ui/dialog';
-import {Select,SelectTrigger,SelectValue,SelectContent,SelectItem} from '@/operations/components/ui/select';
-import {Checkbox} from '@/operations/components/ui/checkbox';
-import {Table,TableHeader,TableBody,TableRow,TableHead,TableCell} from '@/operations/components/ui/table';
-import {Toaster} from '@/operations/components/ui/sonner';import {toast} from 'sonner';
-import {stages,visitCost,type State,type Visit,type Property,type Project,type Command} from '@/operations/lib/operations/model';
-const nav=[['overview','Overview',LayoutDashboard],['clients','Clients & properties',Users],['portal-inbox','Portal inbox',Send],['announcements','Ads & announcements',Send],['timesheets','Timesheets',Clock],['schedule','Schedule',CalendarDays],['orders','Work orders',ClipboardList],['projects','Projects',FolderKanban],['reports','Client updates',Send],['costs','Time & profitability',ChartNoAxesCombined],['inquiries','Inquiries & estimating',ClipboardList],['field','Field map & routes',MapPin],['fleet','Fleet & equipment',Truck],['vendors','Vendors & price book',FolderKanban]] as const;
-type View=typeof nav[number][0];
-const cash=(n:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n);
-const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-const dayLabel=(d:string)=>new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
-const addDays=(d:string,n:number)=>{const v=new Date(d+'T12:00:00Z');v.setUTCDate(v.getUTCDate()+n);return v.toISOString().slice(0,10)};
-const uuid=()=>crypto.randomUUID();
-function Field({label,children}:{label:string;children:ReactNode}){return <label className="field"><span>{label}</span>{children}</label>}
-function Pick({value,onChange,options,label}:{value:string;onChange:(v:string)=>void;options:(string|{value:string;label:string})[];label:string}){return <Select value={value} onValueChange={onChange}><SelectTrigger aria-label={label} className="pick"><SelectValue/></SelectTrigger><SelectContent>{options.map(o=>{const v=typeof o==='string'?o:o.value;return <SelectItem key={v} value={v}>{typeof o==='string'?o:o.label}</SelectItem>})}</SelectContent></Select>}
-function Chip({children}:{children:ReactNode}){return <span className={'chip '+(String(children).match(/Complete|Reviewed|Published|Within/)?'green':String(children).match(/progress|Installation|Approval|Over/)?'amber':'')}>{children}</span>}
-function Empty({children}:{children:ReactNode}){return <div className="empty"><Leaf size={26}/><p>{children}</p></div>}
-function NumberField({label,value,onChange,nullable=false,min=0,max=100000000,step='any'}:{label:string;value:number|null;onChange:(v:number|null)=>void;nullable?:boolean;min?:number;max?:number;step?:string}){return <Field label={label}><input type="number" min={min} max={max} step={step} required={!nullable} value={value??''} placeholder={nullable?'Not recorded':''} onChange={e=>onChange(e.target.value===''&&nullable?null:Number(e.target.value))}/></Field>}
- function OrderRow({v,property,onEdit}:{v:Visit;property:Property;onEdit:(v:Visit)=>void}){return <button className="order-row" onClick={()=>onEdit(v)}><span className="order-time">{v.start}<small>{dayLabel(v.date)}</small></span><span className="order-main"><strong>{property.name}</strong><small>{property.city} · {v.crew} · {v.truck}</small></span><span className="order-meta"><Chip>{v.status}</Chip><small>{v.budgetMinutes} min budget</small></span><ArrowUpRight size={18}/></button>}
-function OfficialLogo(){return <span className="official-logo"><img src={mark.src} alt="" width={481} height={481}/><img src={wordmark.src} alt="GMZ Landscaping" width={471} height={199}/></span>}
-export default function Operations({displayName}:{displayName:string}){
- const [data,setData]=useState<State|null>(null),[version,setVersion]=useState(0),[view,setView]=useState<View>('overview'),[error,setError]=useState(''),[busy,setBusy]=useState(false),[query,setQuery]=useState(''),[crew,setCrew]=useState('All crews'),[day,setDay]=useState(today()),[month,setMonth]=useState(today().slice(0,7));
- const [fingerprint,setFingerprint]=useState(''),[connected,setConnected]=useState(false);
- const [accountId,setAccountId]=useState(''),[clientMode,setClientMode]=useState<'clients'|'properties'>('clients');
- const [modal,setModal]=useState<string|null>(null),[draft,setDraft]=useState<any>({}),[report,setReport]=useState<any>(null),[uploading,setUploading]=useState(false),[photoKind,setPhotoKind]=useState('After');
- async function load(){try{const r=await fetch('/api/admin/operations');const j=await r.json() as any;if(!r.ok)throw Error(j.error);setData(j.state);setVersion(j.version);setFingerprint(j.fingerprint||'');setConnected(!!j.connected);setError('');}catch(e){setError(e instanceof Error?e.message:'Could not load workspace');}}
- useEffect(()=>{load();const sync=()=>{let [hash,account='']=location.hash.slice(1).split('/');if(hash==='accounts'){hash='clients';history.replaceState(null,'','#clients'+(account?'/'+account:''));}if(hash==='clients'){setClientMode(account==='properties'?'properties':'clients');try{setAccountId(account==='properties'?'':decodeURIComponent(account))}catch{setAccountId('')}}if(hash==='irrigation'){hash='orders';history.replaceState(null,'','#orders');}if(nav.some(n=>n[0]===hash))setView(hash as View);};sync();window.addEventListener('hashchange',sync);return()=>window.removeEventListener('hashchange',sync);},[]);
- function openAccount(id:string){setAccountId(id);setClientMode('clients');setView('clients');setQuery('');location.hash='clients'+(id?'/'+encodeURIComponent(id):'');}
- function openProposal(id:string){setView('inquiries');location.hash='inquiries/'+encodeURIComponent(id);}
- function showProperties(){setAccountId('');setClientMode('properties');setView('clients');setQuery('');location.hash='clients/properties';}
- function go(v:View){if(v==='clients'){openAccount('');return;}setView(v);setQuery('');location.hash=v;}
- useEffect(()=>{const context=(document as any).modelContext;if(!context?.registerTool)return;const lifecycle=new AbortController();try{Promise.resolve(context.registerTool({name:'open_operations_section',description:'Navigate to a GMZ operations section. Does not save or change any business records.',inputSchema:{type:'object',properties:{section:{type:'string',enum:nav.map(n=>n[0])}},required:['section'],additionalProperties:false},annotations:{readOnlyHint:true},execute(input:unknown){const section=(input as any)?.section;if(!nav.some(n=>n[0]===section))throw Error('Unknown section');go(section);return {section};}},{signal:lifecycle.signal})).catch(()=>{});}catch{}return()=>lifecycle.abort();},[]);
+import { PortalInbox, Announcements, portalAction } from './portal-tools';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import {
+  LayoutDashboard,
+  Users,
+  CalendarDays,
+  ClipboardList,
+  FolderKanban,
+  Send,
+  ChartNoAxesCombined,
+  Plus,
+  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  Clock,
+  Truck,
+  Check,
+  ArrowRight,
+  Leaf,
+  ShieldCheck,
+  ImagePlus,
+  Loader2,
+  MapPin,
+} from 'lucide-react';
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarHeader,
+  SidebarContent,
+  SidebarFooter,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarInset,
+  SidebarTrigger,
+} from '@/operations/components/ui/sidebar';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/operations/components/ui/dialog';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/operations/components/ui/select';
+import { Checkbox } from '@/operations/components/ui/checkbox';
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from '@/operations/components/ui/table';
+import { Toaster } from '@/operations/components/ui/sonner';
+import { toast } from 'sonner';
+import {
+  stages,
+  visitCost,
+  type State,
+  type Visit,
+  type Property,
+  type Project,
+  type Command,
+} from '@/operations/lib/operations/model';
+const nav = [
+  ['overview', 'Overview', LayoutDashboard],
+  ['clients', 'Clients & properties', Users],
+  ['portal-inbox', 'Portal inbox', Send],
+  ['announcements', 'Ads & announcements', Send],
+  ['timesheets', 'Timesheets', Clock],
+  ['schedule', 'Schedule', CalendarDays],
+  ['orders', 'Work orders', ClipboardList],
+  ['projects', 'Projects', FolderKanban],
+  ['reports', 'Client updates', Send],
+  ['costs', 'Time & profitability', ChartNoAxesCombined],
+  ['inquiries', 'Inquiries & estimating', ClipboardList],
+  ['field', 'Field map & routes', MapPin],
+  ['fleet', 'Fleet & equipment', Truck],
+  ['vendors', 'Vendors & price book', FolderKanban],
+] as const;
+type View = (typeof nav)[number][0];
+const cash = (n: number) =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(n);
+const today = () =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Los_Angeles',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+const dayLabel = (d: string) =>
+  new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const addDays = (d: string, n: number) => {
+  const v = new Date(d + 'T12:00:00Z');
+  v.setUTCDate(v.getUTCDate() + n);
+  return v.toISOString().slice(0, 10);
+};
+const uuid = () => crypto.randomUUID();
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="field">
+      <span>{label}</span>
+      {children}
+    </label>
+  );
+}
+function Pick({
+  value,
+  onChange,
+  options,
+  label,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: (string | { value: string; label: string })[];
+  label: string;
+}) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger aria-label={label} className="pick">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((o) => {
+          const v = typeof o === 'string' ? o : o.value;
+          return (
+            <SelectItem key={v} value={v}>
+              {typeof o === 'string' ? o : o.label}
+            </SelectItem>
+          );
+        })}
+      </SelectContent>
+    </Select>
+  );
+}
+function Chip({ children }: { children: ReactNode }) {
+  return (
+    <span
+      className={
+        'chip ' +
+        (String(children).match(/Complete|Reviewed|Published|Within/)
+          ? 'green'
+          : String(children).match(/progress|Installation|Approval|Over/)
+            ? 'amber'
+            : '')
+      }
+    >
+      {children}
+    </span>
+  );
+}
+function Empty({ children }: { children: ReactNode }) {
+  return (
+    <div className="empty">
+      <Leaf size={26} />
+      <p>{children}</p>
+    </div>
+  );
+}
+function NumberField({
+  label,
+  value,
+  onChange,
+  nullable = false,
+  min = 0,
+  max = 100000000,
+  step = 'any',
+}: {
+  label: string;
+  value: number | null;
+  onChange: (v: number | null) => void;
+  nullable?: boolean;
+  min?: number;
+  max?: number;
+  step?: string;
+}) {
+  return (
+    <Field label={label}>
+      <input
+        type="number"
+        min={min}
+        max={max}
+        step={step}
+        required={!nullable}
+        value={value ?? ''}
+        placeholder={nullable ? 'Not recorded' : ''}
+        onChange={(e) =>
+          onChange(e.target.value === '' && nullable ? null : Number(e.target.value))
+        }
+      />
+    </Field>
+  );
+}
+function OrderRow({
+  v,
+  property,
+  onEdit,
+}: {
+  v: Visit;
+  property: Property;
+  onEdit: (v: Visit) => void;
+}) {
+  return (
+    <button className="order-row" onClick={() => onEdit(v)}>
+      <span className="order-time">
+        {v.start}
+        <small>{dayLabel(v.date)}</small>
+      </span>
+      <span className="order-main">
+        <strong>{property.name}</strong>
+        <small>
+          {property.city} · {v.crew} · {v.truck}
+        </small>
+      </span>
+      <span className="order-meta">
+        <Chip>{v.status}</Chip>
+        <small>{v.budgetMinutes} min budget</small>
+      </span>
+      <ArrowUpRight size={18} />
+    </button>
+  );
+}
+function OfficialLogo() {
+  return (
+    <span className="official-logo">
+      <img src={mark.src} alt="" width={481} height={481} />
+      <img src={wordmark.src} alt="GMZ Landscaping" width={471} height={199} />
+    </span>
+  );
+}
+export default function Operations({ displayName }: { displayName: string }) {
+  const [data, setData] = useState<State | null>(null),
+    [version, setVersion] = useState(0),
+    [view, setView] = useState<View>('overview'),
+    [error, setError] = useState(''),
+    [busy, setBusy] = useState(false),
+    [query, setQuery] = useState(''),
+    [crew, setCrew] = useState('All crews'),
+    [day, setDay] = useState(today()),
+    [month, setMonth] = useState(today().slice(0, 7));
+  const [fingerprint, setFingerprint] = useState(''),
+    [connected, setConnected] = useState(false);
+  const [accountId, setAccountId] = useState(''),
+    [clientMode, setClientMode] = useState<'clients' | 'properties'>('clients');
+  const [modal, setModal] = useState<string | null>(null),
+    [draft, setDraft] = useState<any>({}),
+    [report, setReport] = useState<any>(null),
+    [uploading, setUploading] = useState(false),
+    [photoKind, setPhotoKind] = useState('After');
+  async function load() {
+    try {
+      const r = await fetch('/api/admin/operations');
+      const j = (await r.json()) as any;
+      if (!r.ok) throw Error(j.error);
+      setData(j.state);
+      setVersion(j.version);
+      setFingerprint(j.fingerprint || '');
+      setConnected(!!j.connected);
+      setError('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not load workspace');
+    }
+  }
+  useEffect(() => {
+    load();
+    const sync = () => {
+      let [hash, account = ''] = location.hash.slice(1).split('/');
+      if (hash === 'accounts') {
+        hash = 'clients';
+        history.replaceState(null, '', '#clients' + (account ? '/' + account : ''));
+      }
+      if (hash === 'clients') {
+        setClientMode(account === 'properties' ? 'properties' : 'clients');
+        try {
+          setAccountId(account === 'properties' ? '' : decodeURIComponent(account));
+        } catch {
+          setAccountId('');
+        }
+      }
+      if (hash === 'irrigation') {
+        hash = 'orders';
+        history.replaceState(null, '', '#orders');
+      }
+      if (nav.some((n) => n[0] === hash)) setView(hash as View);
+    };
+    sync();
+    window.addEventListener('hashchange', sync);
+    return () => window.removeEventListener('hashchange', sync);
+  }, []);
+  function openAccount(id: string) {
+    setAccountId(id);
+    setClientMode('clients');
+    setView('clients');
+    setQuery('');
+    location.hash = 'clients' + (id ? '/' + encodeURIComponent(id) : '');
+  }
+  function openProposal(id: string) {
+    setView('inquiries');
+    location.hash = 'inquiries/' + encodeURIComponent(id);
+  }
+  function showProperties() {
+    setAccountId('');
+    setClientMode('properties');
+    setView('clients');
+    setQuery('');
+    location.hash = 'clients/properties';
+  }
+  function go(v: View) {
+    if (v === 'clients') {
+      openAccount('');
+      return;
+    }
+    setView(v);
+    setQuery('');
+    location.hash = v;
+  }
+  useEffect(() => {
+    const context = (document as any).modelContext;
+    if (!context?.registerTool) return;
+    const lifecycle = new AbortController();
+    try {
+      Promise.resolve(
+        context.registerTool(
+          {
+            name: 'open_operations_section',
+            description:
+              'Navigate to a GMZ operations section. Does not save or change any business records.',
+            inputSchema: {
+              type: 'object',
+              properties: { section: { type: 'string', enum: nav.map((n) => n[0]) } },
+              required: ['section'],
+              additionalProperties: false,
+            },
+            annotations: { readOnlyHint: true },
+            execute(input: unknown) {
+              const section = (input as any)?.section;
+              if (!nav.some((n) => n[0] === section)) throw Error('Unknown section');
+              go(section);
+              return { section };
+            },
+          },
+          { signal: lifecycle.signal },
+        ),
+      ).catch(() => {});
+    } catch {}
+    return () => lifecycle.abort();
+  }, []);
 
- async function save(command:Command,close=true){setBusy(true);try{const r=await fetch('/api/admin/operations',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({version,command,fingerprint})});const j=await r.json() as any;if(!r.ok)throw Error(j.error);setData(j.state);setVersion(j.version);setFingerprint(j.fingerprint||'');setConnected(!!j.connected);if(close)setModal(null);toast.success('Saved');return true;}catch(e){toast.error(e instanceof Error?e.message:'Could not save');return false;}finally{setBusy(false);}}
- async function publish(v:Visit){setBusy(true);try{const j=await portalAction({action:'publish',visitId:v.id,version,fingerprint});setData(j.state);setVersion(j.version);setFingerprint(j.fingerprint);toast.success('Report published to the client portal');}catch(e){toast.error((e as Error).message)}finally{setBusy(false)}}
- function edit(kind:string,value:any){setDraft(structuredClone(value));setModal(kind);}
- const prop=(id:string)=>data!.properties.find(p=>p.id===id)!;
- const client=(id:string)=>data!.clients.find(c=>c.id===id)!;
- function newProperty(clientId?:string){if(!data!.clients.length){newClient();return;}edit('property',{id:uuid(),clientId:clientId||data!.clients[0].id,name:'',address:'',city:'',monthly:null,budgetMinutes:null,crew:'',truck:'',access:'',notes:'',cadence:'Not set'});}
- function newClient(){edit('client',{id:uuid(),name:'',contact:'',email:'',phone:''});}
- function schedule(propertyId?:string){if(!data!.properties.length){newProperty();return;}edit('schedule',{propertyId:propertyId||data!.properties[0].id,date:day,start:'08:00',count:1,interval:7,exceptions:[],template:'General service'});}
- function newProject(){if(!data!.properties.length){newProperty();return;}edit('project',{id:uuid(),propertyId:data!.properties[0].id,title:'',stage:'Design',owner:'Project team',due:day,budget:0,laborCost:null,materialCost:null,notes:'',approvalUrl:'',tasks:[]});}
- async function preview(v:Visit){setReport(null);setModal('preview');try{const r=await fetch('/api/admin/reports/'+v.id);if(!r.ok)throw Error('Report unavailable');setReport(await r.json());}catch(e){toast.error('Could not load the report preview');setModal(null);}}
- async function photo(file?:File){if(!file)return;if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>15000000){toast.error('Choose a JPG, PNG or WebP under 15 MB');return;}setUploading(true);try{const bitmap=await createImageBitmap(file);const scale=Math.min(1,1800/Math.max(bitmap.width,bitmap.height));const canvas=document.createElement('canvas');canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);canvas.getContext('2d')!.drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(Error()),'image/webp',.84));const r=await fetch('/api/admin/photos',{method:'POST',headers:{'Content-Type':'image/webp'},body:blob});const j=await r.json() as any;if(!r.ok)throw Error(j.error);setDraft((d:any)=>({...d,photos:[...d.photos,{id:j.id,kind:photoKind,caption:'',visible:false}]}));toast.success('Photo uploaded. Save the work order to attach it.');}catch{toast.error('Photo upload failed. Please try again.');}finally{setUploading(false);}}
- function set(k:string,v:any){setDraft((d:any)=>({...d,[k]:v}));}
- async function submit(e:FormEvent){e.preventDefault();if(modal==='schedule')await save({type:'schedule',...draft,exceptions:(draft.exceptions||[]).map((x:string)=>x.trim()).filter(Boolean)});else await save({type:modal as 'client',value:draft});}
- const btn=(text:string,fn:()=>void,secondary=false)=><button className={secondary?'btn secondary':'btn'} onClick={fn}>{secondary?null:<Plus size={17}/>} {text}</button>;
- const propertyOptions=data?.properties.map(p=>({value:p.id,label:p.name}))||[];
- const filtered=data?.visits.filter(v=>(crew==='All crews'||v.crew===crew)&&(`${prop(v.propertyId).name} ${v.status} ${v.date}`).toLowerCase().includes(query.toLowerCase())).sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start))||[];
- const week=Array.from({length:7},(_,i)=>addDays(day,i));
- const pending=data?.visits.filter(v=>v.status==='Completed'&&!['Published to preview','Published to portal'].includes(v.reportStatus))||[];
- const openOrders=data?.visits.filter(v=>['Scheduled','In progress'].includes(v.status))||[];
+  async function save(command: Command, close = true) {
+    setBusy(true);
+    try {
+      const r = await fetch('/api/admin/operations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version, command, fingerprint }),
+      });
+      const j = (await r.json()) as any;
+      if (!r.ok) throw Error(j.error);
+      setData(j.state);
+      setVersion(j.version);
+      setFingerprint(j.fingerprint || '');
+      setConnected(!!j.connected);
+      if (close) setModal(null);
+      toast.success('Saved');
+      return true;
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Could not save');
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function publish(v: Visit) {
+    setBusy(true);
+    try {
+      const j = await portalAction({ action: 'publish', visitId: v.id, version, fingerprint });
+      setData(j.state);
+      setVersion(j.version);
+      setFingerprint(j.fingerprint);
+      toast.success('Report published to the client portal');
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  function edit(kind: string, value: any) {
+    setDraft(structuredClone(value));
+    setModal(kind);
+  }
+  const prop = (id: string) => data!.properties.find((p) => p.id === id)!;
+  const client = (id: string) => data!.clients.find((c) => c.id === id)!;
+  function newProperty(clientId?: string) {
+    if (!data!.clients.length) {
+      newClient();
+      return;
+    }
+    edit('property', {
+      id: uuid(),
+      clientId: clientId || data!.clients[0].id,
+      name: '',
+      address: '',
+      city: '',
+      monthly: null,
+      budgetMinutes: null,
+      crew: '',
+      truck: '',
+      access: '',
+      notes: '',
+      cadence: 'Not set',
+    });
+  }
+  function newClient() {
+    edit('client', { id: uuid(), name: '', contact: '', email: '', phone: '' });
+  }
+  function schedule(propertyId?: string) {
+    if (!data!.properties.length) {
+      newProperty();
+      return;
+    }
+    edit('schedule', {
+      propertyId: propertyId || data!.properties[0].id,
+      date: day,
+      start: '08:00',
+      count: 1,
+      interval: 7,
+      exceptions: [],
+      template: 'General service',
+    });
+  }
+  function newProject() {
+    if (!data!.properties.length) {
+      newProperty();
+      return;
+    }
+    edit('project', {
+      id: uuid(),
+      propertyId: data!.properties[0].id,
+      title: '',
+      stage: 'Design',
+      owner: 'Project team',
+      due: day,
+      budget: 0,
+      laborCost: null,
+      materialCost: null,
+      notes: '',
+      approvalUrl: '',
+      tasks: [],
+    });
+  }
+  async function preview(v: Visit) {
+    setReport(null);
+    setModal('preview');
+    try {
+      const r = await fetch('/api/admin/reports/' + v.id);
+      if (!r.ok) throw Error('Report unavailable');
+      setReport(await r.json());
+    } catch (e) {
+      toast.error('Could not load the report preview');
+      setModal(null);
+    }
+  }
+  async function photo(file?: File) {
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 15000000) {
+      toast.error('Choose a JPG, PNG or WebP under 15 MB');
+      return;
+    }
+    setUploading(true);
+    try {
+      const bitmap = await createImageBitmap(file);
+      const scale = Math.min(1, 1800 / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+      const blob = await new Promise<Blob>((resolve, reject) =>
+        canvas.toBlob((b) => (b ? resolve(b) : reject(Error())), 'image/webp', 0.84),
+      );
+      const r = await fetch('/api/admin/photos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'image/webp' },
+        body: blob,
+      });
+      const j = (await r.json()) as any;
+      if (!r.ok) throw Error(j.error);
+      setDraft((d: any) => ({
+        ...d,
+        photos: [...d.photos, { id: j.id, kind: photoKind, caption: '', visible: false }],
+      }));
+      toast.success('Photo uploaded. Save the work order to attach it.');
+    } catch {
+      toast.error('Photo upload failed. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  }
+  function set(k: string, v: any) {
+    setDraft((d: any) => ({ ...d, [k]: v }));
+  }
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (modal === 'schedule')
+      await save({
+        type: 'schedule',
+        ...draft,
+        exceptions: (draft.exceptions || []).map((x: string) => x.trim()).filter(Boolean),
+      });
+    else await save({ type: modal as 'client', value: draft });
+  }
+  const btn = (text: string, fn: () => void, secondary = false) => (
+    <button className={secondary ? 'btn secondary' : 'btn'} onClick={fn}>
+      {secondary ? null : <Plus size={17} />} {text}
+    </button>
+  );
+  const propertyOptions = data?.properties.map((p) => ({ value: p.id, label: p.name })) || [];
+  const filtered =
+    data?.visits
+      .filter(
+        (v) =>
+          (crew === 'All crews' || v.crew === crew) &&
+          `${prop(v.propertyId).name} ${v.status} ${v.date}`
+            .toLowerCase()
+            .includes(query.toLowerCase()),
+      )
+      .sort((a, b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start)) || [];
+  const week = Array.from({ length: 7 }, (_, i) => addDays(day, i));
+  const pending =
+    data?.visits.filter(
+      (v) =>
+        v.status === 'Completed' &&
+        !['Published to preview', 'Published to portal'].includes(v.reportStatus),
+    ) || [];
+  const openOrders =
+    data?.visits.filter((v) => ['Scheduled', 'In progress'].includes(v.status)) || [];
 
- return <SidebarProvider style={{'--sidebar-width':'252px'} as React.CSSProperties}><a href="#main" className="skip">Skip to workspace</a><Sidebar className="gmz-sidebar"><SidebarHeader><div className="brand"><OfficialLogo/></div><div className="workspace-label">OPERATIONS</div></SidebarHeader><SidebarContent><SidebarMenu>{nav.map(([key,label,Icon])=><SidebarMenuItem key={key}><SidebarMenuButton className="nav-button" size="lg" isActive={view===key} aria-current={view===key?'page':undefined} onClick={()=>go(key)}><Icon/><span>{label}</span>{key==='reports'&&pending.length>0?<span className="nav-count">{pending.length}</span>:null}</SidebarMenuButton></SidebarMenuItem>)}</SidebarMenu></SidebarContent><SidebarFooter><div className="sidebar-note"><ShieldCheck size={18}/><div>Private prototype<small>{data?.dataMode==='actual'?'GMZ records · saved workspace':'Sample records · saved workspace'}</small></div></div><div className="account"><span className="avatar">GM</span><div>{displayName.includes('@')?'GMZ team':displayName}<small>Owner workspace</small></div></div></SidebarFooter></Sidebar><SidebarInset className="main-shell"><header className="topbar"><div className="topbar-left"><SidebarTrigger/><span>GMZ <span className="muted">/ Operations /</span> {nav.find(n=>n[0]===view)?.[1]}</span></div><div className="topbar-right"><span className="prototype-tag">PROTOTYPE</span><button className="text-button" onClick={load} disabled={busy}>Refresh</button></div></header><main id="main" className="workspace"><div className="prototype-note"><span className="accent-square"/>{data?.dataMode==='actual'?'GMZ client and property records. Check portal-access status before inviting clients.':'Sample data only. Portal publishing stays in this preview; no client messages are sent.'}</div>
- {!data?<div className="loading">{error?<><h1>Workspace unavailable</h1><p role="alert">{error}</p><button className="btn" onClick={load}>Try again</button></>:<><Loader2 className="spin"/><h1>Opening your workspace</h1></>}</div>:<>
- <div className="page-heading"><div><p className="eyebrow">{view==='overview'?'THE OFFICE, AT A GLANCE':'GMZ OPERATIONS'}</p><h1>{view==='overview'?'Good work starts here.':nav.find(n=>n[0]===view)?.[1]}</h1><p className="muted">{{overview:'Your properties, crews, and next steps in one place.','portal-inbox':'Requests and approvals from your client portal.',announcements:'Draft, preview, and publish client announcements and promotions.',timesheets:'Staff hours, review status, and daily route context.',clients:'One record for every relationship. A clear plan for every property.',schedule:'Plan the week. Keep the crew moving.',orders:'The work to do, and the record of what was done.',projects:'Keep each project moving from concept to completion.',reports:'Review the details your clients will see.',costs:'Compare the plan with the time and costs recorded.',inquiries:'From the first conversation to approved scope.',field:'Property access and practical day planning.',fleet:'Keep your equipment ready for the next visit.',irrigation:'Know every zone. Follow through on every repair.',vendors:'Supplier prices connected to your job costs.'}[view]}</p></div><div className="heading-actions">{view==='clients'?<>{btn('Add client',newClient,true)}{btn('Add property',()=>newProperty(accountId||undefined))}</>:view==='projects'?btn('New project',newProject):['overview','schedule','orders'].includes(view)?btn('Schedule visit',()=>schedule()):null}</div></div>
- {view==='timesheets'&&<Timesheets data={data} save={save} busy={busy}/>}
- {view==='portal-inbox'&&<PortalInbox onAccount={openAccount} onRefresh={load} onProposal={openProposal}/>}
- {view==='announcements'&&<Announcements/>}
- {view==='clients'&&<nav className="client-view-switch" aria-label="Clients and properties views"><button className={'btn '+(clientMode==='clients'?'':'secondary')} aria-pressed={clientMode==='clients'} onClick={()=>openAccount('')}>Clients</button><button className={'btn '+(clientMode==='properties'?'':'secondary')} aria-pressed={clientMode==='properties'} onClick={showProperties}>Properties</button></nav>}
- {view==='clients'&&clientMode==='clients'&&<><ClientAccounts data={data} selected={accountId} onSelect={openAccount} onEdit={c=>edit('client',c)} onProperty={p=>edit('property',p)} onVisit={v=>edit('visit',v)} onProject={p=>edit('project',p)} onAddProperty={newProperty} onRefresh={load} onProposal={openProposal}/></>}
- {['inquiries','field','fleet','vendors'].includes(view)&&<Expansion key={view} view={view} data={data} save={save} busy={busy}/>}
- {view==='overview'&&<><HubWorkflows view={view} data={data} busy={busy} save={save}/><div className="stats"><div><span>Active properties</span><strong>{data.properties.length.toString().padStart(2,'0')}</strong><small>{data.clients.length} client relationships</small></div><div><span>Visits to complete</span><strong>{openOrders.length.toString().padStart(2,'0')}</strong><small>{openOrders.filter(v=>v.date===today()).length} scheduled for today</small></div><div><span>Reports to review</span><strong className="amber-text">{pending.length.toString().padStart(2,'0')}</strong><small>Ready for the office</small></div><div><span>Monthly service value</span><strong>{cash(data.properties.reduce((a,p)=>a+(p.monthly??0),0))}</strong><small>{data.dataMode==='actual'?'Recorded monthly agreements':'Sample service agreements'}</small></div></div><div className="overview-grid"><section className="panel"><div className="panel-heading"><div><p className="eyebrow">ON THE SCHEDULE</p><h2>Next visits</h2></div><button className="text-button" onClick={()=>go('schedule')}>View schedule <ArrowRight size={16}/></button></div>{openOrders.length?openOrders.slice().sort((a,b)=>a.date.localeCompare(b.date)||a.start.localeCompare(b.start)).slice(0,5).map(v=><OrderRow key={v.id} v={v} property={prop(v.propertyId)} onEdit={v=>edit('visit',v)}/>):<Empty>No open visits. Schedule your next service.</Empty>}</section><section className="attention-panel"><p className="eyebrow">KEEP THINGS MOVING</p><h2>Needs your attention</h2>{pending.map(v=><button className="attention-item" key={v.id} onClick={()=>edit('visit',v)}><span className="attention-icon"><Send size={19}/></span><span><strong>Service report ready</strong><small>{prop(v.propertyId).name}</small></span><ArrowUpRight size={17}/></button>)}{data.projects.filter(p=>p.stage!=='Complete').slice(0,2).map(p=><button className="attention-item" key={p.id} onClick={()=>edit('project',p)}><span className="attention-icon"><FolderKanban size={19}/></span><span><strong>{p.title}</strong><small>{p.stage} · Due {dayLabel(p.due)}</small></span><ArrowUpRight size={17}/></button>)}{!pending.length&&!data.projects.filter(p=>p.stage!=='Complete').length&&<p>You’re all caught up.</p>}</section></div><div className="section-title"><h2>Project in Progress</h2><button className="text-button" onClick={()=>go('projects')}>All projects <ArrowRight size={16}/></button></div><div className="project-grid">{data.projects.filter(p=>p.stage!=='Complete').slice(0,3).map(p=><button className="project-card" key={p.id} onClick={()=>edit('project',p)}><div className="flex-between"><Chip>{p.stage}</Chip><ArrowUpRight size={19}/></div><h3>{p.title}</h3><p>{prop(p.propertyId).city} · {p.owner}</p><div className="stage-track">{stages.map((s,i)=><span key={s} className={i<=stages.indexOf(p.stage)?'filled':''}/>)}</div><div className="flex-between"><small>{p.tasks.filter(t=>t.done).length}/{p.tasks.length} tasks complete</small><small>Due {dayLabel(p.due)}</small></div></button>)}</div></>}
- {view==='clients'&&clientMode==='properties'&&<><div className="toolbar"><div className="search"><Search size={18}/><input aria-label="Search properties" placeholder="Search clients, properties, or cities" value={query} onChange={e=>setQuery(e.target.value)}/></div><span className="muted">{data.properties.length} properties · {data.clients.length} clients</span></div><div className="panel"><Table><TableHeader><TableRow><TableHead>Property / client</TableHead><TableHead>Service</TableHead><TableHead>Crew & truck</TableHead><TableHead>Visit budget</TableHead><TableHead>Monthly</TableHead><TableHead>Details</TableHead></TableRow></TableHeader><TableBody>{data.properties.filter(p=>(p.name+' '+p.city+' '+client(p.clientId).name).toLowerCase().includes(query.toLowerCase())).map(p=><TableRow key={p.id}><TableCell><button className="cell-link" onClick={()=>edit('property',p)}>{p.name}</button>{p.internal&&<Chip>Internal</Chip>}<small className="block muted">{p.city} · {client(p.clientId).contact}</small><button className="text-button" onClick={()=>openAccount(p.clientId)}>Account: {client(p.clientId).name}</button></TableCell><TableCell>{p.cadence}</TableCell><TableCell>{p.crew||'Unassigned'}<small className="block muted">{p.truck}</small></TableCell><TableCell>{p.budgetMinutes===null?'Not recorded':p.budgetMinutes+' min'}</TableCell><TableCell>{p.monthly===null?(p.internal?'Internal':'Not recorded'):cash(p.monthly)}</TableCell><TableCell><button aria-label={'Property details: '+p.name} title={'Property details: '+p.name} className="text-button" onClick={()=>edit('property',p)}>Property details <ArrowUpRight size={18}/></button></TableCell></TableRow>)}</TableBody></Table></div></>}
- {view==='schedule'&&<ScheduleRoutesProvider><ScheduleRoutePlan properties={data.properties}/><div className="toolbar"><div className="date-controls"><button aria-label="Previous week" className="icon-button" onClick={()=>setDay(addDays(day,-7))}><ChevronLeft size={18}/></button><input aria-label="Week starting" type="date" value={day} onChange={e=>e.target.value&&setDay(e.target.value)}/><button aria-label="Next week" className="icon-button" onClick={()=>setDay(addDays(day,7))}><ChevronRight size={18}/></button><button className="text-button" onClick={()=>setDay(today())}>Today</button></div><Pick label="Filter by crew" value={crew} onChange={setCrew} options={['All crews',...new Set([...data.visits.map(v=>v.crew),...data.properties.map(p=>p.crew)].filter(Boolean))]}/></div><DispatchExport data={data} day={day} crew={crew}/><div className="week-grid">{week.map(d=><section className={'day-column '+(d===today()?'is-today':'')} key={d}><div className="day-heading"><span>{new Date(d+'T12:00:00').toLocaleDateString('en-US',{weekday:'short'})}</span><strong>{Number(d.slice(-2))}</strong><CalendarStopCount data={data} date={d} crew={crew}/></div><div className="day-visits"><CalendarRouteDay data={data} date={d} crew={crew}/>{filtered.filter(v=>v.date===d).map(v=><button className={'visit-card '+(v.status==='Completed'?'done':'')} key={v.id} onClick={()=>edit('visit',v)}><small>{v.start} · {v.budgetMinutes} min</small><strong>{prop(v.propertyId).name}</strong><small>{v.crew}</small><Chip>{v.status}</Chip></button>)}<button className="add-day" onClick={()=>{schedule();setDraft((x:any)=>({...x,date:d}))}}><Plus size={16}/> Add visit</button></div></section>)}</div><div className="footnote"><Clock size={16}/> Budgets are time on site. Labor hours also account for the number of crew members.</div></ScheduleRoutesProvider>}
- {view==='orders'&&<><div className="toolbar"><div className="search"><Search size={18}/><input aria-label="Search work orders" placeholder="Search property, status, or date" value={query} onChange={e=>setQuery(e.target.value)}/></div><Pick label="Filter crew" value={crew} onChange={setCrew} options={['All crews',...new Set(data.visits.map(v=>v.crew))]}/></div><div className="panel">{filtered.length?filtered.map(v=><OrderRow key={v.id} v={v} property={prop(v.propertyId)} onEdit={v=>edit('visit',v)}/>):<Empty>No work orders match this search.</Empty>}</div></>}
- {view==='projects'&&<div className="kanban">{stages.map(stage=><section className="kanban-column" key={stage}><div className="kanban-title"><h2>{stage}</h2><span>{data.projects.filter(p=>p.stage===stage).length}</span></div>{data.projects.filter(p=>p.stage===stage).map(p=><button className="kanban-card" key={p.id} onClick={()=>edit('project',p)}><p className="eyebrow">{prop(p.propertyId).city}</p><h3>{p.title}</h3><p>{p.owner}</p><div className="task-meter"><span style={{width:(p.tasks.length?p.tasks.filter(t=>t.done).length/p.tasks.length*100:0)+'%'}}/></div><small>{p.tasks.filter(t=>t.done).length}/{p.tasks.length} tasks</small><div className="kanban-bottom"><span>Due {dayLabel(p.due)}</span><ArrowUpRight size={16}/></div></button>)}</section>)}</div>}
- {view==='reports'&&<><div className="info-line"><ShieldCheck size={19}/><span>Only the summary, completed tasks, and selected photos appear in the client preview. Editing a report returns it to Draft; the previous published copy stays visible until you publish the revision.</span></div><div className="reports-grid">{data.visits.filter(v=>v.status==='Completed').map(v=><section className="report-card" key={v.id}><div className="flex-between"><span className="eyebrow">{dayLabel(v.date)} · SERVICE REPORT</span><Chip>{v.reportStatus}</Chip></div><h2>{prop(v.propertyId).name}</h2><p>{v.report||'Add a client summary to this work order.'}</p><div className="report-details"><span>{v.checklist.filter(t=>t.done).length} tasks completed</span><span>{v.photos.filter(p=>p.visible).length} selected photos</span></div><div className="report-actions"><button className="btn secondary" onClick={()=>preview(v)}>Client preview <ArrowUpRight size={16}/></button><button className="text-button" onClick={()=>edit('visit',v)}>Edit</button>{['Draft','Published to preview'].includes(v.reportStatus)?<button disabled={busy} className="btn" onClick={()=>save({type:'report',id:v.id,status:'Reviewed'},false)}><Check size={16}/> Mark reviewed</button>:v.reportStatus==='Reviewed'?<button disabled={busy} className="btn" onClick={()=>connected?publish(v):save({type:'report',id:v.id,status:'Published to preview'},false)}><Send size={16}/> {connected?'Publish to client portal':'Publish to preview'}</button>:<span className="muted">{v.reportStatus==='Published to portal'?'Published to client portal':'Saved in preview'}</span>}</div></section>)}</div>{!data.visits.some(v=>v.status==='Completed')&&<Empty>Complete a work order to prepare your first service report.</Empty>}</>}
- {view==='costs'&&<><div className="toolbar"><div className="date-controls"><label htmlFor="cost-month">Service month</label><input id="cost-month" type="month" value={month} onChange={e=>setMonth(e.target.value)}/></div><span className="muted">USD · recorded costs only</span></div><div className="panel"><div className="panel-heading"><h2>Maintenance performance</h2><span className="muted">Monthly agreement vs. costs to date</span></div><Table><TableHeader><TableRow><TableHead>Property</TableHead><TableHead>Completed visits</TableHead><TableHead>Labor hours</TableHead><TableHead>Visit budget</TableHead><TableHead>Recorded cost</TableHead><TableHead>Monthly agreement</TableHead><TableHead>Cost coverage</TableHead></TableRow></TableHeader><TableBody>{data.properties.map(p=>{const vs=data.visits.filter(v=>v.propertyId===p.id&&v.date.startsWith(month)&&v.status==='Completed');const known=vs.filter(v=>visitCost(v)!==null);const cost=known.reduce((n,v)=>n+visitCost(v)!,0);const hours=vs.reduce((n,v)=>n+(v.actualMinutes??0)*v.crewCount/60,0);const over=vs.some(v=>(v.actualMinutes??0)>v.budgetMinutes);return <TableRow key={p.id}><TableCell><strong>{p.name}</strong></TableCell><TableCell>{vs.length}</TableCell><TableCell>{hours.toFixed(1)} h</TableCell><TableCell>{vs.length?<Chip>{over?'Over budget':'Within budget'}</Chip>:'No visits'}</TableCell><TableCell>{known.length?cash(cost):'Not recorded'}</TableCell><TableCell>{p.monthly===null?(p.internal?'Internal':'Not recorded'):cash(p.monthly)}</TableCell><TableCell>{vs.length?`${known.length}/${vs.length} visits costed`:'No completed visits'}</TableCell></TableRow>})}</TableBody></Table></div><p className="footnote">Labor cost = time on site × crew members × hourly cost per person. Monthly fees are contract values, not verified revenue. Travel and overhead are excluded; this is not a net-profit statement.</p><div className="panel"><div className="panel-heading"><h2>Project cost tracking</h2></div><Table><TableHeader><TableRow><TableHead>Project</TableHead><TableHead>Budget</TableHead><TableHead>Labor</TableHead><TableHead>Materials</TableHead><TableHead>Remaining budget</TableHead><TableHead>Update</TableHead></TableRow></TableHeader><TableBody>{data.projects.map(p=><TableRow key={p.id}><TableCell><strong>{p.title}</strong></TableCell><TableCell>{cash(p.budget)}</TableCell><TableCell>{p.laborCost===null?'Not recorded':cash(p.laborCost)}</TableCell><TableCell>{p.materialCost===null?'Not recorded':cash(p.materialCost)}</TableCell><TableCell>{p.laborCost===null||p.materialCost===null?<Chip>Costs incomplete</Chip>:cash(p.budget-p.laborCost-p.materialCost)}</TableCell><TableCell><button className="text-button" onClick={()=>edit('project',p)}>Edit costs</button></TableCell></TableRow>)}</TableBody></Table></div></>}
- <footer className="workspace-footer"><span>GMZ LANDSCAPING <span className="amber-text">/</span> OPERATIONS</span><span>Private prototype · {data.activity.length?`Last saved ${new Date(data.activity[0].at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}`:(data.dataMode==='actual'?'GMZ records':'Sample workspace')}</span></footer>
- </>}
- </main></SidebarInset>
- <Dialog open={modal!==null} onOpenChange={open=>{if(!open&&!busy&&!uploading)setModal(null)}}><DialogContent className={'editor '+(modal==='visit'?'wide':'')}><DialogHeader><DialogTitle>{modal==='property'?(draft.name?'Property: '+draft.name:'Add property'):modal==='client'?(draft.name?'Client account: '+draft.name:'Add client account'):modal==='schedule'?'Schedule service':modal==='visit'?'Crew work order':modal==='project'?'Project details':'Client report preview'}</DialogTitle><DialogDescription>{modal==='preview'?'Private preview only. Nothing is sent to the client.':modal==='visit'?'Record the work once. Keep internal notes separate from the client summary.':connected?'Changes save to shared GMZ records. Reports require an explicit publish action.':'Changes are saved to your private prototype workspace.'}</DialogDescription></DialogHeader>
- {modal==='preview'?(report?<div className="client-preview"><div className="preview-brand"><OfficialLogo/></div><p className="eyebrow">YOUR GARDEN · {dayLabel(report.date)}</p><h2>{report.property}</h2><p className="preview-summary">{report.summary}</p><h3>During our visit</h3>{report.tasks.map((t:string,i:number)=><div className="preview-task" key={i}><Check size={18}/>{t}</div>)}<div className="photo-grid">{report.photos.map((p:any)=><figure key={p.id}><img src={'/api/admin/photos/'+p.id} alt={p.caption||p.kind+' service photo'}/><figcaption>{p.kind}{p.caption?' · '+p.caption:''}</figcaption></figure>)}</div><p className="footnote">Report status: {report.status}</p></div>:<Loader2 className="spin"/>):<form onSubmit={submit} className="editor-form">
- {modal==='client'&&<><Field label="Client / account name"><input required value={draft.name} onChange={e=>set('name',e.target.value)}/></Field><Field label="Contact name"><input value={draft.contact} onChange={e=>set('contact',e.target.value)}/></Field><div className="form-grid"><Field label="Email"><input type="email" value={draft.email} onChange={e=>set('email',e.target.value)}/></Field><Field label="Phone"><input type="tel" value={draft.phone} onChange={e=>set('phone',e.target.value)}/></Field></div><div className="form-grid"><Field label="Account owner"><input value={draft.accountOwner??''} onChange={e=>set('accountOwner',e.target.value)}/></Field><Field label="Preferred contact method"><input value={draft.preferredContact??''} onChange={e=>set('preferredContact',e.target.value)}/></Field><Field label="Billing contact"><input value={draft.billingContact??''} onChange={e=>set('billingContact',e.target.value)}/></Field><Field label="Billing email"><input type="email" value={draft.billingEmail??''} onChange={e=>set('billingEmail',e.target.value)}/></Field></div><Field label="Billing address"><textarea value={draft.billingAddress??''} onChange={e=>set('billingAddress',e.target.value)}/></Field><Field label="Account notes · internal"><textarea rows={4} value={draft.notes??''} onChange={e=>set('notes',e.target.value)}/></Field></>}
- {modal==='property'&&<><Field label="Client"><Pick label="Client" value={draft.clientId} onChange={v=>set('clientId',v)} options={data!.clients.map(c=>({value:c.id,label:c.name}))}/></Field><Field label="Property name"><input required value={draft.name} onChange={e=>set('name',e.target.value)}/></Field><div className="form-grid"><Field label="Address"><input value={draft.address} onChange={e=>set('address',e.target.value)}/></Field><Field label="City"><input value={draft.city} onChange={e=>set('city',e.target.value)}/></Field><Field label="Service frequency"><Pick label="Service frequency" value={draft.cadence} onChange={v=>set('cadence',v)} options={['Weekly','Every two weeks','Monthly','On request','Not set']}/></Field><NumberField label="Monthly agreement ($)" nullable value={draft.monthly} onChange={v=>set('monthly',v)}/><NumberField label="Visit budget (minutes on site)" nullable value={draft.budgetMinutes} min={1} max={1440} step="1" onChange={v=>set('budgetMinutes',v)}/><Field label="Crew"><input value={draft.crew} onChange={e=>set('crew',e.target.value)}/></Field><Field label="Truck"><input value={draft.truck} onChange={e=>set('truck',e.target.value)}/></Field></div><Field label="Access instructions · internal"><textarea value={draft.access} onChange={e=>set('access',e.target.value)}/></Field><Field label="Service scope / property notes"><textarea value={draft.notes} onChange={e=>set('notes',e.target.value)}/></Field></>}
- {modal==='schedule'&&<><Field label="Work checklist"><Pick label="Work checklist" value={draft.template||'General service'} onChange={v=>set('template',v)} options={Object.keys(serviceTemplates)}/></Field><Field label="Property"><Pick label="Property" value={draft.propertyId} onChange={v=>set('propertyId',v)} options={propertyOptions}/></Field><div className="form-grid"><Field label="First visit"><input type="date" required value={draft.date} onChange={e=>set('date',e.target.value)}/></Field><Field label="Start time · Pacific"><input type="time" required value={draft.start} onChange={e=>set('start',e.target.value)}/></Field><NumberField label="Number of visits" min={1} max={12} step="1" value={draft.count} onChange={v=>set('count',v)}/><NumberField label="Days between visits" min={1} max={31} step="1" value={draft.interval} onChange={v=>set('interval',v)}/></div><Field label="Skip dates (one YYYY-MM-DD per line)"><textarea placeholder="2026-12-25" value={(draft.exceptions||[]).join('\n')} onChange={e=>set('exceptions',e.target.value.split('\n'))}/></Field><div className="info-line"><CalendarDays size={20}/><span>Creates up to {draft.count} work order{draft.count===1?'':'s'} with the property’s crew, truck, and service instructions, excluding skipped dates. Each date can be changed afterward.</span></div></>}
- {modal==='visit'&&<>{data!.serviceRequests.filter(r=>r.visitId===draft.id).map(r=><div className="info-line" key={r.id}><strong>Client request {r.reference}</strong><p className="account-notes">{r.note}</p><a className="text-button" href={'#portal-inbox/'+encodeURIComponent(r.id)} onClick={()=>setModal(null)}>Open source request →</a></div>)}<div className="work-order-heading"><div><h2>{prop(draft.propertyId).name}</h2><p><MapPin size={15}/>{prop(draft.propertyId).city} · {prop(draft.propertyId).address}</p></div><Chip>{draft.status}</Chip></div><div className="form-grid"><Field label="Date"><input required type="date" value={draft.date} onChange={e=>set('date',e.target.value)}/></Field><Field label="Start time · Pacific"><input required type="time" value={draft.start} onChange={e=>set('start',e.target.value)}/></Field><Field label="Crew"><input required value={draft.crew} onChange={e=>set('crew',e.target.value)}/></Field><Field label="Truck"><input required value={draft.truck} onChange={e=>set('truck',e.target.value)}/></Field><Field label="Status"><Pick label="Work order status" value={draft.status} onChange={v=>set('status',v)} options={['Scheduled','In progress','Completed','Skipped']}/></Field><NumberField label="Budget (minutes on site)" min={1} max={1440} step="1" value={draft.budgetMinutes} onChange={v=>set('budgetMinutes',v)}/></div><div className="access-note"><strong>Property access</strong><p>{prop(draft.propertyId).access||'No access instructions recorded.'}</p></div><Field label="Work instructions"><textarea value={draft.instructions} onChange={e=>set('instructions',e.target.value)}/></Field><h3>Service checklist</h3><div className="exp-actions">{Object.entries(serviceTemplates).map(([name,labels])=><button type="button" className="text-button" key={name} onClick={()=>set('checklist',[...draft.checklist,...labels.filter(label=>!draft.checklist.some((t:any)=>t.label===label)).map(label=>({id:uuid(),label,done:false}))])}>Add {name.toLowerCase()} tasks</button>)}</div><div className="project-tasks">{draft.checklist.map((t:any,i:number)=><div key={t.id}><Checkbox aria-label={'Complete '+t.label} checked={t.done} onCheckedChange={v=>set('checklist',draft.checklist.map((x:any,j:number)=>i===j?{...x,done:v===true}:x))}/><input aria-label="Service task" required value={t.label} onChange={e=>set('checklist',draft.checklist.map((x:any,j:number)=>i===j?{...x,label:e.target.value}:x))}/></div>)}</div><button type="button" className="text-button" onClick={()=>set('checklist',[...draft.checklist,{id:uuid(),label:'',done:false}])}><Plus size={15}/> Add task</button><div className="form-grid"><NumberField label="Actual minutes on site" min={0} max={1440} step="1" nullable value={draft.actualMinutes} onChange={v=>set('actualMinutes',v)}/><NumberField label="Crew members" min={1} max={30} step="1" value={draft.crewCount} onChange={v=>set('crewCount',v)}/><NumberField label="Hourly cost per person ($) · internal" nullable value={draft.hourlyCost} onChange={v=>set('hourlyCost',v)}/><NumberField label="Materials cost ($) · internal" nullable value={draft.materials} onChange={v=>set('materials',v)}/></div><Field label="Office notes · internal"><textarea value={draft.internalNotes} onChange={e=>set('internalNotes',e.target.value)}/></Field><Field label="Client summary"><textarea rows={4} value={draft.report} placeholder="Tell the client what was done and what needs attention." onChange={e=>set('report',e.target.value)}/></Field><div className="flex-between"><h3>Visit photos</h3><Pick label="Photo type" value={photoKind} onChange={setPhotoKind} options={['Before','After']}/></div><div className="photo-grid">{draft.photos.map((p:any,i:number)=><div key={p.id} className="photo-card"><img src={'/api/admin/photos/'+p.id} alt={p.caption||p.kind+' service photo'}/><Field label={p.kind+' photo caption'}><input value={p.caption} onChange={e=>set('photos',draft.photos.map((x:any,j:number)=>i===j?{...x,caption:e.target.value}:x))}/></Field><label className="photo-visible"><Checkbox checked={p.visible} onCheckedChange={v=>set('photos',draft.photos.map((x:any,j:number)=>i===j?{...x,visible:v===true}:x))}/> Include in client report</label><button type="button" className="text-button" onClick={()=>set('photos',draft.photos.filter((_:any,j:number)=>i!==j))}>Remove from report</button></div>)}</div><label className="upload-box">{uploading?<Loader2 className="spin"/>:<ImagePlus/>}<span>{uploading?'Uploading photo…':'Add a before / after photo'}</span><small>JPG, PNG, WebP · up to 15 MB · location metadata removed</small><input aria-label="Upload visit photo" disabled={uploading||draft.photos.length>=20} type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>{photo(e.target.files?.[0]);e.target.value=''}}/></label></>}
- {modal==='project'&&<><Field label="Project name"><input required value={draft.title} onChange={e=>set('title',e.target.value)}/></Field><Field label="Property"><Pick label="Project property" value={draft.propertyId} onChange={v=>set('propertyId',v)} options={propertyOptions}/></Field><div className="form-grid"><Field label="Stage"><Pick label="Project stage" value={draft.stage} onChange={v=>set('stage',v)} options={[...stages]}/></Field><Field label="Owner"><input required value={draft.owner} onChange={e=>set('owner',e.target.value)}/></Field><Field label="Due date"><input type="date" required value={draft.due} onChange={e=>set('due',e.target.value)}/></Field><NumberField label="Project cost budget ($)" value={draft.budget} onChange={v=>set('budget',v)}/><NumberField label="Labor cost to date ($)" nullable value={draft.laborCost} onChange={v=>set('laborCost',v)}/><NumberField label="Materials cost to date ($)" nullable value={draft.materialCost} onChange={v=>set('materialCost',v)}/></div><Field label="Approval document / portal link"><input type="url" pattern="https://.*" placeholder="https://…" value={draft.approvalUrl} onChange={e=>set('approvalUrl',e.target.value)}/></Field>{draft.approvalUrl&&<a className="text-button" href={/^https:\/\//.test(draft.approvalUrl)?draft.approvalUrl:undefined} target="_blank" rel="noreferrer">Open approval link <ArrowUpRight size={15}/></a>}<Field label="Project notes"><textarea value={draft.notes} onChange={e=>set('notes',e.target.value)}/></Field><h3>Project tasks</h3><div className="project-tasks">{draft.tasks.map((t:any,i:number)=><div key={t.id}><Checkbox aria-label={'Complete '+t.label} checked={t.done} onCheckedChange={v=>set('tasks',draft.tasks.map((x:any,j:number)=>i===j?{...x,done:v===true}:x))}/><input aria-label="Task description" required value={t.label} onChange={e=>set('tasks',draft.tasks.map((x:any,j:number)=>i===j?{...x,label:e.target.value}:x))}/><button type="button" className="text-button" onClick={()=>set('tasks',draft.tasks.filter((_:any,j:number)=>i!==j))}>Remove</button></div>)}</div><button type="button" className="text-button" onClick={()=>set('tasks',[...draft.tasks,{id:uuid(),label:'',done:false}])}><Plus size={16}/> Add task</button></>}
- <div className="editor-footer"><button type="button" className="btn secondary" disabled={busy||uploading} onClick={()=>setModal(null)}>Cancel</button><button className="btn" type="submit" disabled={busy||uploading}>{busy?<Loader2 className="spin" size={17}/>:<Check size={17}/>} {busy?'Saving…':modal==='schedule'?'Create work orders':'Save changes'}</button></div></form>}
- </DialogContent></Dialog><Toaster position="bottom-right" richColors/></SidebarProvider>
+  return (
+    <SidebarProvider style={{ '--sidebar-width': '252px' } as React.CSSProperties}>
+      <a href="#main" className="skip">
+        Skip to workspace
+      </a>
+      <Sidebar className="gmz-sidebar">
+        <SidebarHeader>
+          <div className="brand">
+            <OfficialLogo />
+          </div>
+          <div className="workspace-label">OPERATIONS</div>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarMenu>
+            {nav.map(([key, label, Icon]) => (
+              <SidebarMenuItem key={key}>
+                <SidebarMenuButton
+                  className="nav-button"
+                  size="lg"
+                  isActive={view === key}
+                  aria-current={view === key ? 'page' : undefined}
+                  onClick={() => go(key)}
+                >
+                  <Icon />
+                  <span>{label}</span>
+                  {key === 'reports' && pending.length > 0 ? (
+                    <span className="nav-count">{pending.length}</span>
+                  ) : null}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarContent>
+        <SidebarFooter>
+          <div className="sidebar-note">
+            <ShieldCheck size={18} />
+            <div>
+              Private prototype
+              <small>
+                {data?.dataMode === 'actual'
+                  ? 'GMZ records · saved workspace'
+                  : 'Sample records · saved workspace'}
+              </small>
+            </div>
+          </div>
+          <div className="account">
+            <span className="avatar">GM</span>
+            <div>
+              {displayName.includes('@') ? 'GMZ team' : displayName}
+              <small>Owner workspace</small>
+            </div>
+          </div>
+        </SidebarFooter>
+      </Sidebar>
+      <SidebarInset className="main-shell">
+        <header className="topbar">
+          <div className="topbar-left">
+            <SidebarTrigger />
+            <span>
+              GMZ <span className="muted">/ Operations /</span>{' '}
+              {nav.find((n) => n[0] === view)?.[1]}
+            </span>
+          </div>
+          <div className="topbar-right">
+            <span className="prototype-tag">PROTOTYPE</span>
+            <button className="text-button" onClick={load} disabled={busy}>
+              Refresh
+            </button>
+          </div>
+        </header>
+        <main id="main" className="workspace">
+          <div className="prototype-note">
+            <span className="accent-square" />
+            {data?.dataMode === 'actual'
+              ? 'GMZ client and property records. Check portal-access status before inviting clients.'
+              : 'Sample data only. Portal publishing stays in this preview; no client messages are sent.'}
+          </div>
+          {!data ? (
+            <div className="loading">
+              {error ? (
+                <>
+                  <h1>Workspace unavailable</h1>
+                  <p role="alert">{error}</p>
+                  <button className="btn" onClick={load}>
+                    Try again
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Loader2 className="spin" />
+                  <h1>Opening your workspace</h1>
+                </>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="page-heading">
+                <div>
+                  <p className="eyebrow">
+                    {view === 'overview' ? 'THE OFFICE, AT A GLANCE' : 'GMZ OPERATIONS'}
+                  </p>
+                  <h1>
+                    {view === 'overview'
+                      ? 'Good work starts here.'
+                      : nav.find((n) => n[0] === view)?.[1]}
+                  </h1>
+                  <p className="muted">
+                    {
+                      {
+                        overview: 'Your properties, crews, and next steps in one place.',
+                        'portal-inbox': 'Requests and approvals from your client portal.',
+                        announcements:
+                          'Draft, preview, and publish client announcements and promotions.',
+                        timesheets: 'Staff hours, review status, and daily route context.',
+                        clients:
+                          'One record for every relationship. A clear plan for every property.',
+                        schedule: 'Plan the week. Keep the crew moving.',
+                        orders: 'The work to do, and the record of what was done.',
+                        projects: 'Keep each project moving from concept to completion.',
+                        reports: 'Review the details your clients will see.',
+                        costs: 'Compare the plan with the time and costs recorded.',
+                        inquiries: 'From the first conversation to approved scope.',
+                        field: 'Property access and practical day planning.',
+                        fleet: 'Keep your equipment ready for the next visit.',
+                        irrigation: 'Know every zone. Follow through on every repair.',
+                        vendors: 'Supplier prices connected to your job costs.',
+                      }[view]
+                    }
+                  </p>
+                </div>
+                <div className="heading-actions">
+                  {view === 'clients' ? (
+                    <>
+                      {btn('Add client', newClient, true)}
+                      {btn('Add property', () => newProperty(accountId || undefined))}
+                    </>
+                  ) : view === 'projects' ? (
+                    btn('New project', newProject)
+                  ) : ['overview', 'schedule', 'orders'].includes(view) ? (
+                    btn('Schedule visit', () => schedule())
+                  ) : null}
+                </div>
+              </div>
+              {view === 'timesheets' && <Timesheets data={data} save={save} busy={busy} />}
+              {view === 'portal-inbox' && (
+                <PortalInbox onAccount={openAccount} onRefresh={load} onProposal={openProposal} />
+              )}
+              {view === 'announcements' && <Announcements />}
+              {view === 'clients' && (
+                <nav className="client-view-switch" aria-label="Clients and properties views">
+                  <button
+                    className={'btn ' + (clientMode === 'clients' ? '' : 'secondary')}
+                    aria-pressed={clientMode === 'clients'}
+                    onClick={() => openAccount('')}
+                  >
+                    Clients
+                  </button>
+                  <button
+                    className={'btn ' + (clientMode === 'properties' ? '' : 'secondary')}
+                    aria-pressed={clientMode === 'properties'}
+                    onClick={showProperties}
+                  >
+                    Properties
+                  </button>
+                </nav>
+              )}
+              {view === 'clients' && clientMode === 'clients' && (
+                <>
+                  <ClientAccounts
+                    data={data}
+                    selected={accountId}
+                    onSelect={openAccount}
+                    onEdit={(c) => edit('client', c)}
+                    onProperty={(p) => edit('property', p)}
+                    onVisit={(v) => edit('visit', v)}
+                    onProject={(p) => edit('project', p)}
+                    onAddProperty={newProperty}
+                    onRefresh={load}
+                    onProposal={openProposal}
+                  />
+                </>
+              )}
+              {['inquiries', 'field', 'fleet', 'vendors'].includes(view) && (
+                <Expansion key={view} view={view} data={data} save={save} busy={busy} />
+              )}
+              {view === 'overview' && (
+                <>
+                  <HubWorkflows view={view} data={data} busy={busy} save={save} />
+                  <div className="stats">
+                    <div>
+                      <span>Active properties</span>
+                      <strong>{data.properties.length.toString().padStart(2, '0')}</strong>
+                      <small>{data.clients.length} client relationships</small>
+                    </div>
+                    <div>
+                      <span>Visits to complete</span>
+                      <strong>{openOrders.length.toString().padStart(2, '0')}</strong>
+                      <small>
+                        {openOrders.filter((v) => v.date === today()).length} scheduled for today
+                      </small>
+                    </div>
+                    <div>
+                      <span>Reports to review</span>
+                      <strong className="amber-text">
+                        {pending.length.toString().padStart(2, '0')}
+                      </strong>
+                      <small>Ready for the office</small>
+                    </div>
+                    <div>
+                      <span>Monthly service value</span>
+                      <strong>
+                        {cash(data.properties.reduce((a, p) => a + (p.monthly ?? 0), 0))}
+                      </strong>
+                      <small>
+                        {data.dataMode === 'actual'
+                          ? 'Recorded monthly agreements'
+                          : 'Sample service agreements'}
+                      </small>
+                    </div>
+                  </div>
+                  <div className="overview-grid">
+                    <section className="panel">
+                      <div className="panel-heading">
+                        <div>
+                          <p className="eyebrow">ON THE SCHEDULE</p>
+                          <h2>Next visits</h2>
+                        </div>
+                        <button className="text-button" onClick={() => go('schedule')}>
+                          View schedule <ArrowRight size={16} />
+                        </button>
+                      </div>
+                      {openOrders.length ? (
+                        openOrders
+                          .slice()
+                          .sort(
+                            (a, b) =>
+                              a.date.localeCompare(b.date) || a.start.localeCompare(b.start),
+                          )
+                          .slice(0, 5)
+                          .map((v) => (
+                            <OrderRow
+                              key={v.id}
+                              v={v}
+                              property={prop(v.propertyId)}
+                              onEdit={(v) => edit('visit', v)}
+                            />
+                          ))
+                      ) : (
+                        <Empty>No open visits. Schedule your next service.</Empty>
+                      )}
+                    </section>
+                    <section className="attention-panel">
+                      <p className="eyebrow">KEEP THINGS MOVING</p>
+                      <h2>Needs your attention</h2>
+                      {pending.map((v) => (
+                        <button
+                          className="attention-item"
+                          key={v.id}
+                          onClick={() => edit('visit', v)}
+                        >
+                          <span className="attention-icon">
+                            <Send size={19} />
+                          </span>
+                          <span>
+                            <strong>Service report ready</strong>
+                            <small>{prop(v.propertyId).name}</small>
+                          </span>
+                          <ArrowUpRight size={17} />
+                        </button>
+                      ))}
+                      {data.projects
+                        .filter((p) => p.stage !== 'Complete')
+                        .slice(0, 2)
+                        .map((p) => (
+                          <button
+                            className="attention-item"
+                            key={p.id}
+                            onClick={() => edit('project', p)}
+                          >
+                            <span className="attention-icon">
+                              <FolderKanban size={19} />
+                            </span>
+                            <span>
+                              <strong>{p.title}</strong>
+                              <small>
+                                {p.stage} · Due {dayLabel(p.due)}
+                              </small>
+                            </span>
+                            <ArrowUpRight size={17} />
+                          </button>
+                        ))}
+                      {!pending.length &&
+                        !data.projects.filter((p) => p.stage !== 'Complete').length && (
+                          <p>You’re all caught up.</p>
+                        )}
+                    </section>
+                  </div>
+                  <div className="section-title">
+                    <h2>Project in Progress</h2>
+                    <button className="text-button" onClick={() => go('projects')}>
+                      All projects <ArrowRight size={16} />
+                    </button>
+                  </div>
+                  <div className="project-grid">
+                    {data.projects
+                      .filter((p) => p.stage !== 'Complete')
+                      .slice(0, 3)
+                      .map((p) => (
+                        <button
+                          className="project-card"
+                          key={p.id}
+                          onClick={() => edit('project', p)}
+                        >
+                          <div className="flex-between">
+                            <Chip>{p.stage}</Chip>
+                            <ArrowUpRight size={19} />
+                          </div>
+                          <h3>{p.title}</h3>
+                          <p>
+                            {prop(p.propertyId).city} · {p.owner}
+                          </p>
+                          <div className="stage-track">
+                            {stages.map((s, i) => (
+                              <span
+                                key={s}
+                                className={i <= stages.indexOf(p.stage) ? 'filled' : ''}
+                              />
+                            ))}
+                          </div>
+                          <div className="flex-between">
+                            <small>
+                              {p.tasks.filter((t) => t.done).length}/{p.tasks.length} tasks complete
+                            </small>
+                            <small>Due {dayLabel(p.due)}</small>
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                </>
+              )}
+              {view === 'clients' && clientMode === 'properties' && (
+                <>
+                  <div className="toolbar">
+                    <div className="search">
+                      <Search size={18} />
+                      <input
+                        aria-label="Search properties"
+                        placeholder="Search clients, properties, or cities"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                      />
+                    </div>
+                    <span className="muted">
+                      {data.properties.length} properties · {data.clients.length} clients
+                    </span>
+                  </div>
+                  <div className="panel">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Property / client</TableHead>
+                          <TableHead>Service</TableHead>
+                          <TableHead>Crew & truck</TableHead>
+                          <TableHead>Visit budget</TableHead>
+                          <TableHead>Monthly</TableHead>
+                          <TableHead>Details</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {data.properties
+                          .filter((p) =>
+                            (p.name + ' ' + p.city + ' ' + client(p.clientId).name)
+                              .toLowerCase()
+                              .includes(query.toLowerCase()),
+                          )
+                          .map((p) => (
+                            <TableRow key={p.id}>
+                              <TableCell>
+                                <button className="cell-link" onClick={() => edit('property', p)}>
+                                  {p.name}
+                                </button>
+                                {p.internal && <Chip>Internal</Chip>}
+                                <small className="block muted">
+                                  {p.city} · {client(p.clientId).contact}
+                                </small>
+                                <button
+                                  className="text-button"
+                                  onClick={() => openAccount(p.clientId)}
+                                >
+                                  Account: {client(p.clientId).name}
+                                </button>
+                              </TableCell>
+                              <TableCell>{p.cadence}</TableCell>
+                              <TableCell>
+                                {p.crew || 'Unassigned'}
+                                <small className="block muted">{p.truck}</small>
+                              </TableCell>
+                              <TableCell>
+                                {p.budgetMinutes === null
+                                  ? 'Not recorded'
+                                  : p.budgetMinutes + ' min'}
+                              </TableCell>
+                              <TableCell>
+                                {p.monthly === null
+                                  ? p.internal
+                                    ? 'Internal'
+                                    : 'Not recorded'
+                                  : cash(p.monthly)}
+                              </TableCell>
+                              <TableCell>
+                                <button
+                                  aria-label={'Property details: ' + p.name}
+                                  title={'Property details: ' + p.name}
+                                  className="text-button"
+                                  onClick={() => edit('property', p)}
+                                >
+                                  Property details <ArrowUpRight size={18} />
+                                </button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
+              )}
+              {view === 'schedule' && (
+                <ScheduleRoutesProvider>
+                  <ScheduleRoutePlan properties={data.properties} />
+                  <div className="toolbar">
+                    <div className="date-controls">
+                      <button
+                        aria-label="Previous week"
+                        className="icon-button"
+                        onClick={() => setDay(addDays(day, -7))}
+                      >
+                        <ChevronLeft size={18} />
+                      </button>
+                      <input
+                        aria-label="Week starting"
+                        type="date"
+                        value={day}
+                        onChange={(e) => e.target.value && setDay(e.target.value)}
+                      />
+                      <button
+                        aria-label="Next week"
+                        className="icon-button"
+                        onClick={() => setDay(addDays(day, 7))}
+                      >
+                        <ChevronRight size={18} />
+                      </button>
+                      <button className="text-button" onClick={() => setDay(today())}>
+                        Today
+                      </button>
+                    </div>
+                    <Pick
+                      label="Filter by crew"
+                      value={crew}
+                      onChange={setCrew}
+                      options={[
+                        'All crews',
+                        ...new Set(
+                          [
+                            ...data.visits.map((v) => v.crew),
+                            ...data.properties.map((p) => p.crew),
+                          ].filter(Boolean),
+                        ),
+                      ]}
+                    />
+                  </div>
+                  <DispatchExport data={data} day={day} crew={crew} />
+                  <div className="week-grid">
+                    {week.map((d) => (
+                      <section
+                        className={'day-column ' + (d === today() ? 'is-today' : '')}
+                        key={d}
+                      >
+                        <div className="day-heading">
+                          <span>
+                            {new Date(d + 'T12:00:00').toLocaleDateString('en-US', {
+                              weekday: 'short',
+                            })}
+                          </span>
+                          <strong>{Number(d.slice(-2))}</strong>
+                          <CalendarStopCount data={data} date={d} crew={crew} />
+                        </div>
+                        <div className="day-visits">
+                          <CalendarRouteDay data={data} date={d} crew={crew} />
+                          {filtered
+                            .filter((v) => v.date === d)
+                            .map((v) => (
+                              <button
+                                className={'visit-card ' + (v.status === 'Completed' ? 'done' : '')}
+                                key={v.id}
+                                onClick={() => edit('visit', v)}
+                              >
+                                <small>
+                                  {v.start} · {v.budgetMinutes} min
+                                </small>
+                                <strong>{prop(v.propertyId).name}</strong>
+                                <small>{v.crew}</small>
+                                <Chip>{v.status}</Chip>
+                              </button>
+                            ))}
+                          <button
+                            className="add-day"
+                            onClick={() => {
+                              schedule();
+                              setDraft((x: any) => ({ ...x, date: d }));
+                            }}
+                          >
+                            <Plus size={16} /> Add visit
+                          </button>
+                        </div>
+                      </section>
+                    ))}
+                  </div>
+                  <div className="footnote">
+                    <Clock size={16} /> Budgets are time on site. Labor hours also account for the
+                    number of crew members.
+                  </div>
+                </ScheduleRoutesProvider>
+              )}
+              {view === 'orders' && (
+                <>
+                  <div className="toolbar">
+                    <div className="search">
+                      <Search size={18} />
+                      <input
+                        aria-label="Search work orders"
+                        placeholder="Search property, status, or date"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                      />
+                    </div>
+                    <Pick
+                      label="Filter crew"
+                      value={crew}
+                      onChange={setCrew}
+                      options={['All crews', ...new Set(data.visits.map((v) => v.crew))]}
+                    />
+                  </div>
+                  <div className="panel">
+                    {filtered.length ? (
+                      filtered.map((v) => (
+                        <OrderRow
+                          key={v.id}
+                          v={v}
+                          property={prop(v.propertyId)}
+                          onEdit={(v) => edit('visit', v)}
+                        />
+                      ))
+                    ) : (
+                      <Empty>No work orders match this search.</Empty>
+                    )}
+                  </div>
+                </>
+              )}
+              {view === 'projects' && (
+                <div className="kanban">
+                  {stages.map((stage) => (
+                    <section className="kanban-column" key={stage}>
+                      <div className="kanban-title">
+                        <h2>{stage}</h2>
+                        <span>{data.projects.filter((p) => p.stage === stage).length}</span>
+                      </div>
+                      {data.projects
+                        .filter((p) => p.stage === stage)
+                        .map((p) => (
+                          <button
+                            className="kanban-card"
+                            key={p.id}
+                            onClick={() => edit('project', p)}
+                          >
+                            <p className="eyebrow">{prop(p.propertyId).city}</p>
+                            <h3>{p.title}</h3>
+                            <p>{p.owner}</p>
+                            <div className="task-meter">
+                              <span
+                                style={{
+                                  width:
+                                    (p.tasks.length
+                                      ? (p.tasks.filter((t) => t.done).length / p.tasks.length) *
+                                        100
+                                      : 0) + '%',
+                                }}
+                              />
+                            </div>
+                            <small>
+                              {p.tasks.filter((t) => t.done).length}/{p.tasks.length} tasks
+                            </small>
+                            <div className="kanban-bottom">
+                              <span>Due {dayLabel(p.due)}</span>
+                              <ArrowUpRight size={16} />
+                            </div>
+                          </button>
+                        ))}
+                    </section>
+                  ))}
+                </div>
+              )}
+              {view === 'reports' && (
+                <>
+                  <div className="info-line">
+                    <ShieldCheck size={19} />
+                    <span>
+                      Only the summary, completed tasks, and selected photos appear in the client
+                      preview. Editing a report returns it to Draft; the previous published copy
+                      stays visible until you publish the revision.
+                    </span>
+                  </div>
+                  <div className="reports-grid">
+                    {data.visits
+                      .filter((v) => v.status === 'Completed')
+                      .map((v) => (
+                        <section className="report-card" key={v.id}>
+                          <div className="flex-between">
+                            <span className="eyebrow">{dayLabel(v.date)} · SERVICE REPORT</span>
+                            <Chip>{v.reportStatus}</Chip>
+                          </div>
+                          <h2>{prop(v.propertyId).name}</h2>
+                          <p>{v.report || 'Add a client summary to this work order.'}</p>
+                          <div className="report-details">
+                            <span>{v.checklist.filter((t) => t.done).length} tasks completed</span>
+                            <span>{v.photos.filter((p) => p.visible).length} selected photos</span>
+                          </div>
+                          <div className="report-actions">
+                            <button className="btn secondary" onClick={() => preview(v)}>
+                              Client preview <ArrowUpRight size={16} />
+                            </button>
+                            <button className="text-button" onClick={() => edit('visit', v)}>
+                              Edit
+                            </button>
+                            {['Draft', 'Published to preview'].includes(v.reportStatus) ? (
+                              <button
+                                disabled={busy}
+                                className="btn"
+                                onClick={() =>
+                                  save({ type: 'report', id: v.id, status: 'Reviewed' }, false)
+                                }
+                              >
+                                <Check size={16} /> Mark reviewed
+                              </button>
+                            ) : v.reportStatus === 'Reviewed' ? (
+                              <button
+                                disabled={busy}
+                                className="btn"
+                                onClick={() =>
+                                  connected
+                                    ? publish(v)
+                                    : save(
+                                        {
+                                          type: 'report',
+                                          id: v.id,
+                                          status: 'Published to preview',
+                                        },
+                                        false,
+                                      )
+                                }
+                              >
+                                <Send size={16} />{' '}
+                                {connected ? 'Publish to client portal' : 'Publish to preview'}
+                              </button>
+                            ) : (
+                              <span className="muted">
+                                {v.reportStatus === 'Published to portal'
+                                  ? 'Published to client portal'
+                                  : 'Saved in preview'}
+                              </span>
+                            )}
+                          </div>
+                        </section>
+                      ))}
+                  </div>
+                  {!data.visits.some((v) => v.status === 'Completed') && (
+                    <Empty>Complete a work order to prepare your first service report.</Empty>
+                  )}
+                </>
+              )}
+              {view === 'costs' && (
+                <>
+                  <div className="toolbar">
+                    <div className="date-controls">
+                      <label htmlFor="cost-month">Service month</label>
+                      <input
+                        id="cost-month"
+                        type="month"
+                        value={month}
+                        onChange={(e) => setMonth(e.target.value)}
+                      />
+                    </div>
+                    <span className="muted">USD · recorded costs only</span>
+                  </div>
+                  <div className="panel">
+                    <div className="panel-heading">
+                      <h2>Maintenance performance</h2>
+                      <span className="muted">Monthly agreement vs. costs to date</span>
+                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Property</TableHead>
+                          <TableHead>Completed visits</TableHead>
+                          <TableHead>Labor hours</TableHead>
+                          <TableHead>Visit budget</TableHead>
+                          <TableHead>Recorded cost</TableHead>
+                          <TableHead>Monthly agreement</TableHead>
+                          <TableHead>Cost coverage</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {data.properties.map((p) => {
+                          const vs = data.visits.filter(
+                            (v) =>
+                              v.propertyId === p.id &&
+                              v.date.startsWith(month) &&
+                              v.status === 'Completed',
+                          );
+                          const known = vs.filter((v) => visitCost(v) !== null);
+                          const cost = known.reduce((n, v) => n + visitCost(v)!, 0);
+                          const hours = vs.reduce(
+                            (n, v) => n + ((v.actualMinutes ?? 0) * v.crewCount) / 60,
+                            0,
+                          );
+                          const over = vs.some((v) => (v.actualMinutes ?? 0) > v.budgetMinutes);
+                          return (
+                            <TableRow key={p.id}>
+                              <TableCell>
+                                <strong>{p.name}</strong>
+                              </TableCell>
+                              <TableCell>{vs.length}</TableCell>
+                              <TableCell>{hours.toFixed(1)} h</TableCell>
+                              <TableCell>
+                                {vs.length ? (
+                                  <Chip>{over ? 'Over budget' : 'Within budget'}</Chip>
+                                ) : (
+                                  'No visits'
+                                )}
+                              </TableCell>
+                              <TableCell>{known.length ? cash(cost) : 'Not recorded'}</TableCell>
+                              <TableCell>
+                                {p.monthly === null
+                                  ? p.internal
+                                    ? 'Internal'
+                                    : 'Not recorded'
+                                  : cash(p.monthly)}
+                              </TableCell>
+                              <TableCell>
+                                {vs.length
+                                  ? `${known.length}/${vs.length} visits costed`
+                                  : 'No completed visits'}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  <p className="footnote">
+                    Labor cost = time on site × crew members × hourly cost per person. Monthly fees
+                    are contract values, not verified revenue. Travel and overhead are excluded;
+                    this is not a net-profit statement.
+                  </p>
+                  <div className="panel">
+                    <div className="panel-heading">
+                      <h2>Project cost tracking</h2>
+                    </div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Project</TableHead>
+                          <TableHead>Budget</TableHead>
+                          <TableHead>Labor</TableHead>
+                          <TableHead>Materials</TableHead>
+                          <TableHead>Remaining budget</TableHead>
+                          <TableHead>Update</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {data.projects.map((p) => (
+                          <TableRow key={p.id}>
+                            <TableCell>
+                              <strong>{p.title}</strong>
+                            </TableCell>
+                            <TableCell>{cash(p.budget)}</TableCell>
+                            <TableCell>
+                              {p.laborCost === null ? 'Not recorded' : cash(p.laborCost)}
+                            </TableCell>
+                            <TableCell>
+                              {p.materialCost === null ? 'Not recorded' : cash(p.materialCost)}
+                            </TableCell>
+                            <TableCell>
+                              {p.laborCost === null || p.materialCost === null ? (
+                                <Chip>Costs incomplete</Chip>
+                              ) : (
+                                cash(p.budget - p.laborCost - p.materialCost)
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <button className="text-button" onClick={() => edit('project', p)}>
+                                Edit costs
+                              </button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
+              )}
+              <footer className="workspace-footer">
+                <span>
+                  GMZ LANDSCAPING <span className="amber-text">/</span> OPERATIONS
+                </span>
+                <span>
+                  Private prototype ·{' '}
+                  {data.activity.length
+                    ? `Last saved ${new Date(data.activity[0].at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
+                    : data.dataMode === 'actual'
+                      ? 'GMZ records'
+                      : 'Sample workspace'}
+                </span>
+              </footer>
+            </>
+          )}
+        </main>
+      </SidebarInset>
+      <Dialog
+        open={modal !== null}
+        onOpenChange={(open) => {
+          if (!open && !busy && !uploading) setModal(null);
+        }}
+      >
+        <DialogContent className={'editor ' + (modal === 'visit' ? 'wide' : '')}>
+          <DialogHeader>
+            <DialogTitle>
+              {modal === 'property'
+                ? draft.name
+                  ? 'Property: ' + draft.name
+                  : 'Add property'
+                : modal === 'client'
+                  ? draft.name
+                    ? 'Client account: ' + draft.name
+                    : 'Add client account'
+                  : modal === 'schedule'
+                    ? 'Schedule service'
+                    : modal === 'visit'
+                      ? 'Crew work order'
+                      : modal === 'project'
+                        ? 'Project details'
+                        : 'Client report preview'}
+            </DialogTitle>
+            <DialogDescription>
+              {modal === 'preview'
+                ? 'Private preview only. Nothing is sent to the client.'
+                : modal === 'visit'
+                  ? 'Record the work once. Keep internal notes separate from the client summary.'
+                  : connected
+                    ? 'Changes save to shared GMZ records. Reports require an explicit publish action.'
+                    : 'Changes are saved to your private prototype workspace.'}
+            </DialogDescription>
+          </DialogHeader>
+          {modal === 'preview' ? (
+            report ? (
+              <div className="client-preview">
+                <div className="preview-brand">
+                  <OfficialLogo />
+                </div>
+                <p className="eyebrow">YOUR GARDEN · {dayLabel(report.date)}</p>
+                <h2>{report.property}</h2>
+                <p className="preview-summary">{report.summary}</p>
+                <h3>During our visit</h3>
+                {report.tasks.map((t: string, i: number) => (
+                  <div className="preview-task" key={i}>
+                    <Check size={18} />
+                    {t}
+                  </div>
+                ))}
+                <div className="photo-grid">
+                  {report.photos.map((p: any) => (
+                    <figure key={p.id}>
+                      <img
+                        src={'/api/admin/photos/' + p.id}
+                        alt={p.caption || p.kind + ' service photo'}
+                      />
+                      <figcaption>
+                        {p.kind}
+                        {p.caption ? ' · ' + p.caption : ''}
+                      </figcaption>
+                    </figure>
+                  ))}
+                </div>
+                <p className="footnote">Report status: {report.status}</p>
+              </div>
+            ) : (
+              <Loader2 className="spin" />
+            )
+          ) : (
+            <form onSubmit={submit} className="editor-form">
+              {modal === 'client' && (
+                <>
+                  <Field label="Client / account name">
+                    <input
+                      required
+                      value={draft.name}
+                      onChange={(e) => set('name', e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Contact name">
+                    <input value={draft.contact} onChange={(e) => set('contact', e.target.value)} />
+                  </Field>
+                  <div className="form-grid">
+                    <Field label="Email">
+                      <input
+                        type="email"
+                        value={draft.email}
+                        onChange={(e) => set('email', e.target.value)}
+                      />
+                    </Field>
+                    <Field label="Phone">
+                      <input
+                        type="tel"
+                        value={draft.phone}
+                        onChange={(e) => set('phone', e.target.value)}
+                      />
+                    </Field>
+                  </div>
+                  <div className="form-grid">
+                    <Field label="Account owner">
+                      <input
+                        value={draft.accountOwner ?? ''}
+                        onChange={(e) => set('accountOwner', e.target.value)}
+                      />
+                    </Field>
+                    <Field label="Preferred contact method">
+                      <input
+                        value={draft.preferredContact ?? ''}
+                        onChange={(e) => set('preferredContact', e.target.value)}
+                      />
+                    </Field>
+                    <Field label="Billing contact">
+                      <input
+                        value={draft.billingContact ?? ''}
+                        onChange={(e) => set('billingContact', e.target.value)}
+                      />
+                    </Field>
+                    <Field label="Billing email">
+                      <input
+                        type="email"
+                        value={draft.billingEmail ?? ''}
+                        onChange={(e) => set('billingEmail', e.target.value)}
+                      />
+                    </Field>
+                  </div>
+                  <Field label="Billing address">
+                    <textarea
+                      value={draft.billingAddress ?? ''}
+                      onChange={(e) => set('billingAddress', e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Account notes · internal">
+                    <textarea
+                      rows={4}
+                      value={draft.notes ?? ''}
+                      onChange={(e) => set('notes', e.target.value)}
+                    />
+                  </Field>
+                </>
+              )}
+              {modal === 'property' && (
+                <>
+                  <Field label="Client">
+                    <Pick
+                      label="Client"
+                      value={draft.clientId}
+                      onChange={(v) => set('clientId', v)}
+                      options={data!.clients.map((c) => ({ value: c.id, label: c.name }))}
+                    />
+                  </Field>
+                  <Field label="Property name">
+                    <input
+                      required
+                      value={draft.name}
+                      onChange={(e) => set('name', e.target.value)}
+                    />
+                  </Field>
+                  <div className="form-grid">
+                    <Field label="Address">
+                      <input
+                        value={draft.address}
+                        onChange={(e) => set('address', e.target.value)}
+                      />
+                    </Field>
+                    <Field label="City">
+                      <input value={draft.city} onChange={(e) => set('city', e.target.value)} />
+                    </Field>
+                    <Field label="Service frequency">
+                      <Pick
+                        label="Service frequency"
+                        value={draft.cadence}
+                        onChange={(v) => set('cadence', v)}
+                        options={['Weekly', 'Every two weeks', 'Monthly', 'On request', 'Not set']}
+                      />
+                    </Field>
+                    <NumberField
+                      label="Monthly agreement ($)"
+                      nullable
+                      value={draft.monthly}
+                      onChange={(v) => set('monthly', v)}
+                    />
+                    <NumberField
+                      label="Visit budget (minutes on site)"
+                      nullable
+                      value={draft.budgetMinutes}
+                      min={1}
+                      max={1440}
+                      step="1"
+                      onChange={(v) => set('budgetMinutes', v)}
+                    />
+                    <Field label="Crew">
+                      <input value={draft.crew} onChange={(e) => set('crew', e.target.value)} />
+                    </Field>
+                    <Field label="Truck">
+                      <input value={draft.truck} onChange={(e) => set('truck', e.target.value)} />
+                    </Field>
+                  </div>
+                  <Field label="Access instructions · internal">
+                    <textarea
+                      value={draft.access}
+                      onChange={(e) => set('access', e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Service scope / property notes">
+                    <textarea value={draft.notes} onChange={(e) => set('notes', e.target.value)} />
+                  </Field>
+                </>
+              )}
+              {modal === 'schedule' && (
+                <>
+                  <Field label="Work checklist">
+                    <Pick
+                      label="Work checklist"
+                      value={draft.template || 'General service'}
+                      onChange={(v) => set('template', v)}
+                      options={Object.keys(serviceTemplates)}
+                    />
+                  </Field>
+                  <Field label="Property">
+                    <Pick
+                      label="Property"
+                      value={draft.propertyId}
+                      onChange={(v) => set('propertyId', v)}
+                      options={propertyOptions}
+                    />
+                  </Field>
+                  <div className="form-grid">
+                    <Field label="First visit">
+                      <input
+                        type="date"
+                        required
+                        value={draft.date}
+                        onChange={(e) => set('date', e.target.value)}
+                      />
+                    </Field>
+                    <Field label="Start time · Pacific">
+                      <input
+                        type="time"
+                        required
+                        value={draft.start}
+                        onChange={(e) => set('start', e.target.value)}
+                      />
+                    </Field>
+                    <NumberField
+                      label="Number of visits"
+                      min={1}
+                      max={12}
+                      step="1"
+                      value={draft.count}
+                      onChange={(v) => set('count', v)}
+                    />
+                    <NumberField
+                      label="Days between visits"
+                      min={1}
+                      max={31}
+                      step="1"
+                      value={draft.interval}
+                      onChange={(v) => set('interval', v)}
+                    />
+                  </div>
+                  <Field label="Skip dates (one YYYY-MM-DD per line)">
+                    <textarea
+                      placeholder="2026-12-25"
+                      value={(draft.exceptions || []).join('\n')}
+                      onChange={(e) => set('exceptions', e.target.value.split('\n'))}
+                    />
+                  </Field>
+                  <div className="info-line">
+                    <CalendarDays size={20} />
+                    <span>
+                      Creates up to {draft.count} work order{draft.count === 1 ? '' : 's'} with the
+                      property’s crew, truck, and service instructions, excluding skipped dates.
+                      Each date can be changed afterward.
+                    </span>
+                  </div>
+                </>
+              )}
+              {modal === 'visit' && (
+                <>
+                  {data!.serviceRequests
+                    .filter((r) => r.visitId === draft.id)
+                    .map((r) => (
+                      <div className="info-line" key={r.id}>
+                        <strong>Client request {r.reference}</strong>
+                        <p className="account-notes">{r.note}</p>
+                        <a
+                          className="text-button"
+                          href={'#portal-inbox/' + encodeURIComponent(r.id)}
+                          onClick={() => setModal(null)}
+                        >
+                          Open source request →
+                        </a>
+                      </div>
+                    ))}
+                  <div className="work-order-heading">
+                    <div>
+                      <h2>{prop(draft.propertyId).name}</h2>
+                      <p>
+                        <MapPin size={15} />
+                        {prop(draft.propertyId).city} · {prop(draft.propertyId).address}
+                      </p>
+                    </div>
+                    <Chip>{draft.status}</Chip>
+                  </div>
+                  <div className="form-grid">
+                    <Field label="Date">
+                      <input
+                        required
+                        type="date"
+                        value={draft.date}
+                        onChange={(e) => set('date', e.target.value)}
+                      />
+                    </Field>
+                    <Field label="Start time · Pacific">
+                      <input
+                        required
+                        type="time"
+                        value={draft.start}
+                        onChange={(e) => set('start', e.target.value)}
+                      />
+                    </Field>
+                    <Field label="Crew">
+                      <input
+                        required
+                        value={draft.crew}
+                        onChange={(e) => set('crew', e.target.value)}
+                      />
+                    </Field>
+                    <Field label="Truck">
+                      <input
+                        required
+                        value={draft.truck}
+                        onChange={(e) => set('truck', e.target.value)}
+                      />
+                    </Field>
+                    <Field label="Status">
+                      <Pick
+                        label="Work order status"
+                        value={draft.status}
+                        onChange={(v) => set('status', v)}
+                        options={['Scheduled', 'In progress', 'Completed', 'Skipped']}
+                      />
+                    </Field>
+                    <NumberField
+                      label="Budget (minutes on site)"
+                      min={1}
+                      max={1440}
+                      step="1"
+                      value={draft.budgetMinutes}
+                      onChange={(v) => set('budgetMinutes', v)}
+                    />
+                  </div>
+                  <div className="access-note">
+                    <strong>Property access</strong>
+                    <p>{prop(draft.propertyId).access || 'No access instructions recorded.'}</p>
+                  </div>
+                  <Field label="Work instructions">
+                    <textarea
+                      value={draft.instructions}
+                      onChange={(e) => set('instructions', e.target.value)}
+                    />
+                  </Field>
+                  <h3>Service checklist</h3>
+                  <div className="exp-actions">
+                    {Object.entries(serviceTemplates).map(([name, labels]) => (
+                      <button
+                        type="button"
+                        className="text-button"
+                        key={name}
+                        onClick={() =>
+                          set('checklist', [
+                            ...draft.checklist,
+                            ...labels
+                              .filter(
+                                (label) => !draft.checklist.some((t: any) => t.label === label),
+                              )
+                              .map((label) => ({ id: uuid(), label, done: false })),
+                          ])
+                        }
+                      >
+                        Add {name.toLowerCase()} tasks
+                      </button>
+                    ))}
+                  </div>
+                  <div className="project-tasks">
+                    {draft.checklist.map((t: any, i: number) => (
+                      <div key={t.id}>
+                        <Checkbox
+                          aria-label={'Complete ' + t.label}
+                          checked={t.done}
+                          onCheckedChange={(v) =>
+                            set(
+                              'checklist',
+                              draft.checklist.map((x: any, j: number) =>
+                                i === j ? { ...x, done: v === true } : x,
+                              ),
+                            )
+                          }
+                        />
+                        <input
+                          aria-label="Service task"
+                          required
+                          value={t.label}
+                          onChange={(e) =>
+                            set(
+                              'checklist',
+                              draft.checklist.map((x: any, j: number) =>
+                                i === j ? { ...x, label: e.target.value } : x,
+                              ),
+                            )
+                          }
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() =>
+                      set('checklist', [...draft.checklist, { id: uuid(), label: '', done: false }])
+                    }
+                  >
+                    <Plus size={15} /> Add task
+                  </button>
+                  <div className="form-grid">
+                    <NumberField
+                      label="Actual minutes on site"
+                      min={0}
+                      max={1440}
+                      step="1"
+                      nullable
+                      value={draft.actualMinutes}
+                      onChange={(v) => set('actualMinutes', v)}
+                    />
+                    <NumberField
+                      label="Crew members"
+                      min={1}
+                      max={30}
+                      step="1"
+                      value={draft.crewCount}
+                      onChange={(v) => set('crewCount', v)}
+                    />
+                    <NumberField
+                      label="Hourly cost per person ($) · internal"
+                      nullable
+                      value={draft.hourlyCost}
+                      onChange={(v) => set('hourlyCost', v)}
+                    />
+                    <NumberField
+                      label="Materials cost ($) · internal"
+                      nullable
+                      value={draft.materials}
+                      onChange={(v) => set('materials', v)}
+                    />
+                  </div>
+                  <Field label="Office notes · internal">
+                    <textarea
+                      value={draft.internalNotes}
+                      onChange={(e) => set('internalNotes', e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Client summary">
+                    <textarea
+                      rows={4}
+                      value={draft.report}
+                      placeholder="Tell the client what was done and what needs attention."
+                      onChange={(e) => set('report', e.target.value)}
+                    />
+                  </Field>
+                  <div className="flex-between">
+                    <h3>Visit photos</h3>
+                    <Pick
+                      label="Photo type"
+                      value={photoKind}
+                      onChange={setPhotoKind}
+                      options={['Before', 'After']}
+                    />
+                  </div>
+                  <div className="photo-grid">
+                    {draft.photos.map((p: any, i: number) => (
+                      <div key={p.id} className="photo-card">
+                        <img
+                          src={'/api/admin/photos/' + p.id}
+                          alt={p.caption || p.kind + ' service photo'}
+                        />
+                        <Field label={p.kind + ' photo caption'}>
+                          <input
+                            value={p.caption}
+                            onChange={(e) =>
+                              set(
+                                'photos',
+                                draft.photos.map((x: any, j: number) =>
+                                  i === j ? { ...x, caption: e.target.value } : x,
+                                ),
+                              )
+                            }
+                          />
+                        </Field>
+                        <label className="photo-visible">
+                          <Checkbox
+                            checked={p.visible}
+                            onCheckedChange={(v) =>
+                              set(
+                                'photos',
+                                draft.photos.map((x: any, j: number) =>
+                                  i === j ? { ...x, visible: v === true } : x,
+                                ),
+                              )
+                            }
+                          />{' '}
+                          Include in client report
+                        </label>
+                        <button
+                          type="button"
+                          className="text-button"
+                          onClick={() =>
+                            set(
+                              'photos',
+                              draft.photos.filter((_: any, j: number) => i !== j),
+                            )
+                          }
+                        >
+                          Remove from report
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <label className="upload-box">
+                    {uploading ? <Loader2 className="spin" /> : <ImagePlus />}
+                    <span>{uploading ? 'Uploading photo…' : 'Add a before / after photo'}</span>
+                    <small>JPG, PNG, WebP · up to 15 MB · location metadata removed</small>
+                    <input
+                      aria-label="Upload visit photo"
+                      disabled={uploading || draft.photos.length >= 20}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(e) => {
+                        photo(e.target.files?.[0]);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                </>
+              )}
+              {modal === 'project' && (
+                <>
+                  <Field label="Project name">
+                    <input
+                      required
+                      value={draft.title}
+                      onChange={(e) => set('title', e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Property">
+                    <Pick
+                      label="Project property"
+                      value={draft.propertyId}
+                      onChange={(v) => set('propertyId', v)}
+                      options={propertyOptions}
+                    />
+                  </Field>
+                  <div className="form-grid">
+                    <Field label="Stage">
+                      <Pick
+                        label="Project stage"
+                        value={draft.stage}
+                        onChange={(v) => set('stage', v)}
+                        options={[...stages]}
+                      />
+                    </Field>
+                    <Field label="Owner">
+                      <input
+                        required
+                        value={draft.owner}
+                        onChange={(e) => set('owner', e.target.value)}
+                      />
+                    </Field>
+                    <Field label="Due date">
+                      <input
+                        type="date"
+                        required
+                        value={draft.due}
+                        onChange={(e) => set('due', e.target.value)}
+                      />
+                    </Field>
+                    <NumberField
+                      label="Project cost budget ($)"
+                      value={draft.budget}
+                      onChange={(v) => set('budget', v)}
+                    />
+                    <NumberField
+                      label="Labor cost to date ($)"
+                      nullable
+                      value={draft.laborCost}
+                      onChange={(v) => set('laborCost', v)}
+                    />
+                    <NumberField
+                      label="Materials cost to date ($)"
+                      nullable
+                      value={draft.materialCost}
+                      onChange={(v) => set('materialCost', v)}
+                    />
+                  </div>
+                  <Field label="Approval document / portal link">
+                    <input
+                      type="url"
+                      pattern="https://.*"
+                      placeholder="https://…"
+                      value={draft.approvalUrl}
+                      onChange={(e) => set('approvalUrl', e.target.value)}
+                    />
+                  </Field>
+                  {draft.approvalUrl && (
+                    <a
+                      className="text-button"
+                      href={/^https:\/\//.test(draft.approvalUrl) ? draft.approvalUrl : undefined}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open approval link <ArrowUpRight size={15} />
+                    </a>
+                  )}
+                  <Field label="Project notes">
+                    <textarea value={draft.notes} onChange={(e) => set('notes', e.target.value)} />
+                  </Field>
+                  <h3>Project tasks</h3>
+                  <div className="project-tasks">
+                    {draft.tasks.map((t: any, i: number) => (
+                      <div key={t.id}>
+                        <Checkbox
+                          aria-label={'Complete ' + t.label}
+                          checked={t.done}
+                          onCheckedChange={(v) =>
+                            set(
+                              'tasks',
+                              draft.tasks.map((x: any, j: number) =>
+                                i === j ? { ...x, done: v === true } : x,
+                              ),
+                            )
+                          }
+                        />
+                        <input
+                          aria-label="Task description"
+                          required
+                          value={t.label}
+                          onChange={(e) =>
+                            set(
+                              'tasks',
+                              draft.tasks.map((x: any, j: number) =>
+                                i === j ? { ...x, label: e.target.value } : x,
+                              ),
+                            )
+                          }
+                        />
+                        <button
+                          type="button"
+                          className="text-button"
+                          onClick={() =>
+                            set(
+                              'tasks',
+                              draft.tasks.filter((_: any, j: number) => i !== j),
+                            )
+                          }
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() =>
+                      set('tasks', [...draft.tasks, { id: uuid(), label: '', done: false }])
+                    }
+                  >
+                    <Plus size={16} /> Add task
+                  </button>
+                </>
+              )}
+              <div className="editor-footer">
+                <button
+                  type="button"
+                  className="btn secondary"
+                  disabled={busy || uploading}
+                  onClick={() => setModal(null)}
+                >
+                  Cancel
+                </button>
+                <button className="btn" type="submit" disabled={busy || uploading}>
+                  {busy ? <Loader2 className="spin" size={17} /> : <Check size={17} />}{' '}
+                  {busy ? 'Saving…' : modal === 'schedule' ? 'Create work orders' : 'Save changes'}
+                </button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+      <Toaster position="bottom-right" richColors />
+    </SidebarProvider>
+  );
 }

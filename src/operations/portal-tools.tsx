@@ -1,61 +1,1027 @@
 'use client';
-import {useEffect,useState,useRef} from 'react';
-import {toast} from 'sonner';
-import {Tabs,TabsList,TabsTrigger} from '@/operations/components/ui/tabs';
-import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/operations/components/ui/dialog';
-export async function portalAction(value:any){const r=await fetch('/api/admin/portal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(value)});const data=await r.json() as any;if(!r.ok)throw Error(data.error||'Portal unavailable');return data;}
-export function PortalAccount({clientId}:{clientId:string}){
- const [data,setData]=useState<any>(null),[error,setError]=useState(''),[open,setOpen]=useState(false);
- useEffect(()=>{let active=true;setData(null);setError('');portalAction({action:'preview',clientId}).then(j=>{if(active)setData(j)}).catch(e=>{if(active)setError(e.message)});return()=>{active=false}},[clientId]);
- return <section className="panel account-section"><h3>Client portal</h3>{error?<p role="alert">{error}</p>:!data?<p>Checking portal connection…</p>:<><p><strong>{data.client?.access}</strong></p><p className="muted">{data.reports.length} published reports · {data.announcements.length} active announcements</p><button className="btn secondary" onClick={()=>setOpen(true)}>Preview client view</button><p className="muted">Read-only preview. It does not sign you in as the client or send an invitation.</p></>}
- <Dialog open={open} onOpenChange={setOpen}><DialogContent className="editor wide"><DialogHeader><DialogTitle>{data?.client?.name} · Client preview</DialogTitle><DialogDescription>Current published content. Private account notes and job costs are excluded.</DialogDescription></DialogHeader>{data&&<div className="portal-preview"><h3>Properties</h3>{data.properties.map((p:any)=><p key={p.id}><strong>{p.name}</strong> · {p.city} · {p.cadence}</p>)}{data.announcements.map((a:any)=><article className="panel account-section" key={a.id}><small>{a.kind}</small><h3>{a.title}</h3><p className="account-notes">{a.body}</p>{a.link_url&&<a className="text-button" href={a.link_url} target="_blank" rel="noreferrer">{a.link_label} ↗</a>}</article>)}<h3>Published service reports</h3>{!data.reports.length&&<p>No reports published from Operations yet.</p>}{data.reports.map((r:any)=><article className="panel account-section" key={r.id}><h3>{r.report.property} · {r.report.date}</h3><p className="account-notes">{r.report.summary}</p><ul>{r.report.tasks.map((t:string,i:number)=><li key={i}>{t}</li>)}</ul><div className="photo-grid">{r.report.photos.map((p:any)=><figure key={p.path}><img src={p.url} alt={p.caption}/><figcaption>{p.caption}</figcaption></figure>)}</div></article>)}{data.garden&&<details><summary>Existing garden record</summary><h3>{data.garden.service?.headline}</h3><p>{data.garden.visitReport?.body}</p><p>Next visit: {data.garden.nextVisit?.date}</p></details>}{data.project&&<details><summary>Existing project record</summary><h3>{data.project.display?.projectName}</h3><p>{data.project.proposal?.summary}</p><p>{data.project.proposal?.total}</p></details>}</div>}</DialogContent></Dialog></section>;
+import { useEffect, useState, useRef } from 'react';
+import { toast } from 'sonner';
+import { Tabs, TabsList, TabsTrigger } from '@/operations/components/ui/tabs';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/operations/components/ui/dialog';
+export async function portalAction(value: any) {
+  const r = await fetch('/api/admin/portal', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(value),
+  });
+  const data = (await r.json()) as any;
+  if (!r.ok) throw Error(data.error || 'Portal unavailable');
+  return data;
 }
-function RequestPhotos({requestId,count}:{requestId:string;count:number}){
- const [photos,setPhotos]=useState<{url:string}[]>([]),[error,setError]=useState(''),[refresh,setRefresh]=useState(0);
- useEffect(()=>{let active=true;setPhotos([]);setError('');if(count)portalAction({action:'requestPhotos',id:requestId}).then(j=>{if(active)setPhotos(j.photos)}).catch(e=>{if(active)setError(e.message)});return()=>{active=false}},[requestId,count,refresh]);
- if(!count)return null;
- return <section className="request-photos"><div className="flex-between"><h3>Client photos · {count}</h3><button className="text-button" onClick={()=>setRefresh(n=>n+1)}>Refresh photos</button></div>{error?<p role="alert">{error}</p>:!photos.length?<p>Loading photos…</p>:<div className="photo-grid">{photos.map((p,i)=><a key={p.url} href={p.url} target="_blank" rel="noreferrer"><img src={p.url} alt={'Client request attachment '+(i+1)}/><span className="text-button">Open photo {i+1} ↗</span></a>)}</div>}</section>;
+export function PortalAccount({ clientId }: { clientId: string }) {
+  const [data, setData] = useState<any>(null),
+    [error, setError] = useState(''),
+    [open, setOpen] = useState(false);
+  useEffect(() => {
+    let active = true;
+    setData(null);
+    setError('');
+    portalAction({ action: 'preview', clientId })
+      .then((j) => {
+        if (active) setData(j);
+      })
+      .catch((e) => {
+        if (active) setError(e.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [clientId]);
+  return (
+    <section className="panel account-section">
+      <h3>Client portal</h3>
+      {error ? (
+        <p role="alert">{error}</p>
+      ) : !data ? (
+        <p>Checking portal connection…</p>
+      ) : (
+        <>
+          <p>
+            <strong>{data.client?.access}</strong>
+          </p>
+          <p className="muted">
+            {data.reports.length} published reports · {data.announcements.length} active
+            announcements
+          </p>
+          <button className="btn secondary" onClick={() => setOpen(true)}>
+            Preview client view
+          </button>
+          <p className="muted">
+            Read-only preview. It does not sign you in as the client or send an invitation.
+          </p>
+        </>
+      )}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="editor wide">
+          <DialogHeader>
+            <DialogTitle>{data?.client?.name} · Client preview</DialogTitle>
+            <DialogDescription>
+              Current published content. Private account notes and job costs are excluded.
+            </DialogDescription>
+          </DialogHeader>
+          {data && (
+            <div className="portal-preview">
+              <h3>Properties</h3>
+              {data.properties.map((p: any) => (
+                <p key={p.id}>
+                  <strong>{p.name}</strong> · {p.city} · {p.cadence}
+                </p>
+              ))}
+              {data.announcements.map((a: any) => (
+                <article className="panel account-section" key={a.id}>
+                  <small>{a.kind}</small>
+                  <h3>{a.title}</h3>
+                  <p className="account-notes">{a.body}</p>
+                  {a.link_url && (
+                    <a className="text-button" href={a.link_url} target="_blank" rel="noreferrer">
+                      {a.link_label} ↗
+                    </a>
+                  )}
+                </article>
+              ))}
+              <h3>Published service reports</h3>
+              {!data.reports.length && <p>No reports published from Operations yet.</p>}
+              {data.reports.map((r: any) => (
+                <article className="panel account-section" key={r.id}>
+                  <h3>
+                    {r.report.property} · {r.report.date}
+                  </h3>
+                  <p className="account-notes">{r.report.summary}</p>
+                  <ul>
+                    {r.report.tasks.map((t: string, i: number) => (
+                      <li key={i}>{t}</li>
+                    ))}
+                  </ul>
+                  <div className="photo-grid">
+                    {r.report.photos.map((p: any) => (
+                      <figure key={p.path}>
+                        <img src={p.url} alt={p.caption} />
+                        <figcaption>{p.caption}</figcaption>
+                      </figure>
+                    ))}
+                  </div>
+                </article>
+              ))}
+              {data.garden && (
+                <details>
+                  <summary>Existing garden record</summary>
+                  <h3>{data.garden.service?.headline}</h3>
+                  <p>{data.garden.visitReport?.body}</p>
+                  <p>Next visit: {data.garden.nextVisit?.date}</p>
+                </details>
+              )}
+              {data.project && (
+                <details>
+                  <summary>Existing project record</summary>
+                  <h3>{data.project.display?.projectName}</h3>
+                  <p>{data.project.proposal?.summary}</p>
+                  <p>{data.project.proposal?.total}</p>
+                </details>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </section>
+  );
 }
-export function PortalInbox({onAccount,onRefresh,onProposal,clientId=''}:{onAccount:(id:string)=>void;onRefresh:()=>Promise<void>;onProposal:(id:string)=>void;clientId?:string}){
- const [data,setData]=useState<any>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[noteDrafts,setNoteDrafts]=useState<Record<string,string>>({}),[request,setRequest]=useState<any>(null),[propertyId,setPropertyId]=useState(''),[kind,setKind]=useState('request'),[selectedId,setSelectedId]=useState(''),[statusDrafts,setStatusDrafts]=useState<Record<string,string>>({}),[service,setService]=useState<any>(null),[serviceNote,setServiceNote]=useState('');
- const loadSequence=useRef(0),[checkedAt,setCheckedAt]=useState('');
- async function load(){const sequence=++loadSequence.current;try{const result=await portalAction({action:'inbox'});if(sequence!==loadSequence.current)return;setData(result);setCheckedAt(new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}));setError('')}catch(e){if(sequence===loadSequence.current)setError((e as Error).message)}}
- useEffect(()=>()=>{loadSequence.current++},[]);
- useEffect(()=>{const refresh=()=>{if(!busy&&!request&&!service&&document.visibilityState==='visible')void load()};const timer=window.setInterval(refresh,30000);window.addEventListener('focus',refresh);return()=>{window.clearInterval(timer);window.removeEventListener('focus',refresh)}},[busy,request,service]);
- useEffect(()=>{load();const sync=()=>{if(location.hash.startsWith('#portal-inbox/')){setKind('request');setSelectedId(decodeURIComponent(location.hash.split('/')[1]||''))}};sync();window.addEventListener('hashchange',sync);return()=>window.removeEventListener('hashchange',sync)},[]);
- async function track(kind:string,row:any,status:string){setBusy(true);try{const key=kind+row.id,old=data.tracking.find((x:any)=>x.kind===kind&&x.source_id===row.id);await portalAction({action:'track',kind,id:row.id,status,notes:noteDrafts[key]??old?.notes??''});setNoteDrafts(prev=>{const next={...prev};delete next[key];return next});setStatusDrafts(prev=>{const next={...prev};delete next[key];return next});await load();toast.success('Follow-up saved')}catch(e){toast.error((e as Error).message)}finally{setBusy(false)}}
- async function link(row:any){setBusy(true);try{const result=await portalAction({action:'link',clientId:row.client_id});await onRefresh();await load();const c=result.state.clients.find((c:any)=>c.id==='portal-'+row.client_id);if(c)onAccount(c.id);toast.success('Client profile linked')}catch(e){toast.error((e as Error).message)}finally{setBusy(false)}}
- async function createProposal(){setBusy(true);try{const result=await portalAction({action:'requestProposal',id:request.id,propertyId});await onRefresh();await load();setRequest(null);onProposal(result.proposalId);toast.success('Proposal draft ready')}catch(e){toast.error((e as Error).message)}finally{setBusy(false)}}
- async function addToService(){setBusy(true);try{const result=await portalAction({action:'requestService',id:service.id,propertyId,note:serviceNote});await onRefresh();await load();setService(null);toast.success(result.serviceRequest.visitId?'Added to the next service':'Queued for the next scheduled service')}catch(e){toast.error((e as Error).message)}finally{setBusy(false)}}
- const scoped=(type:string)=>(type==='request'?data?.requests:data?.approvals)?.filter((r:any)=>!clientId||data.clients.find((c:any)=>c.id===r.client_id)?.localId===clientId)||[];
- const rows=scoped(kind),r=rows.find((r:any)=>r.id===selectedId)||rows[0],c=data?.clients.find((c:any)=>c.id===r?.client_id),tracking=data?.tracking.find((x:any)=>x.kind===kind&&x.source_id===r?.id),status=tracking?.status||'Open',key=kind+(r?.id||''),proposal=data?.proposals?.find((p:any)=>p.sourceRequestId===r?.id),properties=data?.properties?.filter((p:any)=>p.clientId===c?.localId)||[];
- const serviceLink=data?.serviceRequests?.find((x:any)=>x.id===r?.id);
- const received=(value:string)=>new Date(value).toLocaleString('en-US',{timeZone:'America/Los_Angeles',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
- const dirty=!!r&&((noteDrafts[key]??tracking?.notes??'')!==(tracking?.notes||'')||(statusDrafts[key]??status)!==status);
- return <div className="portal-inbox"><div className="inbox-toolbar"><Tabs value={kind} onValueChange={v=>{setKind(v);setSelectedId('')}}><TabsList aria-label="Portal inbox categories"><TabsTrigger value="request">Requests <span className="inbox-count">{scoped('request').length}</span></TabsTrigger><TabsTrigger value="approval">Approvals <span className="inbox-count">{scoped('approval').length}</span></TabsTrigger></TabsList></Tabs><div className="inbox-refresh"><small className="muted" role="status">{checkedAt?'Checked '+checkedAt+' · refreshes every 30 seconds':'Connecting to client portal…'}</small><button className="text-button" disabled={busy} onClick={load}>Refresh</button></div></div>{error&&<p role="alert">{error}</p>}{!data&&!error&&<p>Loading portal inbox…</p>}{data&&<div className={'inbox-layout'+(!rows.length?' inbox-is-empty':'')}>
- <section className="panel inbox-list" aria-label={kind==='request'?'Client requests':'Client approvals'}><div className="inbox-list-heading"><h2>{kind==='request'?'Client requests':'Client approvals'}</h2><span className="muted">{rows.length}</span></div>{rows.map((item:any)=>{const client=data.clients.find((c:any)=>c.id===item.client_id),itemStatus=data.tracking.find((x:any)=>x.kind===kind&&x.source_id===item.id)?.status||'Open';return <button className={'inbox-list-item'+(item.id===r?.id?' is-selected':'')} aria-pressed={item.id===r?.id} key={item.id} onClick={()=>setSelectedId(item.id)}><span className="inbox-item-top"><strong>{client?.name||'Portal client'}</strong><span className={'inbox-status '+(itemStatus==='Resolved'?'is-resolved':'')}>{itemStatus}</span></span><span className="inbox-subject">{item.about||item.subject}</span><span className="inbox-item-meta">{item.reference||'Approval'} · {new Date(item.created_at).toLocaleDateString('en-US',{timeZone:'America/Los_Angeles',month:'short',day:'numeric'})}</span></button>})}{!rows.length&&<p className="inbox-empty">No {kind==='request'?'requests':'approvals'} received{clientId?' for this client':''}.</p>}</section>
- {r&&<article className="panel inbox-detail" aria-label="Selected inbox item"><header className="inbox-detail-header"><div><p className="eyebrow">{r.reference||'CLIENT APPROVAL'}</p><h2>{r.about||r.subject}</h2>{c?.linked?<a className="text-button" href={'#clients/'+encodeURIComponent(c.localId)} onClick={e=>{e.preventDefault();onAccount(c.localId)}}>{c.name} · Client profile →</a>:<button className="text-button" disabled={busy} onClick={()=>link(r)}>{c?.name||'Portal client'} · Link client profile</button>}</div><span className="chip">{status}</span></header>
- <section className="inbox-message"><p className="inbox-timestamp">Received {received(r.created_at)} · Pacific time</p><p className="account-notes">{r.body||`Approved by ${r.typed_name}${r.amount?' · '+r.amount:''}`}</p>{kind==='request'&&Object.keys(r.details||{}).length>0&&<details className="inbox-extra"><summary>Additional request details</summary><dl>{Object.entries(r.details).map(([name,value])=><div key={name}><dt>{name.replaceAll('_',' ')}</dt><dd>{typeof value==='string'?value:JSON.stringify(value)}</dd></div>)}</dl></details>}</section>
- {kind==='request'&&<RequestPhotos key={r.id} requestId={r.id} count={r.photoCount||0}/>}
- {kind==='request'&&<section className="inbox-proposal"><div><h3>{serviceLink?'Next-service note':'Included in regular service?'}</h3><p>{serviceLink?(serviceLink.date?`Attached to service on ${serviceLink.date} · ${serviceLink.visitStatus}`:'Queued for the next scheduled work order.'):'Send the request to the crew as a service instruction.'}</p>{serviceLink&&<p className="account-notes">{serviceLink.note}</p>}</div>{serviceLink?<a className="btn secondary" href={'#clients/'+encodeURIComponent(serviceLink.clientId)}>View service history →</a>:<button className="btn" disabled={busy||!c?.linked||!properties.length} onClick={()=>{setService({...r,localId:c.localId});setPropertyId(properties.length===1?properties[0].id:'');setServiceNote([r.about,r.body].filter(Boolean).join('\n').slice(0,2500))}}>Add to next service</button>}</section>}
- {kind==='request'&&<section className="inbox-proposal"><div><h3>{proposal?'Linked proposal':'Does this need a proposal?'}</h3><p>{proposal?(proposal.projectId?'Accepted scope converted to a project.':proposal.status==='Lost'?'Proposal declined or closed.':proposal.sentOn?'Sent '+proposal.sentOn:'Internal draft · not sent to the client.'):'For work outside the regular service agreement.'}</p>{proposal?.sentReference&&<small>{proposal.sentReference}</small>}</div>{proposal?<button className="btn secondary" onClick={()=>onProposal(proposal.id)}>Open proposal</button>:<button className="btn secondary" disabled={busy||!c?.linked||!properties.length} onClick={()=>{setRequest({...r,localId:c.localId});setPropertyId(properties.length===1?properties[0].id:'')}}>Prepare proposal</button>}{!proposal&&c?.linked&&!properties.length&&<p className="inbox-proposal-hint">Add a property in the client profile to prepare a proposal.</p>}</section>}
- <form className="inbox-followup" onSubmit={e=>{e.preventDefault();track(kind,r,statusDrafts[key]??status)}}><div className="inbox-section-heading"><h3>Office follow-up</h3><span className="muted">Internal only</span></div><label className="field"><span>Notes & next steps</span><textarea rows={5} maxLength={4000} disabled={busy||!c?.linked} value={noteDrafts[key]??tracking?.notes??''} onChange={e=>setNoteDrafts(prev=>({...prev,[key]:e.target.value}))} placeholder="Add the next step, who is responsible, and any service-scope notes."/></label><div className="inbox-followup-footer"><label className="field"><span>Status</span><select value={statusDrafts[key]??status} disabled={busy||!c?.linked} onChange={e=>setStatusDrafts(prev=>({...prev,[key]:e.target.value}))}>{['Open','In progress','Resolved'].map(s=><option key={s}>{s}</option>)}</select></label><div className="inbox-save"><span role="status" className="muted">{dirty?'Unsaved changes':''}</span><button type="submit" className="btn" disabled={busy||!c?.linked}>{busy?'Saving…':'Save follow-up'}</button></div></div>{!c?.linked&&<p className="muted">Link this client profile to save follow-up notes.</p>}</form></article>}
- </div>}
- <Dialog open={!!service} onOpenChange={v=>{if(!v&&!busy)setService(null)}}><DialogContent className="editor"><DialogHeader><DialogTitle>Add to next service</DialogTitle><DialogDescription>For work covered by the existing service. These instructions are for GMZ Admin and the assigned crew, not a client report. If no visit is scheduled, they stay queued for the next work order.</DialogDescription></DialogHeader><form className="editor-form" onSubmit={e=>{e.preventDefault();addToService()}}><label className="field"><span>Client property</span><select required value={propertyId} onChange={e=>setPropertyId(e.target.value)}><option value="">Choose a property</option>{data?.properties?.filter((p:any)=>p.clientId===service?.localId).map((p:any)=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label className="field"><span>Instructions for Admin & crew</span><textarea required rows={5} maxLength={2500} value={serviceNote} onChange={e=>setServiceNote(e.target.value)}/></label><p className="muted">GMZ Staff login is not connected yet. The note will be saved in Operations now.</p><button className="btn" disabled={busy||!propertyId||!serviceNote.trim()}>Save service instruction</button></form></DialogContent></Dialog>
- <Dialog open={!!request} onOpenChange={v=>{if(!v&&!busy)setRequest(null)}}><DialogContent className="editor"><DialogHeader><DialogTitle>Prepare proposal</DialogTitle><DialogDescription>Keep the original request and client linked. This creates an internal draft, without sending or approving anything.</DialogDescription></DialogHeader><label className="field"><span>Client property</span><select value={propertyId} onChange={e=>setPropertyId(e.target.value)}><option value="">Choose a property</option>{data?.properties?.filter((p:any)=>p.clientId===request?.localId).map((p:any)=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><button className="btn" disabled={busy||!propertyId} onClick={createProposal}>Create proposal draft</button></DialogContent></Dialog></div>;
+function RequestPhotos({ requestId, count }: { requestId: string; count: number }) {
+  const [photos, setPhotos] = useState<{ url: string }[]>([]),
+    [error, setError] = useState(''),
+    [refresh, setRefresh] = useState(0);
+  useEffect(() => {
+    let active = true;
+    setPhotos([]);
+    setError('');
+    if (count)
+      portalAction({ action: 'requestPhotos', id: requestId })
+        .then((j) => {
+          if (active) setPhotos(j.photos);
+        })
+        .catch((e) => {
+          if (active) setError(e.message);
+        });
+    return () => {
+      active = false;
+    };
+  }, [requestId, count, refresh]);
+  if (!count) return null;
+  return (
+    <section className="request-photos">
+      <div className="flex-between">
+        <h3>Client photos · {count}</h3>
+        <button className="text-button" onClick={() => setRefresh((n) => n + 1)}>
+          Refresh photos
+        </button>
+      </div>
+      {error ? (
+        <p role="alert">{error}</p>
+      ) : !photos.length ? (
+        <p>Loading photos…</p>
+      ) : (
+        <div className="photo-grid">
+          {photos.map((p, i) => (
+            <a key={p.url} href={p.url} target="_blank" rel="noreferrer">
+              <img src={p.url} alt={'Client request attachment ' + (i + 1)} />
+              <span className="text-button">Open photo {i + 1} ↗</span>
+            </a>
+          ))}
+        </div>
+      )}
+    </section>
+  );
 }
-const day=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-function AnnouncementMessage({body}:{body:string}){
- const paragraphs=body.split(/\n+|(?<=[.!?])\s+(?=[A-Z])/).filter(Boolean);
- return <div className="announcement-message">{paragraphs.map((text,index)=><p key={index} className={index===0?'announcement-lead':/not included|material only|separate estimate/i.test(text)?'announcement-terms':''}>{text}</p>)}</div>;
+export function PortalInbox({
+  onAccount,
+  onRefresh,
+  onProposal,
+  clientId = '',
+}: {
+  onAccount: (id: string) => void;
+  onRefresh: () => Promise<void>;
+  onProposal: (id: string) => void;
+  clientId?: string;
+}) {
+  const [data, setData] = useState<any>(null),
+    [error, setError] = useState(''),
+    [busy, setBusy] = useState(false),
+    [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({}),
+    [request, setRequest] = useState<any>(null),
+    [propertyId, setPropertyId] = useState(''),
+    [kind, setKind] = useState('request'),
+    [selectedId, setSelectedId] = useState(''),
+    [statusDrafts, setStatusDrafts] = useState<Record<string, string>>({}),
+    [service, setService] = useState<any>(null),
+    [serviceNote, setServiceNote] = useState('');
+  const loadSequence = useRef(0),
+    [checkedAt, setCheckedAt] = useState('');
+  async function load() {
+    const sequence = ++loadSequence.current;
+    try {
+      const result = await portalAction({ action: 'inbox' });
+      if (sequence !== loadSequence.current) return;
+      setData(result);
+      setCheckedAt(new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }));
+      setError('');
+    } catch (e) {
+      if (sequence === loadSequence.current) setError((e as Error).message);
+    }
+  }
+  useEffect(
+    () => () => {
+      loadSequence.current++;
+    },
+    [],
+  );
+  useEffect(() => {
+    const refresh = () => {
+      if (!busy && !request && !service && document.visibilityState === 'visible') void load();
+    };
+    const timer = window.setInterval(refresh, 30000);
+    window.addEventListener('focus', refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [busy, request, service]);
+  useEffect(() => {
+    load();
+    const sync = () => {
+      if (location.hash.startsWith('#portal-inbox/')) {
+        setKind('request');
+        setSelectedId(decodeURIComponent(location.hash.split('/')[1] || ''));
+      }
+    };
+    sync();
+    window.addEventListener('hashchange', sync);
+    return () => window.removeEventListener('hashchange', sync);
+  }, []);
+  async function track(kind: string, row: any, status: string) {
+    setBusy(true);
+    try {
+      const key = kind + row.id,
+        old = data.tracking.find((x: any) => x.kind === kind && x.source_id === row.id);
+      await portalAction({
+        action: 'track',
+        kind,
+        id: row.id,
+        status,
+        notes: noteDrafts[key] ?? old?.notes ?? '',
+      });
+      setNoteDrafts((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      setStatusDrafts((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+      await load();
+      toast.success('Follow-up saved');
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function link(row: any) {
+    setBusy(true);
+    try {
+      const result = await portalAction({ action: 'link', clientId: row.client_id });
+      await onRefresh();
+      await load();
+      const c = result.state.clients.find((c: any) => c.id === 'portal-' + row.client_id);
+      if (c) onAccount(c.id);
+      toast.success('Client profile linked');
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function createProposal() {
+    setBusy(true);
+    try {
+      const result = await portalAction({ action: 'requestProposal', id: request.id, propertyId });
+      await onRefresh();
+      await load();
+      setRequest(null);
+      onProposal(result.proposalId);
+      toast.success('Proposal draft ready');
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function addToService() {
+    setBusy(true);
+    try {
+      const result = await portalAction({
+        action: 'requestService',
+        id: service.id,
+        propertyId,
+        note: serviceNote,
+      });
+      await onRefresh();
+      await load();
+      setService(null);
+      toast.success(
+        result.serviceRequest.visitId
+          ? 'Added to the next service'
+          : 'Queued for the next scheduled service',
+      );
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  const scoped = (type: string) =>
+    (type === 'request' ? data?.requests : data?.approvals)?.filter(
+      (r: any) =>
+        !clientId || data.clients.find((c: any) => c.id === r.client_id)?.localId === clientId,
+    ) || [];
+  const rows = scoped(kind),
+    r = rows.find((r: any) => r.id === selectedId) || rows[0],
+    c = data?.clients.find((c: any) => c.id === r?.client_id),
+    tracking = data?.tracking.find((x: any) => x.kind === kind && x.source_id === r?.id),
+    status = tracking?.status || 'Open',
+    key = kind + (r?.id || ''),
+    proposal = data?.proposals?.find((p: any) => p.sourceRequestId === r?.id),
+    properties = data?.properties?.filter((p: any) => p.clientId === c?.localId) || [];
+  const serviceLink = data?.serviceRequests?.find((x: any) => x.id === r?.id);
+  const received = (value: string) =>
+    new Date(value).toLocaleString('en-US', {
+      timeZone: 'America/Los_Angeles',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  const dirty =
+    !!r &&
+    ((noteDrafts[key] ?? tracking?.notes ?? '') !== (tracking?.notes || '') ||
+      (statusDrafts[key] ?? status) !== status);
+  return (
+    <div className="portal-inbox">
+      <div className="inbox-toolbar">
+        <Tabs
+          value={kind}
+          onValueChange={(v) => {
+            setKind(v);
+            setSelectedId('');
+          }}
+        >
+          <TabsList aria-label="Portal inbox categories">
+            <TabsTrigger value="request">
+              Requests <span className="inbox-count">{scoped('request').length}</span>
+            </TabsTrigger>
+            <TabsTrigger value="approval">
+              Approvals <span className="inbox-count">{scoped('approval').length}</span>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <div className="inbox-refresh">
+          <small className="muted" role="status">
+            {checkedAt
+              ? 'Checked ' + checkedAt + ' · refreshes every 30 seconds'
+              : 'Connecting to client portal…'}
+          </small>
+          <button className="text-button" disabled={busy} onClick={load}>
+            Refresh
+          </button>
+        </div>
+      </div>
+      {error && <p role="alert">{error}</p>}
+      {!data && !error && <p>Loading portal inbox…</p>}
+      {data && (
+        <div className={'inbox-layout' + (!rows.length ? ' inbox-is-empty' : '')}>
+          <section
+            className="panel inbox-list"
+            aria-label={kind === 'request' ? 'Client requests' : 'Client approvals'}
+          >
+            <div className="inbox-list-heading">
+              <h2>{kind === 'request' ? 'Client requests' : 'Client approvals'}</h2>
+              <span className="muted">{rows.length}</span>
+            </div>
+            {rows.map((item: any) => {
+              const client = data.clients.find((c: any) => c.id === item.client_id),
+                itemStatus =
+                  data.tracking.find((x: any) => x.kind === kind && x.source_id === item.id)
+                    ?.status || 'Open';
+              return (
+                <button
+                  className={'inbox-list-item' + (item.id === r?.id ? ' is-selected' : '')}
+                  aria-pressed={item.id === r?.id}
+                  key={item.id}
+                  onClick={() => setSelectedId(item.id)}
+                >
+                  <span className="inbox-item-top">
+                    <strong>{client?.name || 'Portal client'}</strong>
+                    <span
+                      className={'inbox-status ' + (itemStatus === 'Resolved' ? 'is-resolved' : '')}
+                    >
+                      {itemStatus}
+                    </span>
+                  </span>
+                  <span className="inbox-subject">{item.about || item.subject}</span>
+                  <span className="inbox-item-meta">
+                    {item.reference || 'Approval'} ·{' '}
+                    {new Date(item.created_at).toLocaleDateString('en-US', {
+                      timeZone: 'America/Los_Angeles',
+                      month: 'short',
+                      day: 'numeric',
+                    })}
+                  </span>
+                </button>
+              );
+            })}
+            {!rows.length && (
+              <p className="inbox-empty">
+                No {kind === 'request' ? 'requests' : 'approvals'} received
+                {clientId ? ' for this client' : ''}.
+              </p>
+            )}
+          </section>
+          {r && (
+            <article className="panel inbox-detail" aria-label="Selected inbox item">
+              <header className="inbox-detail-header">
+                <div>
+                  <p className="eyebrow">{r.reference || 'CLIENT APPROVAL'}</p>
+                  <h2>{r.about || r.subject}</h2>
+                  {c?.linked ? (
+                    <a
+                      className="text-button"
+                      href={'#clients/' + encodeURIComponent(c.localId)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onAccount(c.localId);
+                      }}
+                    >
+                      {c.name} · Client profile →
+                    </a>
+                  ) : (
+                    <button className="text-button" disabled={busy} onClick={() => link(r)}>
+                      {c?.name || 'Portal client'} · Link client profile
+                    </button>
+                  )}
+                </div>
+                <span className="chip">{status}</span>
+              </header>
+              <section className="inbox-message">
+                <p className="inbox-timestamp">Received {received(r.created_at)} · Pacific time</p>
+                <p className="account-notes">
+                  {r.body || `Approved by ${r.typed_name}${r.amount ? ' · ' + r.amount : ''}`}
+                </p>
+                {kind === 'request' && Object.keys(r.details || {}).length > 0 && (
+                  <details className="inbox-extra">
+                    <summary>Additional request details</summary>
+                    <dl>
+                      {Object.entries(r.details).map(([name, value]) => (
+                        <div key={name}>
+                          <dt>{name.replaceAll('_', ' ')}</dt>
+                          <dd>{typeof value === 'string' ? value : JSON.stringify(value)}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </details>
+                )}
+              </section>
+              {kind === 'request' && (
+                <RequestPhotos key={r.id} requestId={r.id} count={r.photoCount || 0} />
+              )}
+              {kind === 'request' && (
+                <section className="inbox-proposal">
+                  <div>
+                    <h3>{serviceLink ? 'Next-service note' : 'Included in regular service?'}</h3>
+                    <p>
+                      {serviceLink
+                        ? serviceLink.date
+                          ? `Attached to service on ${serviceLink.date} · ${serviceLink.visitStatus}`
+                          : 'Queued for the next scheduled work order.'
+                        : 'Send the request to the crew as a service instruction.'}
+                    </p>
+                    {serviceLink && <p className="account-notes">{serviceLink.note}</p>}
+                  </div>
+                  {serviceLink ? (
+                    <a
+                      className="btn secondary"
+                      href={'#clients/' + encodeURIComponent(serviceLink.clientId)}
+                    >
+                      View service history →
+                    </a>
+                  ) : (
+                    <button
+                      className="btn"
+                      disabled={busy || !c?.linked || !properties.length}
+                      onClick={() => {
+                        setService({ ...r, localId: c.localId });
+                        setPropertyId(properties.length === 1 ? properties[0].id : '');
+                        setServiceNote([r.about, r.body].filter(Boolean).join('\n').slice(0, 2500));
+                      }}
+                    >
+                      Add to next service
+                    </button>
+                  )}
+                </section>
+              )}
+              {kind === 'request' && (
+                <section className="inbox-proposal">
+                  <div>
+                    <h3>{proposal ? 'Linked proposal' : 'Does this need a proposal?'}</h3>
+                    <p>
+                      {proposal
+                        ? proposal.projectId
+                          ? 'Accepted scope converted to a project.'
+                          : proposal.status === 'Lost'
+                            ? 'Proposal declined or closed.'
+                            : proposal.sentOn
+                              ? 'Sent ' + proposal.sentOn
+                              : 'Internal draft · not sent to the client.'
+                        : 'For work outside the regular service agreement.'}
+                    </p>
+                    {proposal?.sentReference && <small>{proposal.sentReference}</small>}
+                  </div>
+                  {proposal ? (
+                    <button className="btn secondary" onClick={() => onProposal(proposal.id)}>
+                      Open proposal
+                    </button>
+                  ) : (
+                    <button
+                      className="btn secondary"
+                      disabled={busy || !c?.linked || !properties.length}
+                      onClick={() => {
+                        setRequest({ ...r, localId: c.localId });
+                        setPropertyId(properties.length === 1 ? properties[0].id : '');
+                      }}
+                    >
+                      Prepare proposal
+                    </button>
+                  )}
+                  {!proposal && c?.linked && !properties.length && (
+                    <p className="inbox-proposal-hint">
+                      Add a property in the client profile to prepare a proposal.
+                    </p>
+                  )}
+                </section>
+              )}
+              <form
+                className="inbox-followup"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  track(kind, r, statusDrafts[key] ?? status);
+                }}
+              >
+                <div className="inbox-section-heading">
+                  <h3>Office follow-up</h3>
+                  <span className="muted">Internal only</span>
+                </div>
+                <label className="field">
+                  <span>Notes & next steps</span>
+                  <textarea
+                    rows={5}
+                    maxLength={4000}
+                    disabled={busy || !c?.linked}
+                    value={noteDrafts[key] ?? tracking?.notes ?? ''}
+                    onChange={(e) => setNoteDrafts((prev) => ({ ...prev, [key]: e.target.value }))}
+                    placeholder="Add the next step, who is responsible, and any service-scope notes."
+                  />
+                </label>
+                <div className="inbox-followup-footer">
+                  <label className="field">
+                    <span>Status</span>
+                    <select
+                      value={statusDrafts[key] ?? status}
+                      disabled={busy || !c?.linked}
+                      onChange={(e) =>
+                        setStatusDrafts((prev) => ({ ...prev, [key]: e.target.value }))
+                      }
+                    >
+                      {['Open', 'In progress', 'Resolved'].map((s) => (
+                        <option key={s}>{s}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="inbox-save">
+                    <span role="status" className="muted">
+                      {dirty ? 'Unsaved changes' : ''}
+                    </span>
+                    <button type="submit" className="btn" disabled={busy || !c?.linked}>
+                      {busy ? 'Saving…' : 'Save follow-up'}
+                    </button>
+                  </div>
+                </div>
+                {!c?.linked && (
+                  <p className="muted">Link this client profile to save follow-up notes.</p>
+                )}
+              </form>
+            </article>
+          )}
+        </div>
+      )}
+      <Dialog
+        open={!!service}
+        onOpenChange={(v) => {
+          if (!v && !busy) setService(null);
+        }}
+      >
+        <DialogContent className="editor">
+          <DialogHeader>
+            <DialogTitle>Add to next service</DialogTitle>
+            <DialogDescription>
+              For work covered by the existing service. These instructions are for GMZ Admin and the
+              assigned crew, not a client report. If no visit is scheduled, they stay queued for the
+              next work order.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="editor-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              addToService();
+            }}
+          >
+            <label className="field">
+              <span>Client property</span>
+              <select required value={propertyId} onChange={(e) => setPropertyId(e.target.value)}>
+                <option value="">Choose a property</option>
+                {data?.properties
+                  ?.filter((p: any) => p.clientId === service?.localId)
+                  .map((p: any) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <label className="field">
+              <span>Instructions for Admin & crew</span>
+              <textarea
+                required
+                rows={5}
+                maxLength={2500}
+                value={serviceNote}
+                onChange={(e) => setServiceNote(e.target.value)}
+              />
+            </label>
+            <p className="muted">
+              GMZ Staff login is not connected yet. The note will be saved in Operations now.
+            </p>
+            <button className="btn" disabled={busy || !propertyId || !serviceNote.trim()}>
+              Save service instruction
+            </button>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={!!request}
+        onOpenChange={(v) => {
+          if (!v && !busy) setRequest(null);
+        }}
+      >
+        <DialogContent className="editor">
+          <DialogHeader>
+            <DialogTitle>Prepare proposal</DialogTitle>
+            <DialogDescription>
+              Keep the original request and client linked. This creates an internal draft, without
+              sending or approving anything.
+            </DialogDescription>
+          </DialogHeader>
+          <label className="field">
+            <span>Client property</span>
+            <select value={propertyId} onChange={(e) => setPropertyId(e.target.value)}>
+              <option value="">Choose a property</option>
+              {data?.properties
+                ?.filter((p: any) => p.clientId === request?.localId)
+                .map((p: any) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+            </select>
+          </label>
+          <button className="btn" disabled={busy || !propertyId} onClick={createProposal}>
+            Create proposal draft
+          </button>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }
-const announcementDate=(value:string)=>new Date(value+'T12:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});
-export function Announcements(){
- const [data,setData]=useState<any>(null),[error,setError]=useState(''),[draft,setDraft]=useState<any>(null),[busy,setBusy]=useState(false),[preview,setPreview]=useState<any>(null);
- async function load(){try{setData(await portalAction({action:'announcements'}));setError('')}catch(e){setError((e as Error).message)}}useEffect(()=>{load()},[]);
- async function save(value:any,publish=false){setBusy(true);try{await portalAction({action:'announcementSave',value,publish});setDraft(null);setPreview(null);await load();toast.success(publish?'Published to the selected client audience':'Saved')}catch(e){toast.error((e as Error).message)}finally{setBusy(false)}}
- const set=(key:string,value:any)=>setDraft((d:any)=>({...d,[key]:value}));
- return <><div className="toolbar"><p className="muted">Announcements and promotions for the client portal. No email or external ad spending.</p><button className="btn" disabled={!data} onClick={()=>setDraft({id:crypto.randomUUID(),title:'',body:'',kind:'Announcement',audience:'All clients',client_ids:[],starts_on:day(),ends_on:null,link_url:'',link_label:'',status:'Draft',version:0})}>New announcement</button></div>{error&&<p role="alert">{error}</p>}{!data&&!error&&<p>Loading announcements…</p>}<div className="announcement-grid">{data?.items.map((a:any)=><article className="panel announcement-card" key={a.id}><div className="flex-between"><span className="eyebrow">{a.kind}</span><span className="chip">{a.status==='Published'?(a.starts_on>day()?'Scheduled':a.ends_on&&a.ends_on<day()?'Expired':'Published'):a.status}</span></div><h3>{a.title}</h3><AnnouncementMessage body={a.body}/><dl className="announcement-meta"><div><dt>Audience</dt><dd>{a.audience}</dd></div><div><dt>Starts</dt><dd>{announcementDate(a.starts_on)}</dd></div><div><dt>Ends</dt><dd>{a.ends_on?announcementDate(a.ends_on):'No end date'}</dd></div></dl><div className="announcement-actions"><button className="btn secondary" onClick={()=>setPreview(a)}>Preview</button><button className="text-button" onClick={()=>setDraft({...a,status:'Draft'})}>Edit draft</button>{a.status!=='Archived'&&<button className="text-button" disabled={busy} onClick={()=>save({...a,status:'Archived'})}>Archive</button>}</div></article>)}</div>{data&&!data.items.length&&<p className="empty">No announcements yet. Start with a draft, then preview and publish it.</p>}
- <Dialog open={!!draft} onOpenChange={v=>{if(!v&&!busy)setDraft(null)}}><DialogContent className="editor"><DialogHeader><DialogTitle>{draft?.version?'Edit announcement':'New announcement'}</DialogTitle><DialogDescription>Saving keeps this as a draft. Preview it before publishing.</DialogDescription></DialogHeader>{draft&&<form className="editor-form" onSubmit={e=>{e.preventDefault();save(draft)}}><label className="field"><span>Title</span><input required maxLength={160} value={draft.title} onChange={e=>set('title',e.target.value)}/></label><label className="field"><span>Message</span><textarea required rows={5} maxLength={4000} value={draft.body} onChange={e=>set('body',e.target.value)}/></label><div className="form-grid"><label className="field"><span>Type</span><select value={draft.kind} onChange={e=>set('kind',e.target.value)}><option>Announcement</option><option>Promotion</option></select></label><label className="field"><span>Audience</span><select value={draft.audience} onChange={e=>set('audience',e.target.value)}>{['All clients','Garden clients','Project clients','Selected clients'].map(v=><option key={v}>{v}</option>)}</select></label></div>{draft.audience==='Selected clients'&&<fieldset><legend>Select client accounts</legend>{data.clients.map((c:any)=><label className="photo-visible" key={c.id}><input type="checkbox" checked={draft.client_ids.includes(c.id)} onChange={e=>set('client_ids',e.target.checked?[...draft.client_ids,c.id]:draft.client_ids.filter((id:string)=>id!==c.id))}/>{c.name}</label>)}</fieldset>}<div className="form-grid"><label className="field"><span>Starts · Pacific date</span><input required type="date" value={draft.starts_on} onChange={e=>set('starts_on',e.target.value)}/></label><label className="field"><span>Ends · optional</span><input type="date" min={draft.starts_on} value={draft.ends_on||''} onChange={e=>set('ends_on',e.target.value||null)}/></label></div><label className="field"><span>Link URL · optional HTTPS</span><input type="url" pattern="https://.*" value={draft.link_url} onChange={e=>set('link_url',e.target.value)}/></label><label className="field"><span>Link label</span><input required={!!draft.link_url} value={draft.link_label} onChange={e=>set('link_label',e.target.value)}/></label><button className="btn" disabled={busy}>Save draft</button></form>}</DialogContent></Dialog>
- <Dialog open={!!preview} onOpenChange={v=>{if(!v&&!busy)setPreview(null)}}><DialogContent className="editor"><DialogHeader><DialogTitle>Client announcement preview</DialogTitle><DialogDescription>{preview?.audience} · {preview?.starts_on}{preview?.ends_on?' through '+preview.ends_on:''}</DialogDescription></DialogHeader>{preview&&<><article className="panel account-section"><p className="eyebrow">{preview.kind}</p><h2>{preview.title}</h2><AnnouncementMessage body={preview.body}/>{preview.link_url&&<a className="text-button" href={preview.link_url} target="_blank" rel="noreferrer">{preview.link_label} ↗</a>}</article>{preview.status==='Draft'&&<button className="btn" disabled={busy} onClick={()=>save(preview,true)}>Publish to client portal</button>}</>}</DialogContent></Dialog></>;
+const day = () =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Los_Angeles',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+function AnnouncementMessage({ body }: { body: string }) {
+  const paragraphs = body.split(/\n+|(?<=[.!?])\s+(?=[A-Z])/).filter(Boolean);
+  return (
+    <div className="announcement-message">
+      {paragraphs.map((text, index) => (
+        <p
+          key={index}
+          className={
+            index === 0
+              ? 'announcement-lead'
+              : /not included|material only|separate estimate/i.test(text)
+                ? 'announcement-terms'
+                : ''
+          }
+        >
+          {text}
+        </p>
+      ))}
+    </div>
+  );
+}
+const announcementDate = (value: string) =>
+  new Date(value + 'T12:00:00Z').toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+export function Announcements() {
+  const [data, setData] = useState<any>(null),
+    [error, setError] = useState(''),
+    [draft, setDraft] = useState<any>(null),
+    [busy, setBusy] = useState(false),
+    [preview, setPreview] = useState<any>(null);
+  async function load() {
+    try {
+      setData(await portalAction({ action: 'announcements' }));
+      setError('');
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+  useEffect(() => {
+    load();
+  }, []);
+  async function save(value: any, publish = false) {
+    setBusy(true);
+    try {
+      await portalAction({ action: 'announcementSave', value, publish });
+      setDraft(null);
+      setPreview(null);
+      await load();
+      toast.success(publish ? 'Published to the selected client audience' : 'Saved');
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  const set = (key: string, value: any) => setDraft((d: any) => ({ ...d, [key]: value }));
+  return (
+    <>
+      <div className="toolbar">
+        <p className="muted">
+          Announcements and promotions for the client portal. No email or external ad spending.
+        </p>
+        <button
+          className="btn"
+          disabled={!data}
+          onClick={() =>
+            setDraft({
+              id: crypto.randomUUID(),
+              title: '',
+              body: '',
+              kind: 'Announcement',
+              audience: 'All clients',
+              client_ids: [],
+              starts_on: day(),
+              ends_on: null,
+              link_url: '',
+              link_label: '',
+              status: 'Draft',
+              version: 0,
+            })
+          }
+        >
+          New announcement
+        </button>
+      </div>
+      {error && <p role="alert">{error}</p>}
+      {!data && !error && <p>Loading announcements…</p>}
+      <div className="announcement-grid">
+        {data?.items.map((a: any) => (
+          <article className="panel announcement-card" key={a.id}>
+            <div className="flex-between">
+              <span className="eyebrow">{a.kind}</span>
+              <span className="chip">
+                {a.status === 'Published'
+                  ? a.starts_on > day()
+                    ? 'Scheduled'
+                    : a.ends_on && a.ends_on < day()
+                      ? 'Expired'
+                      : 'Published'
+                  : a.status}
+              </span>
+            </div>
+            <h3>{a.title}</h3>
+            <AnnouncementMessage body={a.body} />
+            <dl className="announcement-meta">
+              <div>
+                <dt>Audience</dt>
+                <dd>{a.audience}</dd>
+              </div>
+              <div>
+                <dt>Starts</dt>
+                <dd>{announcementDate(a.starts_on)}</dd>
+              </div>
+              <div>
+                <dt>Ends</dt>
+                <dd>{a.ends_on ? announcementDate(a.ends_on) : 'No end date'}</dd>
+              </div>
+            </dl>
+            <div className="announcement-actions">
+              <button className="btn secondary" onClick={() => setPreview(a)}>
+                Preview
+              </button>
+              <button className="text-button" onClick={() => setDraft({ ...a, status: 'Draft' })}>
+                Edit draft
+              </button>
+              {a.status !== 'Archived' && (
+                <button
+                  className="text-button"
+                  disabled={busy}
+                  onClick={() => save({ ...a, status: 'Archived' })}
+                >
+                  Archive
+                </button>
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+      {data && !data.items.length && (
+        <p className="empty">
+          No announcements yet. Start with a draft, then preview and publish it.
+        </p>
+      )}
+      <Dialog
+        open={!!draft}
+        onOpenChange={(v) => {
+          if (!v && !busy) setDraft(null);
+        }}
+      >
+        <DialogContent className="editor">
+          <DialogHeader>
+            <DialogTitle>{draft?.version ? 'Edit announcement' : 'New announcement'}</DialogTitle>
+            <DialogDescription>
+              Saving keeps this as a draft. Preview it before publishing.
+            </DialogDescription>
+          </DialogHeader>
+          {draft && (
+            <form
+              className="editor-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                save(draft);
+              }}
+            >
+              <label className="field">
+                <span>Title</span>
+                <input
+                  required
+                  maxLength={160}
+                  value={draft.title}
+                  onChange={(e) => set('title', e.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span>Message</span>
+                <textarea
+                  required
+                  rows={5}
+                  maxLength={4000}
+                  value={draft.body}
+                  onChange={(e) => set('body', e.target.value)}
+                />
+              </label>
+              <div className="form-grid">
+                <label className="field">
+                  <span>Type</span>
+                  <select value={draft.kind} onChange={(e) => set('kind', e.target.value)}>
+                    <option>Announcement</option>
+                    <option>Promotion</option>
+                  </select>
+                </label>
+                <label className="field">
+                  <span>Audience</span>
+                  <select value={draft.audience} onChange={(e) => set('audience', e.target.value)}>
+                    {['All clients', 'Garden clients', 'Project clients', 'Selected clients'].map(
+                      (v) => (
+                        <option key={v}>{v}</option>
+                      ),
+                    )}
+                  </select>
+                </label>
+              </div>
+              {draft.audience === 'Selected clients' && (
+                <fieldset>
+                  <legend>Select client accounts</legend>
+                  {data.clients.map((c: any) => (
+                    <label className="photo-visible" key={c.id}>
+                      <input
+                        type="checkbox"
+                        checked={draft.client_ids.includes(c.id)}
+                        onChange={(e) =>
+                          set(
+                            'client_ids',
+                            e.target.checked
+                              ? [...draft.client_ids, c.id]
+                              : draft.client_ids.filter((id: string) => id !== c.id),
+                          )
+                        }
+                      />
+                      {c.name}
+                    </label>
+                  ))}
+                </fieldset>
+              )}
+              <div className="form-grid">
+                <label className="field">
+                  <span>Starts · Pacific date</span>
+                  <input
+                    required
+                    type="date"
+                    value={draft.starts_on}
+                    onChange={(e) => set('starts_on', e.target.value)}
+                  />
+                </label>
+                <label className="field">
+                  <span>Ends · optional</span>
+                  <input
+                    type="date"
+                    min={draft.starts_on}
+                    value={draft.ends_on || ''}
+                    onChange={(e) => set('ends_on', e.target.value || null)}
+                  />
+                </label>
+              </div>
+              <label className="field">
+                <span>Link URL · optional HTTPS</span>
+                <input
+                  type="url"
+                  pattern="https://.*"
+                  value={draft.link_url}
+                  onChange={(e) => set('link_url', e.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span>Link label</span>
+                <input
+                  required={!!draft.link_url}
+                  value={draft.link_label}
+                  onChange={(e) => set('link_label', e.target.value)}
+                />
+              </label>
+              <button className="btn" disabled={busy}>
+                Save draft
+              </button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={!!preview}
+        onOpenChange={(v) => {
+          if (!v && !busy) setPreview(null);
+        }}
+      >
+        <DialogContent className="editor">
+          <DialogHeader>
+            <DialogTitle>Client announcement preview</DialogTitle>
+            <DialogDescription>
+              {preview?.audience} · {preview?.starts_on}
+              {preview?.ends_on ? ' through ' + preview.ends_on : ''}
+            </DialogDescription>
+          </DialogHeader>
+          {preview && (
+            <>
+              <article className="panel account-section">
+                <p className="eyebrow">{preview.kind}</p>
+                <h2>{preview.title}</h2>
+                <AnnouncementMessage body={preview.body} />
+                {preview.link_url && (
+                  <a
+                    className="text-button"
+                    href={preview.link_url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {preview.link_label} ↗
+                  </a>
+                )}
+              </article>
+              {preview.status === 'Draft' && (
+                <button className="btn" disabled={busy} onClick={() => save(preview, true)}>
+                  Publish to client portal
+                </button>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }

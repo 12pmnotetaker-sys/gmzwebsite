@@ -1,57 +1,1274 @@
 'use client';
 import HubWorkflows from './hub-workflows';
 import FieldSource from './field-source';
-import {useEffect,useState} from 'react';
-import {Plus,ArrowUpRight,MapPin,Truck,Droplets,Package,Inbox} from 'lucide-react';
-import {Dialog,DialogContent,DialogHeader,DialogTitle,DialogDescription} from '@/operations/components/ui/dialog';
-import {Checkbox} from '@/operations/components/ui/checkbox';
-import {Select,SelectTrigger,SelectValue,SelectContent,SelectItem} from '@/operations/components/ui/select';
-import {estimateTotal} from '@/operations/lib/operations/extensions';
-import type {State,Command} from '@/operations/lib/operations/model';
-import {toast} from 'sonner';
-const uid=()=>crypto.randomUUID(),today=()=>new Date().toISOString().slice(0,10),cash=(n:number)=>n.toLocaleString('en-US',{style:'currency',currency:'USD'});
-type Props={view:string;data:State;save:(c:Command,close?:boolean)=>Promise<boolean>;busy:boolean};
-type Spec={key:string;label:string;type?:string;options?:{value:string;label:string}[];optional?:boolean};
-const opts=(a:string[])=>a.map(value=>({value,label:value}));
-function Choice({value,options,onChange,label}:{value:string;options:{value:string;label:string}[];onChange:(v:string)=>void;label:string}){return <Select value={value||'__none'} onValueChange={v=>onChange(v==='__none'?'':v)}><SelectTrigger aria-label={label}><SelectValue/></SelectTrigger><SelectContent>{options.map(o=><SelectItem key={o.value||'__none'} value={o.value||'__none'}>{o.label}</SelectItem>)}</SelectContent></Select>}
-export default function Expansion({view,data,save,busy}:Props){
- const [modal,setModal]=useState(''),[draft,setDraft]=useState<any>({}),[search,setSearch]=useState(''),[selected,setSelected]=useState(''),[truck,setTruck]=useState(''),[frequency,setFrequency]=useState(''),[routeDate,setRouteDate]=useState(today()),[routeStops,setRouteStops]=useState<string[]>([]),[calc,setCalc]=useState({kind:'Pavers',length:0,width:0,depth:3,price:0}),[csv,setCsv]=useState('');
- const propertyOptions=data.properties.map(p=>({value:p.id,label:p.name})),pname=(id:string)=>data.properties.find(p=>p.id===id)?.name||'Unknown property';
- const set=(k:string,v:any)=>setDraft((d:any)=>({...d,[k]:v}));
- const open=(kind:string,value:any)=>{setModal(kind);setDraft(structuredClone(value));};
- const run=async(action:string,value:any)=>{const ok=await save({type:'extension',action,value},false);if(ok)setModal('');return ok;};
- useEffect(()=>{if(view!=='inquiries')return;const sync=()=>{let id='';try{id=decodeURIComponent(location.hash.split('/')[1]||'')}catch{}const lead=data.leads.find(l=>l.id===id);if(lead)open(lead.projectId?'proposal':'lead',lead);};sync();window.addEventListener('hashchange',sync);return()=>window.removeEventListener('hashchange',sync);},[view,data.leads]);
- const fields:Record<string,Spec[]>={
- lead:[{key:'name',label:'Client / inquiry name'},{key:'email',label:'Email',type:'email',optional:true},{key:'phone',label:'Phone',optional:true},{key:'address',label:'Property address',optional:true},{key:'city',label:'City',optional:true},{key:'kind',label:'Request type',options:opts(['Contact','Consultation','Site walk'])},{key:'status',label:'Pipeline stage',options:opts(['New','Contacted','Site walk','Estimating','Lost'])},{key:'clientSummary',label:'Client-facing proposal summary',type:'textarea',optional:true},{key:'sentOn',label:'Date actually sent',type:'date',optional:true},{key:'sentReference',label:'Delivery reference (email subject, document, or link)',optional:true},{key:'notes',label:'Office scope & inquiry notes · internal',type:'textarea',optional:true},{key:'approvalNote',label:'Acceptance evidence (who, when, and reference)',type:'textarea',optional:true}],
- convert:[{key:'propertyId',label:'Property',options:[{value:'',label:'Create a new client / property'},...propertyOptions]},{key:'owner',label:'Project owner'},{key:'due',label:'Project due date',type:'date'}],
- asset:[{key:'name',label:'Equipment name'},{key:'kind',label:'Type',options:opts(['Truck','Trailer','Loader','Mower','Tool','Other'])},{key:'unit',label:'Meter unit',options:opts(['Miles','Hours'])},{key:'meter',label:'Current meter',type:'number'},{key:'lastService',label:'Last service meter',type:'number'},{key:'interval',label:'Service interval',type:'number'},{key:'notes',label:'Service requirements / equipment notes',type:'textarea',optional:true}],
- service:[{key:'assetId',label:'Equipment',options:data.assets.map(a=>({value:a.id,label:a.name}))},{key:'date',label:'Service date',type:'date'},{key:'meter',label:'Meter at service',type:'number'},{key:'description',label:'Work performed'},{key:'cost',label:'Service cost ($)',type:'number'}],
- zone:[{key:'propertyId',label:'Property',options:propertyOptions},{key:'controller',label:'Controller make / model'},{key:'location',label:'Controller location',optional:true},{key:'zone',label:'Zone number / name'},{key:'planting',label:'Planting / coverage',optional:true},{key:'minutes',label:'Base minutes per cycle',type:'number'},{key:'cycles',label:'Cycles per watering day',type:'number'},{key:'budget',label:'Seasonal budget (%)',type:'number'},{key:'days',label:'Watering days',optional:true},{key:'start',label:'Start times',optional:true},{key:'notes',label:'Cycle / soak and audit notes',type:'textarea',optional:true}],
- issue:[{key:'propertyId',label:'Property',options:propertyOptions},{key:'title',label:'Problem observed'},{key:'priority',label:'Priority',options:opts(['Routine','Urgent'])},{key:'status',label:'Status',options:opts(['Open','Resolved'])},{key:'notes',label:'Location and repair scope',type:'textarea',optional:true}],
- repair:[{key:'date',label:'Repair date',type:'date'},{key:'crew',label:'Assigned crew'},{key:'truck',label:'Assigned truck'},{key:'minutes',label:'Time budget (minutes)',type:'number'}],
- item:[{key:'name',label:'Material name'},{key:'vendor',label:'Supplier'},{key:'unit',label:'Purchase unit (each, ft, yd³, bag)'},{key:'cost',label:'Unit cost ($)',type:'number'},{key:'asOf',label:'Price date',type:'date'},{key:'source',label:'Quote / receipt reference',optional:true}],
- allocate:[{key:'itemId',label:'Material',options:data.items.map(i=>({value:i.id,label:`${i.name} · ${cash(i.cost)}/${i.unit}`}))},{key:'targetType',label:'Post cost to',options:opts(['visit','project'])},{key:'targetId',label:'Work order / project',options:draft.targetType==='project'?data.projects.map(p=>({value:p.id,label:p.title})):data.visits.map(v=>({value:v.id,label:`${pname(v.propertyId)} · ${v.date}`}))},{key:'quantity',label:'Quantity',type:'number'}]
- };
- const quantity=calc.kind==='Soil / aggregate'?Math.round(calc.length*calc.width*(calc.depth/12)/27*100)/100:calc.kind==='Drip tubing'?calc.length:calc.kind==='Plants'?calc.length:calc.length*calc.width;
- const unit=calc.kind==='Soil / aggregate'?'yd³':calc.kind==='Drip tubing'?'ft':calc.kind==='Plants'?'each':'sq ft';
- const filtered=data.properties.filter(p=>(!truck||p.truck===truck)&&(!frequency||p.cadence===frequency)&&(p.name+' '+p.city).toLowerCase().includes(search.toLowerCase()));
- const activeProperty=data.properties.find(p=>p.id===selected)||filtered[0];
- const address=(id:string)=>{const p=data.properties.find(p=>p.id===id);return p?`${p.address}, ${p.city}, CA`:'';};
- function directions(){if(!routeStops.length)return '';return 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+encodeURIComponent(address(routeStops.at(-1)!))+(routeStops.length>1?'&origin='+encodeURIComponent(address(routeStops[0])):'')+(routeStops.length>2?'&waypoints='+encodeURIComponent(routeStops.slice(1,-1).map(address).join('|')):'');}
- function newLead(){open('lead',{id:uid(),name:'',email:'',phone:'',address:'',city:'',kind:'Contact',status:'New',notes:'',approvalNote:'',projectId:'',lines:[]});}
- return <div className="expansion">{['fleet','vendors'].includes(view)&&<HubWorkflows view={view} data={data} busy={busy} save={save}/>}
- {view==='inquiries'&&<><div className="toolbar"><p className="muted">Portal requests and manual inquiries. Public website intake is not connected yet.</p><button className="btn" onClick={newLead}><Plus size={16}/> Add inquiry</button></div><div className="exp-kanban">{['New','Contacted','Site walk','Estimating','Won','Lost'].map(stage=><section key={stage} className="exp-lane"><h3>{stage} <small>{data.leads.filter(l=>l.status===stage).length}</small></h3>{data.leads.filter(l=>l.status===stage).map(l=><article className="exp-card" key={l.id}><span className="chip">{l.kind}</span><h3>{l.name}</h3><p>{l.city||'Location not recorded'}</p>{l.sourceRequestId&&<p><a className="text-button" href={'#clients/'+encodeURIComponent(l.clientId)}>Client profile →</a><br/><a className="text-button" href="#portal-inbox">{l.sourceReference} · Portal request</a></p>}{l.sentOn&&<p>Sent {l.sentOn}</p>}<strong>{cash(estimateTotal(l))}</strong><div className="exp-actions"><button className="text-button" onClick={()=>open(l.projectId?'proposal':'lead',l)}>{l.projectId?'View scope':'Edit scope'}</button><button className="text-button" onClick={()=>open('proposal',l)}>Preview</button>{!l.projectId&&<button className="text-button" onClick={()=>open('convert',{id:l.id,propertyId:l.propertyId||'',owner:'Project team',due:today()})}>Convert accepted scope <ArrowUpRight size={14}/></button>}</div></article>)}{!data.leads.some(l=>l.status===stage)&&<p className="muted">No inquiries</p>}</section>)}</div></>}
- {view==='field'&&<><FieldSource properties={data.properties} onLoad={ids=>{setRouteStops(ids);setTruck('');setFrequency('');setSearch('');toast.success('Route stops loaded. Choose the date and truck, then save.');}}/><div className="toolbar"><input className="exp-input" aria-label="Search properties" placeholder="Search property or city" value={search} onChange={e=>setSearch(e.target.value)}/><Choice label="Truck filter" value={truck} onChange={setTruck} options={[{value:'',label:'All trucks'},...opts([...new Set(['F-150','Silverado HD',...data.properties.map(p=>p.truck).filter(Boolean)])])]}/><Choice label="Frequency filter" value={frequency} onChange={setFrequency} options={[{value:'',label:'All frequencies'},...opts([...new Set(data.properties.map(p=>p.cadence))])]}/></div><div className="exp-two"><section className="panel exp-pad"><h2>Property map</h2><p className="muted">Address-based map for the selected property. Confirm the map match before driving.</p>{activeProperty?<><iframe title={'Map of '+activeProperty.name} className="exp-map" loading="lazy" referrerPolicy="no-referrer" src={'https://maps.google.com/maps?q='+encodeURIComponent(address(activeProperty.id))+'&output=embed'}/><h3>{activeProperty.name}</h3><p>{activeProperty.address} · {activeProperty.city}</p><div className="access-note"><strong>Access, parking & water shut-off</strong><p>{activeProperty.access||'No field access instructions recorded. Add them in Clients & properties.'}</p></div></>:<p>No properties match these filters.</p>}<div className="exp-property-list">{filtered.map(p=><button className={'exp-stop '+(activeProperty?.id===p.id?'selected':'')} key={p.id} onClick={()=>setSelected(p.id)}><MapPin size={16}/><span>{p.name}<small>{p.city} · {p.truck||'Truck unassigned'} · {p.cadence}</small></span></button>)}</div></section><section className="panel exp-pad"><h2>Day route planner</h2><p className="muted">Group by city, then arrange stops. Navigation opens in Google Maps; traffic optimization and an all-property pin map are not connected.</p><label className="field"><span>Route date</span><input type="date" value={routeDate} onChange={e=>setRouteDate(e.target.value)}/></label><button className="btn secondary" onClick={()=>setRouteStops(filtered.slice().sort((a,b)=>a.city.localeCompare(b.city)||a.name.localeCompare(b.name)).map(p=>p.id))}>Group filtered properties by city</button><div className="exp-actions"><Choice label="Add stop" value="" options={[{value:'',label:'Add a property'},...propertyOptions.filter(p=>!routeStops.includes(p.value))]} onChange={v=>v&&setRouteStops([...routeStops,v])}/></div>{routeStops.map((id,i)=><div className="exp-route" key={id}><span>{i+1}. {pname(id)}<small>{data.properties.find(p=>p.id===id)?.city}</small></span><button className="text-button" aria-label={'Move '+pname(id)+' up'} disabled={i===0} onClick={()=>{const a=[...routeStops];[a[i-1],a[i]]=[a[i],a[i-1]];setRouteStops(a);}}>↑</button><button className="text-button" aria-label={'Remove '+pname(id)} onClick={()=>setRouteStops(routeStops.filter(x=>x!==id))}>Remove</button></div>)}<div className="exp-actions"><button disabled={busy||!routeStops.length||!truck} className="btn" onClick={()=>run('route',{id:routeDate+'-'+truck,date:routeDate,truck,propertyIds:routeStops})}>Save route</button>{routeStops.length>0&&<a className="btn secondary" target="_blank" rel="noreferrer" href={directions()}>Open navigation</a>}</div><p className="muted">Select a truck above to save. Your map app may limit the number of stops. Saving a route does not create visits.</p><h3>Saved plans</h3>{data.routes.map(r=><button className="exp-stop" key={r.id} onClick={()=>{setRouteDate(r.date);setTruck(r.truck);setRouteStops(r.propertyIds);}}>{r.date} · {r.truck} · {r.propertyIds.length} stops</button>)}</section></div></>}
- {view==='fleet'&&<><div className="toolbar"><p className="muted">Record verified meters and intervals from your equipment records.</p><button className="btn" onClick={()=>open('asset',{id:uid(),name:'',kind:'Truck',meter:0,unit:'Miles',lastService:0,interval:5000,notes:'',checklist:['Blower','Trimmer','Irrigation key','MAS830L multimeter','PVC repair fittings'].map(label=>({label,done:false}))})}><Plus size={16}/> Add equipment</button></div><div className="project-grid">{data.assets.map(a=><article className="panel exp-pad" key={a.id}><Truck/><h2>{a.name}</h2><p>{a.kind} · {a.meter.toLocaleString()} {a.unit.toLowerCase()}</p><span className={'chip '+(a.meter-a.lastService>=a.interval?'amber':'green')}>{a.meter-a.lastService>=a.interval?'Service due':`${a.interval-(a.meter-a.lastService)} ${a.unit.toLowerCase()} until service`}</span><p>{a.notes}</p><h3>Morning checklist</h3>{a.checklist.map((t,i)=><label className="exp-check" key={i}><Checkbox disabled={busy} checked={t.done} onCheckedChange={done=>run('asset',{...a,checklist:a.checklist.map((x,j)=>j===i?{...x,done:done===true}:x)})}/>{t.label}</label>)}<div className="exp-actions"><button className="text-button" onClick={()=>open('asset',a)}>Edit equipment</button><button className="text-button" disabled={busy} onClick={()=>run('asset',{...a,checklist:a.checklist.map(t=>({...t,done:false}))})}>Reset checklist</button><button className="btn secondary" onClick={()=>open('service',{id:uid(),assetId:a.id,date:today(),meter:a.meter,description:'',cost:0})}>Log service</button></div></article>)}</div>{!data.assets.length&&<div className="empty"><Truck/><p>Add your Silverado HD, F-150, and equipment with their actual meter readings.</p></div>}<section className="panel exp-pad"><h2>Service history</h2>{data.services.slice().reverse().map(s=><div className="exp-route" key={s.id}><span><strong>{data.assets.find(a=>a.id===s.assetId)?.name}</strong><small>{s.date} · {s.description} · meter {s.meter}</small></span>{cash(s.cost)}</div>)}{!data.services.length&&<p className="muted">No services logged.</p>}</section></>}
- {view==='vendors'&&<><div className="toolbar"><input className="exp-input" aria-label="Search price book" placeholder="Search material, supplier, or unit" value={search} onChange={e=>setSearch(e.target.value)}/><div className="exp-actions"><button className="btn secondary" onClick={()=>{setCsv('');setModal('importItems');}}>Import CSV</button><button className="btn" onClick={()=>open('item',{id:uid(),name:'',vendor:'',unit:'each',cost:0,asOf:today(),source:''})}><Plus size={16}/> Add material</button></div></div><div className="project-grid">{data.items.filter(i=>(i.name+' '+i.vendor+' '+i.unit).toLowerCase().includes(search.toLowerCase())).map(i=><article className="panel exp-pad" key={i.id}><Package/><h3>{i.name}</h3><p>{i.vendor}</p><div className="exp-metric">{cash(i.cost)}<small>per {i.unit} · {i.asOf}</small></div><p>{i.source||'No quote reference'}</p><div className="exp-actions"><button className="text-button" onClick={()=>open('item',i)}>Edit price</button><button className="btn secondary" onClick={()=>open('allocate',{id:uid(),itemId:i.id,targetType:'visit',targetId:data.visits[0]?.id||'',quantity:1})}>Add to job cost</button></div></article>)}</div>{!data.items.length&&<div className="empty"><Package/><p>Add supplier quotes or import your material costs. No sample prices are used.</p></div>}<section className="panel exp-pad"><h2>Material cost postings</h2><p className="muted">Each posting adds to the recorded job total and keeps its original unit cost when supplier prices change.</p>{data.allocations.slice().reverse().map(a=><div className="exp-route" key={a.id}><span><strong>{a.name} · {a.quantity} × {cash(a.unitCost)}</strong><small>{a.targetType==='project'?data.projects.find(p=>p.id===a.targetId)?.title:pname(data.visits.find(v=>v.id===a.targetId)?.propertyId||'')} · {a.at.slice(0,10)}</small></span>{cash(a.total)}</div>)}</section></>}
- <Dialog open={!!modal} onOpenChange={v=>!v&&setModal('')}><DialogContent className="editor"><DialogHeader><DialogTitle>{({lead:'Inquiry & scope builder',convert:'Convert accepted proposal',asset:'Equipment profile',service:'Log maintenance service',zone:'Controller & zone',issue:'Audit finding',repair:'Schedule irrigation repair',item:'Price book material',allocate:'Post material cost',importItems:'Import supplier prices',proposal:'Proposal preview'} as Record<string,string>)[modal]}</DialogTitle><DialogDescription>{modal==='proposal'?'Review and print a client copy. Deliver it using your usual channel, then record the sent date and reference.':'Saved in your private GMZ workspace.'}</DialogDescription></DialogHeader>
- {modal==='proposal'?<div className="exp-pad"><h2>{draft.name}</h2><p>{draft.address} · {draft.city}</p><p className="account-notes">{draft.clientSummary||'Add a client-facing summary before delivery.'}</p>{draft.lines?.map((l:any)=><div className="exp-route" key={l.id}><span>{l.label}<small>{l.quantity} {l.unit} × {cash(l.price)}</small></span>{cash(l.quantity*l.price)}</div>)}<h3>Total: {cash(estimateTotal(draft))}</h3><p>This proposal covers only the line items listed. Extra work requires separate approval.</p><button className="btn secondary" onClick={()=>window.print()}>Print / save PDF</button></div>:<form className="editor-form" onSubmit={async e=>{e.preventDefault();if(modal==='importItems'){try{const rows=parseCSV(csv);await run('importItems',rows);}catch(err){toast.error(err instanceof Error?err.message:'Invalid CSV');}}else await run(modal,draft);}}>
- {modal==='lead'&&draft.sourceRequestId&&<div className="info-line"><p>Source request: {draft.sourceReference}</p><a className="text-button" href={'#clients/'+encodeURIComponent(draft.clientId)}>View client profile →</a><label className="field"><span>Client property</span><Choice label="Client property" value={draft.propertyId} options={data.properties.filter(p=>p.clientId===draft.clientId&&!p.internal).map(p=>({value:p.id,label:p.name}))} onChange={id=>{const p=data.properties.find(p=>p.id===id);setDraft({...draft,propertyId:id,address:p?.address||'',city:p?.city||''})}}/></label></div>}{modal==='lead'&&<p className="muted">Save scope, then use Preview to print a client copy. Saving does not send it. Record the sent date only after delivery.</p>}<div className="form-grid">{(fields[modal]||[]).map(f=><label className="field" key={f.key}><span>{f.label}</span>{f.options?<Choice label={f.label} value={draft[f.key]||''} options={f.options} onChange={v=>{set(f.key,v);if(f.key==='targetType')set('targetId','');}}/>:f.type==='textarea'?<textarea required={!f.optional} value={draft[f.key]??''} onChange={e=>set(f.key,e.target.value)}/>:<input required={!f.optional} type={f.type||'text'} min={f.type==='number'?0:undefined} step={f.type==='number'?'any':undefined} value={draft[f.key]??''} onChange={e=>set(f.key,f.type==='number'?Number(e.target.value):e.target.value)}/>}</label>)}</div>
- {modal==='lead'&&<><h3>Rapid take-off</h3><Choice label="Calculator" value={calc.kind} options={opts(['Pavers','Retaining wall face','Turf','Soil / aggregate','Drip tubing','Plants'])} onChange={kind=>setCalc({...calc,kind})}/><div className="form-grid">{(['length','width',...(calc.kind==='Soil / aggregate'?['depth']:[]),'price'] as const).map(k=><label className="field" key={k}><span>{k==='price'?'Sell price per '+unit:k==='depth'?'Depth (inches)':k==='length'&&calc.kind==='Plants'?'Plant count':k+' (feet)'}</span><input type="number" min="0" step="any" value={calc[k as keyof typeof calc]} onChange={e=>setCalc({...calc,[k]:Number(e.target.value)})}/></label>)}</div><button type="button" className="btn secondary" disabled={quantity<=0} onClick={()=>set('lines',[...draft.lines,{id:uid(),label:calc.kind,unit,quantity,price:calc.price,accepted:false}])}>Add {quantity} {unit} · {cash(quantity*calc.price)}</button><h3>Proposal lines</h3>{draft.lines.map((l:any,i:number)=><div className="exp-line" key={l.id}><input aria-label="Scope description" required value={l.label} onChange={e=>set('lines',draft.lines.map((x:any,j:number)=>j===i?{...x,label:e.target.value}:x))}/><label className="field"><span>Quantity ({l.unit})</span><input type="number" min="0" step="any" required value={l.quantity} onChange={e=>set('lines',draft.lines.map((x:any,j:number)=>j===i?{...x,quantity:Number(e.target.value)}:x))}/></label><label className="field"><span>Unit price ($)</span><input type="number" min="0" step="any" required value={l.price} onChange={e=>set('lines',draft.lines.map((x:any,j:number)=>j===i?{...x,price:Number(e.target.value)}:x))}/></label><label className="exp-check"><Checkbox checked={l.accepted} onCheckedChange={v=>set('lines',draft.lines.map((x:any,j:number)=>j===i?{...x,accepted:v===true}:x))}/> Accepted</label><button className="text-button" type="button" onClick={()=>set('lines',draft.lines.filter((_:any,j:number)=>j!==i))}>Remove</button></div>)}<button type="button" className="text-button" onClick={()=>set('lines',[...draft.lines,{id:uid(),label:'Custom scope',unit:'job',quantity:1,price:calc.price,accepted:false}])}>Add custom line using entered price</button><strong>Estimate total: {cash(estimateTotal(draft))}</strong><p className="muted">Acceptance is recorded by the office. Enter supporting evidence before conversion. Calculations exclude tax and waste unless included in your entered price.</p></>}
- {modal==='asset'&&<><h3>Truck checklist</h3>{draft.checklist.map((t:any,i:number)=><div className="exp-line" key={i}><input aria-label="Checklist item" required value={t.label} onChange={e=>set('checklist',draft.checklist.map((x:any,j:number)=>j===i?{...x,label:e.target.value}:x))}/><button type="button" className="text-button" onClick={()=>set('checklist',draft.checklist.filter((_:any,j:number)=>i!==j))}>Remove</button></div>)}<button type="button" className="text-button" onClick={()=>set('checklist',[...draft.checklist,{label:'',done:false}])}>Add checklist item</button><p className="muted">Confirm the suggested interval against your service manual.</p></>}
- {modal==='importItems'&&<><p>Paste CSV with this header. Quoted fields may contain commas. Imports add new records; existing prices can be edited in the catalog.</p><code>name,vendor,unit,cost,asOf,source</code><label className="field"><span>Supplier price CSV</span><textarea rows={12} required value={csv} onChange={e=>setCsv(e.target.value)} placeholder={'Drip tube,Supplier,ft,0.25,2026-09-16,Quote reference'}/></label></>}
- {modal==='allocate'&&<p className="info-line">This adds {cash((data.items.find(i=>i.id===draft.itemId)?.cost||0)*(draft.quantity||0))} to the existing material cost. Record each purchase once.</p>}
- <div className="editor-footer"><button type="button" className="btn secondary" onClick={()=>setModal('')}>Cancel</button><button disabled={busy} className="btn" type="submit">{busy?'Saving…':modal==='convert'?'Create project':modal==='repair'?'Create work order':'Save'}</button></div></form>}
- </DialogContent></Dialog></div>;
+import { useEffect, useState } from 'react';
+import { Plus, ArrowUpRight, MapPin, Truck, Droplets, Package, Inbox } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/operations/components/ui/dialog';
+import { Checkbox } from '@/operations/components/ui/checkbox';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '@/operations/components/ui/select';
+import { estimateTotal } from '@/operations/lib/operations/extensions';
+import type { State, Command } from '@/operations/lib/operations/model';
+import { toast } from 'sonner';
+const uid = () => crypto.randomUUID(),
+  today = () => new Date().toISOString().slice(0, 10),
+  cash = (n: number) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+type Props = {
+  view: string;
+  data: State;
+  save: (c: Command, close?: boolean) => Promise<boolean>;
+  busy: boolean;
+};
+type Spec = {
+  key: string;
+  label: string;
+  type?: string;
+  options?: { value: string; label: string }[];
+  optional?: boolean;
+};
+const opts = (a: string[]) => a.map((value) => ({ value, label: value }));
+function Choice({
+  value,
+  options,
+  onChange,
+  label,
+}: {
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (v: string) => void;
+  label: string;
+}) {
+  return (
+    <Select value={value || '__none'} onValueChange={(v) => onChange(v === '__none' ? '' : v)}>
+      <SelectTrigger aria-label={label}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((o) => (
+          <SelectItem key={o.value || '__none'} value={o.value || '__none'}>
+            {o.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 }
-export function parseCSV(input:string){const rows:string[][]=[];let row:string[]=[],cell='',quote=false;for(let i=0;i<input.length;i++){const c=input[i];if(c==='"'){if(quote&&input[i+1]==='"'){cell+='"';i++;}else quote=!quote;}else if(c===','&&!quote){row.push(cell.trim());cell='';}else if(c==='\n'&&!quote){row.push(cell.trim());if(row.some(Boolean))rows.push(row);row=[];cell='';}else cell+=c;}if(quote)throw Error('Unclosed CSV quote');row.push(cell.trim());if(row.some(Boolean))rows.push(row);const header=rows.shift();if(header?.join(',')!=='name,vendor,unit,cost,asOf,source')throw Error('Use the exact CSV header shown');return rows.map((r,i)=>{if(r.length!==6||!r[3].trim()||!Number.isFinite(Number(r[3])))throw Error('Invalid fields on CSV row '+(i+2));return {id:uid(),name:r[0],vendor:r[1],unit:r[2],cost:Number(r[3]),asOf:r[4],source:r[5]};});}
+export default function Expansion({ view, data, save, busy }: Props) {
+  const [modal, setModal] = useState(''),
+    [draft, setDraft] = useState<any>({}),
+    [search, setSearch] = useState(''),
+    [selected, setSelected] = useState(''),
+    [truck, setTruck] = useState(''),
+    [frequency, setFrequency] = useState(''),
+    [routeDate, setRouteDate] = useState(today()),
+    [routeStops, setRouteStops] = useState<string[]>([]),
+    [calc, setCalc] = useState({ kind: 'Pavers', length: 0, width: 0, depth: 3, price: 0 }),
+    [csv, setCsv] = useState('');
+  const propertyOptions = data.properties.map((p) => ({ value: p.id, label: p.name })),
+    pname = (id: string) => data.properties.find((p) => p.id === id)?.name || 'Unknown property';
+  const set = (k: string, v: any) => setDraft((d: any) => ({ ...d, [k]: v }));
+  const open = (kind: string, value: any) => {
+    setModal(kind);
+    setDraft(structuredClone(value));
+  };
+  const run = async (action: string, value: any) => {
+    const ok = await save({ type: 'extension', action, value }, false);
+    if (ok) setModal('');
+    return ok;
+  };
+  useEffect(() => {
+    if (view !== 'inquiries') return;
+    const sync = () => {
+      let id = '';
+      try {
+        id = decodeURIComponent(location.hash.split('/')[1] || '');
+      } catch {}
+      const lead = data.leads.find((l) => l.id === id);
+      if (lead) open(lead.projectId ? 'proposal' : 'lead', lead);
+    };
+    sync();
+    window.addEventListener('hashchange', sync);
+    return () => window.removeEventListener('hashchange', sync);
+  }, [view, data.leads]);
+  const fields: Record<string, Spec[]> = {
+    lead: [
+      { key: 'name', label: 'Client / inquiry name' },
+      { key: 'email', label: 'Email', type: 'email', optional: true },
+      { key: 'phone', label: 'Phone', optional: true },
+      { key: 'address', label: 'Property address', optional: true },
+      { key: 'city', label: 'City', optional: true },
+      {
+        key: 'kind',
+        label: 'Request type',
+        options: opts(['Contact', 'Consultation', 'Site walk']),
+      },
+      {
+        key: 'status',
+        label: 'Pipeline stage',
+        options: opts(['New', 'Contacted', 'Site walk', 'Estimating', 'Lost']),
+      },
+      {
+        key: 'clientSummary',
+        label: 'Client-facing proposal summary',
+        type: 'textarea',
+        optional: true,
+      },
+      { key: 'sentOn', label: 'Date actually sent', type: 'date', optional: true },
+      {
+        key: 'sentReference',
+        label: 'Delivery reference (email subject, document, or link)',
+        optional: true,
+      },
+      {
+        key: 'notes',
+        label: 'Office scope & inquiry notes · internal',
+        type: 'textarea',
+        optional: true,
+      },
+      {
+        key: 'approvalNote',
+        label: 'Acceptance evidence (who, when, and reference)',
+        type: 'textarea',
+        optional: true,
+      },
+    ],
+    convert: [
+      {
+        key: 'propertyId',
+        label: 'Property',
+        options: [{ value: '', label: 'Create a new client / property' }, ...propertyOptions],
+      },
+      { key: 'owner', label: 'Project owner' },
+      { key: 'due', label: 'Project due date', type: 'date' },
+    ],
+    asset: [
+      { key: 'name', label: 'Equipment name' },
+      {
+        key: 'kind',
+        label: 'Type',
+        options: opts(['Truck', 'Trailer', 'Loader', 'Mower', 'Tool', 'Other']),
+      },
+      { key: 'unit', label: 'Meter unit', options: opts(['Miles', 'Hours']) },
+      { key: 'meter', label: 'Current meter', type: 'number' },
+      { key: 'lastService', label: 'Last service meter', type: 'number' },
+      { key: 'interval', label: 'Service interval', type: 'number' },
+      {
+        key: 'notes',
+        label: 'Service requirements / equipment notes',
+        type: 'textarea',
+        optional: true,
+      },
+    ],
+    service: [
+      {
+        key: 'assetId',
+        label: 'Equipment',
+        options: data.assets.map((a) => ({ value: a.id, label: a.name })),
+      },
+      { key: 'date', label: 'Service date', type: 'date' },
+      { key: 'meter', label: 'Meter at service', type: 'number' },
+      { key: 'description', label: 'Work performed' },
+      { key: 'cost', label: 'Service cost ($)', type: 'number' },
+    ],
+    zone: [
+      { key: 'propertyId', label: 'Property', options: propertyOptions },
+      { key: 'controller', label: 'Controller make / model' },
+      { key: 'location', label: 'Controller location', optional: true },
+      { key: 'zone', label: 'Zone number / name' },
+      { key: 'planting', label: 'Planting / coverage', optional: true },
+      { key: 'minutes', label: 'Base minutes per cycle', type: 'number' },
+      { key: 'cycles', label: 'Cycles per watering day', type: 'number' },
+      { key: 'budget', label: 'Seasonal budget (%)', type: 'number' },
+      { key: 'days', label: 'Watering days', optional: true },
+      { key: 'start', label: 'Start times', optional: true },
+      { key: 'notes', label: 'Cycle / soak and audit notes', type: 'textarea', optional: true },
+    ],
+    issue: [
+      { key: 'propertyId', label: 'Property', options: propertyOptions },
+      { key: 'title', label: 'Problem observed' },
+      { key: 'priority', label: 'Priority', options: opts(['Routine', 'Urgent']) },
+      { key: 'status', label: 'Status', options: opts(['Open', 'Resolved']) },
+      { key: 'notes', label: 'Location and repair scope', type: 'textarea', optional: true },
+    ],
+    repair: [
+      { key: 'date', label: 'Repair date', type: 'date' },
+      { key: 'crew', label: 'Assigned crew' },
+      { key: 'truck', label: 'Assigned truck' },
+      { key: 'minutes', label: 'Time budget (minutes)', type: 'number' },
+    ],
+    item: [
+      { key: 'name', label: 'Material name' },
+      { key: 'vendor', label: 'Supplier' },
+      { key: 'unit', label: 'Purchase unit (each, ft, yd³, bag)' },
+      { key: 'cost', label: 'Unit cost ($)', type: 'number' },
+      { key: 'asOf', label: 'Price date', type: 'date' },
+      { key: 'source', label: 'Quote / receipt reference', optional: true },
+    ],
+    allocate: [
+      {
+        key: 'itemId',
+        label: 'Material',
+        options: data.items.map((i) => ({
+          value: i.id,
+          label: `${i.name} · ${cash(i.cost)}/${i.unit}`,
+        })),
+      },
+      { key: 'targetType', label: 'Post cost to', options: opts(['visit', 'project']) },
+      {
+        key: 'targetId',
+        label: 'Work order / project',
+        options:
+          draft.targetType === 'project'
+            ? data.projects.map((p) => ({ value: p.id, label: p.title }))
+            : data.visits.map((v) => ({
+                value: v.id,
+                label: `${pname(v.propertyId)} · ${v.date}`,
+              })),
+      },
+      { key: 'quantity', label: 'Quantity', type: 'number' },
+    ],
+  };
+  const quantity =
+    calc.kind === 'Soil / aggregate'
+      ? Math.round(((calc.length * calc.width * (calc.depth / 12)) / 27) * 100) / 100
+      : calc.kind === 'Drip tubing'
+        ? calc.length
+        : calc.kind === 'Plants'
+          ? calc.length
+          : calc.length * calc.width;
+  const unit =
+    calc.kind === 'Soil / aggregate'
+      ? 'yd³'
+      : calc.kind === 'Drip tubing'
+        ? 'ft'
+        : calc.kind === 'Plants'
+          ? 'each'
+          : 'sq ft';
+  const filtered = data.properties.filter(
+    (p) =>
+      (!truck || p.truck === truck) &&
+      (!frequency || p.cadence === frequency) &&
+      (p.name + ' ' + p.city).toLowerCase().includes(search.toLowerCase()),
+  );
+  const activeProperty = data.properties.find((p) => p.id === selected) || filtered[0];
+  const address = (id: string) => {
+    const p = data.properties.find((p) => p.id === id);
+    return p ? `${p.address}, ${p.city}, CA` : '';
+  };
+  function directions() {
+    if (!routeStops.length) return '';
+    return (
+      'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' +
+      encodeURIComponent(address(routeStops.at(-1)!)) +
+      (routeStops.length > 1 ? '&origin=' + encodeURIComponent(address(routeStops[0])) : '') +
+      (routeStops.length > 2
+        ? '&waypoints=' + encodeURIComponent(routeStops.slice(1, -1).map(address).join('|'))
+        : '')
+    );
+  }
+  function newLead() {
+    open('lead', {
+      id: uid(),
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      city: '',
+      kind: 'Contact',
+      status: 'New',
+      notes: '',
+      approvalNote: '',
+      projectId: '',
+      lines: [],
+    });
+  }
+  return (
+    <div className="expansion">
+      {['fleet', 'vendors'].includes(view) && (
+        <HubWorkflows view={view} data={data} busy={busy} save={save} />
+      )}
+      {view === 'inquiries' && (
+        <>
+          <div className="toolbar">
+            <p className="muted">
+              Portal requests and manual inquiries. Public website intake is not connected yet.
+            </p>
+            <button className="btn" onClick={newLead}>
+              <Plus size={16} /> Add inquiry
+            </button>
+          </div>
+          <div className="exp-kanban">
+            {['New', 'Contacted', 'Site walk', 'Estimating', 'Won', 'Lost'].map((stage) => (
+              <section key={stage} className="exp-lane">
+                <h3>
+                  {stage} <small>{data.leads.filter((l) => l.status === stage).length}</small>
+                </h3>
+                {data.leads
+                  .filter((l) => l.status === stage)
+                  .map((l) => (
+                    <article className="exp-card" key={l.id}>
+                      <span className="chip">{l.kind}</span>
+                      <h3>{l.name}</h3>
+                      <p>{l.city || 'Location not recorded'}</p>
+                      {l.sourceRequestId && (
+                        <p>
+                          <a
+                            className="text-button"
+                            href={'#clients/' + encodeURIComponent(l.clientId)}
+                          >
+                            Client profile →
+                          </a>
+                          <br />
+                          <a className="text-button" href="#portal-inbox">
+                            {l.sourceReference} · Portal request
+                          </a>
+                        </p>
+                      )}
+                      {l.sentOn && <p>Sent {l.sentOn}</p>}
+                      <strong>{cash(estimateTotal(l))}</strong>
+                      <div className="exp-actions">
+                        <button
+                          className="text-button"
+                          onClick={() => open(l.projectId ? 'proposal' : 'lead', l)}
+                        >
+                          {l.projectId ? 'View scope' : 'Edit scope'}
+                        </button>
+                        <button className="text-button" onClick={() => open('proposal', l)}>
+                          Preview
+                        </button>
+                        {!l.projectId && (
+                          <button
+                            className="text-button"
+                            onClick={() =>
+                              open('convert', {
+                                id: l.id,
+                                propertyId: l.propertyId || '',
+                                owner: 'Project team',
+                                due: today(),
+                              })
+                            }
+                          >
+                            Convert accepted scope <ArrowUpRight size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                {!data.leads.some((l) => l.status === stage) && (
+                  <p className="muted">No inquiries</p>
+                )}
+              </section>
+            ))}
+          </div>
+        </>
+      )}
+      {view === 'field' && (
+        <>
+          <FieldSource
+            properties={data.properties}
+            onLoad={(ids) => {
+              setRouteStops(ids);
+              setTruck('');
+              setFrequency('');
+              setSearch('');
+              toast.success('Route stops loaded. Choose the date and truck, then save.');
+            }}
+          />
+          <div className="toolbar">
+            <input
+              className="exp-input"
+              aria-label="Search properties"
+              placeholder="Search property or city"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <Choice
+              label="Truck filter"
+              value={truck}
+              onChange={setTruck}
+              options={[
+                { value: '', label: 'All trucks' },
+                ...opts([
+                  ...new Set([
+                    'F-150',
+                    'Silverado HD',
+                    ...data.properties.map((p) => p.truck).filter(Boolean),
+                  ]),
+                ]),
+              ]}
+            />
+            <Choice
+              label="Frequency filter"
+              value={frequency}
+              onChange={setFrequency}
+              options={[
+                { value: '', label: 'All frequencies' },
+                ...opts([...new Set(data.properties.map((p) => p.cadence))]),
+              ]}
+            />
+          </div>
+          <div className="exp-two">
+            <section className="panel exp-pad">
+              <h2>Property map</h2>
+              <p className="muted">
+                Address-based map for the selected property. Confirm the map match before driving.
+              </p>
+              {activeProperty ? (
+                <>
+                  <iframe
+                    title={'Map of ' + activeProperty.name}
+                    className="exp-map"
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                    src={
+                      'https://maps.google.com/maps?q=' +
+                      encodeURIComponent(address(activeProperty.id)) +
+                      '&output=embed'
+                    }
+                  />
+                  <h3>{activeProperty.name}</h3>
+                  <p>
+                    {activeProperty.address} · {activeProperty.city}
+                  </p>
+                  <div className="access-note">
+                    <strong>Access, parking & water shut-off</strong>
+                    <p>
+                      {activeProperty.access ||
+                        'No field access instructions recorded. Add them in Clients & properties.'}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <p>No properties match these filters.</p>
+              )}
+              <div className="exp-property-list">
+                {filtered.map((p) => (
+                  <button
+                    className={'exp-stop ' + (activeProperty?.id === p.id ? 'selected' : '')}
+                    key={p.id}
+                    onClick={() => setSelected(p.id)}
+                  >
+                    <MapPin size={16} />
+                    <span>
+                      {p.name}
+                      <small>
+                        {p.city} · {p.truck || 'Truck unassigned'} · {p.cadence}
+                      </small>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+            <section className="panel exp-pad">
+              <h2>Day route planner</h2>
+              <p className="muted">
+                Group by city, then arrange stops. Navigation opens in Google Maps; traffic
+                optimization and an all-property pin map are not connected.
+              </p>
+              <label className="field">
+                <span>Route date</span>
+                <input
+                  type="date"
+                  value={routeDate}
+                  onChange={(e) => setRouteDate(e.target.value)}
+                />
+              </label>
+              <button
+                className="btn secondary"
+                onClick={() =>
+                  setRouteStops(
+                    filtered
+                      .slice()
+                      .sort((a, b) => a.city.localeCompare(b.city) || a.name.localeCompare(b.name))
+                      .map((p) => p.id),
+                  )
+                }
+              >
+                Group filtered properties by city
+              </button>
+              <div className="exp-actions">
+                <Choice
+                  label="Add stop"
+                  value=""
+                  options={[
+                    { value: '', label: 'Add a property' },
+                    ...propertyOptions.filter((p) => !routeStops.includes(p.value)),
+                  ]}
+                  onChange={(v) => v && setRouteStops([...routeStops, v])}
+                />
+              </div>
+              {routeStops.map((id, i) => (
+                <div className="exp-route" key={id}>
+                  <span>
+                    {i + 1}. {pname(id)}
+                    <small>{data.properties.find((p) => p.id === id)?.city}</small>
+                  </span>
+                  <button
+                    className="text-button"
+                    aria-label={'Move ' + pname(id) + ' up'}
+                    disabled={i === 0}
+                    onClick={() => {
+                      const a = [...routeStops];
+                      [a[i - 1], a[i]] = [a[i], a[i - 1]];
+                      setRouteStops(a);
+                    }}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    className="text-button"
+                    aria-label={'Remove ' + pname(id)}
+                    onClick={() => setRouteStops(routeStops.filter((x) => x !== id))}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+              <div className="exp-actions">
+                <button
+                  disabled={busy || !routeStops.length || !truck}
+                  className="btn"
+                  onClick={() =>
+                    run('route', {
+                      id: routeDate + '-' + truck,
+                      date: routeDate,
+                      truck,
+                      propertyIds: routeStops,
+                    })
+                  }
+                >
+                  Save route
+                </button>
+                {routeStops.length > 0 && (
+                  <a className="btn secondary" target="_blank" rel="noreferrer" href={directions()}>
+                    Open navigation
+                  </a>
+                )}
+              </div>
+              <p className="muted">
+                Select a truck above to save. Your map app may limit the number of stops. Saving a
+                route does not create visits.
+              </p>
+              <h3>Saved plans</h3>
+              {data.routes.map((r) => (
+                <button
+                  className="exp-stop"
+                  key={r.id}
+                  onClick={() => {
+                    setRouteDate(r.date);
+                    setTruck(r.truck);
+                    setRouteStops(r.propertyIds);
+                  }}
+                >
+                  {r.date} · {r.truck} · {r.propertyIds.length} stops
+                </button>
+              ))}
+            </section>
+          </div>
+        </>
+      )}
+      {view === 'fleet' && (
+        <>
+          <div className="toolbar">
+            <p className="muted">
+              Record verified meters and intervals from your equipment records.
+            </p>
+            <button
+              className="btn"
+              onClick={() =>
+                open('asset', {
+                  id: uid(),
+                  name: '',
+                  kind: 'Truck',
+                  meter: 0,
+                  unit: 'Miles',
+                  lastService: 0,
+                  interval: 5000,
+                  notes: '',
+                  checklist: [
+                    'Blower',
+                    'Trimmer',
+                    'Irrigation key',
+                    'MAS830L multimeter',
+                    'PVC repair fittings',
+                  ].map((label) => ({ label, done: false })),
+                })
+              }
+            >
+              <Plus size={16} /> Add equipment
+            </button>
+          </div>
+          <div className="project-grid">
+            {data.assets.map((a) => (
+              <article className="panel exp-pad" key={a.id}>
+                <Truck />
+                <h2>{a.name}</h2>
+                <p>
+                  {a.kind} · {a.meter.toLocaleString()} {a.unit.toLowerCase()}
+                </p>
+                <span
+                  className={'chip ' + (a.meter - a.lastService >= a.interval ? 'amber' : 'green')}
+                >
+                  {a.meter - a.lastService >= a.interval
+                    ? 'Service due'
+                    : `${a.interval - (a.meter - a.lastService)} ${a.unit.toLowerCase()} until service`}
+                </span>
+                <p>{a.notes}</p>
+                <h3>Morning checklist</h3>
+                {a.checklist.map((t, i) => (
+                  <label className="exp-check" key={i}>
+                    <Checkbox
+                      disabled={busy}
+                      checked={t.done}
+                      onCheckedChange={(done) =>
+                        run('asset', {
+                          ...a,
+                          checklist: a.checklist.map((x, j) =>
+                            j === i ? { ...x, done: done === true } : x,
+                          ),
+                        })
+                      }
+                    />
+                    {t.label}
+                  </label>
+                ))}
+                <div className="exp-actions">
+                  <button className="text-button" onClick={() => open('asset', a)}>
+                    Edit equipment
+                  </button>
+                  <button
+                    className="text-button"
+                    disabled={busy}
+                    onClick={() =>
+                      run('asset', {
+                        ...a,
+                        checklist: a.checklist.map((t) => ({ ...t, done: false })),
+                      })
+                    }
+                  >
+                    Reset checklist
+                  </button>
+                  <button
+                    className="btn secondary"
+                    onClick={() =>
+                      open('service', {
+                        id: uid(),
+                        assetId: a.id,
+                        date: today(),
+                        meter: a.meter,
+                        description: '',
+                        cost: 0,
+                      })
+                    }
+                  >
+                    Log service
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+          {!data.assets.length && (
+            <div className="empty">
+              <Truck />
+              <p>Add your Silverado HD, F-150, and equipment with their actual meter readings.</p>
+            </div>
+          )}
+          <section className="panel exp-pad">
+            <h2>Service history</h2>
+            {data.services
+              .slice()
+              .reverse()
+              .map((s) => (
+                <div className="exp-route" key={s.id}>
+                  <span>
+                    <strong>{data.assets.find((a) => a.id === s.assetId)?.name}</strong>
+                    <small>
+                      {s.date} · {s.description} · meter {s.meter}
+                    </small>
+                  </span>
+                  {cash(s.cost)}
+                </div>
+              ))}
+            {!data.services.length && <p className="muted">No services logged.</p>}
+          </section>
+        </>
+      )}
+      {view === 'vendors' && (
+        <>
+          <div className="toolbar">
+            <input
+              className="exp-input"
+              aria-label="Search price book"
+              placeholder="Search material, supplier, or unit"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <div className="exp-actions">
+              <button
+                className="btn secondary"
+                onClick={() => {
+                  setCsv('');
+                  setModal('importItems');
+                }}
+              >
+                Import CSV
+              </button>
+              <button
+                className="btn"
+                onClick={() =>
+                  open('item', {
+                    id: uid(),
+                    name: '',
+                    vendor: '',
+                    unit: 'each',
+                    cost: 0,
+                    asOf: today(),
+                    source: '',
+                  })
+                }
+              >
+                <Plus size={16} /> Add material
+              </button>
+            </div>
+          </div>
+          <div className="project-grid">
+            {data.items
+              .filter((i) =>
+                (i.name + ' ' + i.vendor + ' ' + i.unit)
+                  .toLowerCase()
+                  .includes(search.toLowerCase()),
+              )
+              .map((i) => (
+                <article className="panel exp-pad" key={i.id}>
+                  <Package />
+                  <h3>{i.name}</h3>
+                  <p>{i.vendor}</p>
+                  <div className="exp-metric">
+                    {cash(i.cost)}
+                    <small>
+                      per {i.unit} · {i.asOf}
+                    </small>
+                  </div>
+                  <p>{i.source || 'No quote reference'}</p>
+                  <div className="exp-actions">
+                    <button className="text-button" onClick={() => open('item', i)}>
+                      Edit price
+                    </button>
+                    <button
+                      className="btn secondary"
+                      onClick={() =>
+                        open('allocate', {
+                          id: uid(),
+                          itemId: i.id,
+                          targetType: 'visit',
+                          targetId: data.visits[0]?.id || '',
+                          quantity: 1,
+                        })
+                      }
+                    >
+                      Add to job cost
+                    </button>
+                  </div>
+                </article>
+              ))}
+          </div>
+          {!data.items.length && (
+            <div className="empty">
+              <Package />
+              <p>Add supplier quotes or import your material costs. No sample prices are used.</p>
+            </div>
+          )}
+          <section className="panel exp-pad">
+            <h2>Material cost postings</h2>
+            <p className="muted">
+              Each posting adds to the recorded job total and keeps its original unit cost when
+              supplier prices change.
+            </p>
+            {data.allocations
+              .slice()
+              .reverse()
+              .map((a) => (
+                <div className="exp-route" key={a.id}>
+                  <span>
+                    <strong>
+                      {a.name} · {a.quantity} × {cash(a.unitCost)}
+                    </strong>
+                    <small>
+                      {a.targetType === 'project'
+                        ? data.projects.find((p) => p.id === a.targetId)?.title
+                        : pname(
+                            data.visits.find((v) => v.id === a.targetId)?.propertyId || '',
+                          )}{' '}
+                      · {a.at.slice(0, 10)}
+                    </small>
+                  </span>
+                  {cash(a.total)}
+                </div>
+              ))}
+          </section>
+        </>
+      )}
+      <Dialog open={!!modal} onOpenChange={(v) => !v && setModal('')}>
+        <DialogContent className="editor">
+          <DialogHeader>
+            <DialogTitle>
+              {
+                (
+                  {
+                    lead: 'Inquiry & scope builder',
+                    convert: 'Convert accepted proposal',
+                    asset: 'Equipment profile',
+                    service: 'Log maintenance service',
+                    zone: 'Controller & zone',
+                    issue: 'Audit finding',
+                    repair: 'Schedule irrigation repair',
+                    item: 'Price book material',
+                    allocate: 'Post material cost',
+                    importItems: 'Import supplier prices',
+                    proposal: 'Proposal preview',
+                  } as Record<string, string>
+                )[modal]
+              }
+            </DialogTitle>
+            <DialogDescription>
+              {modal === 'proposal'
+                ? 'Review and print a client copy. Deliver it using your usual channel, then record the sent date and reference.'
+                : 'Saved in your private GMZ workspace.'}
+            </DialogDescription>
+          </DialogHeader>
+          {modal === 'proposal' ? (
+            <div className="exp-pad">
+              <h2>{draft.name}</h2>
+              <p>
+                {draft.address} · {draft.city}
+              </p>
+              <p className="account-notes">
+                {draft.clientSummary || 'Add a client-facing summary before delivery.'}
+              </p>
+              {draft.lines?.map((l: any) => (
+                <div className="exp-route" key={l.id}>
+                  <span>
+                    {l.label}
+                    <small>
+                      {l.quantity} {l.unit} × {cash(l.price)}
+                    </small>
+                  </span>
+                  {cash(l.quantity * l.price)}
+                </div>
+              ))}
+              <h3>Total: {cash(estimateTotal(draft))}</h3>
+              <p>
+                This proposal covers only the line items listed. Extra work requires separate
+                approval.
+              </p>
+              <button className="btn secondary" onClick={() => window.print()}>
+                Print / save PDF
+              </button>
+            </div>
+          ) : (
+            <form
+              className="editor-form"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (modal === 'importItems') {
+                  try {
+                    const rows = parseCSV(csv);
+                    await run('importItems', rows);
+                  } catch (err) {
+                    toast.error(err instanceof Error ? err.message : 'Invalid CSV');
+                  }
+                } else await run(modal, draft);
+              }}
+            >
+              {modal === 'lead' && draft.sourceRequestId && (
+                <div className="info-line">
+                  <p>Source request: {draft.sourceReference}</p>
+                  <a
+                    className="text-button"
+                    href={'#clients/' + encodeURIComponent(draft.clientId)}
+                  >
+                    View client profile →
+                  </a>
+                  <label className="field">
+                    <span>Client property</span>
+                    <Choice
+                      label="Client property"
+                      value={draft.propertyId}
+                      options={data.properties
+                        .filter((p) => p.clientId === draft.clientId && !p.internal)
+                        .map((p) => ({ value: p.id, label: p.name }))}
+                      onChange={(id) => {
+                        const p = data.properties.find((p) => p.id === id);
+                        setDraft({
+                          ...draft,
+                          propertyId: id,
+                          address: p?.address || '',
+                          city: p?.city || '',
+                        });
+                      }}
+                    />
+                  </label>
+                </div>
+              )}
+              {modal === 'lead' && (
+                <p className="muted">
+                  Save scope, then use Preview to print a client copy. Saving does not send it.
+                  Record the sent date only after delivery.
+                </p>
+              )}
+              <div className="form-grid">
+                {(fields[modal] || []).map((f) => (
+                  <label className="field" key={f.key}>
+                    <span>{f.label}</span>
+                    {f.options ? (
+                      <Choice
+                        label={f.label}
+                        value={draft[f.key] || ''}
+                        options={f.options}
+                        onChange={(v) => {
+                          set(f.key, v);
+                          if (f.key === 'targetType') set('targetId', '');
+                        }}
+                      />
+                    ) : f.type === 'textarea' ? (
+                      <textarea
+                        required={!f.optional}
+                        value={draft[f.key] ?? ''}
+                        onChange={(e) => set(f.key, e.target.value)}
+                      />
+                    ) : (
+                      <input
+                        required={!f.optional}
+                        type={f.type || 'text'}
+                        min={f.type === 'number' ? 0 : undefined}
+                        step={f.type === 'number' ? 'any' : undefined}
+                        value={draft[f.key] ?? ''}
+                        onChange={(e) =>
+                          set(f.key, f.type === 'number' ? Number(e.target.value) : e.target.value)
+                        }
+                      />
+                    )}
+                  </label>
+                ))}
+              </div>
+              {modal === 'lead' && (
+                <>
+                  <h3>Rapid take-off</h3>
+                  <Choice
+                    label="Calculator"
+                    value={calc.kind}
+                    options={opts([
+                      'Pavers',
+                      'Retaining wall face',
+                      'Turf',
+                      'Soil / aggregate',
+                      'Drip tubing',
+                      'Plants',
+                    ])}
+                    onChange={(kind) => setCalc({ ...calc, kind })}
+                  />
+                  <div className="form-grid">
+                    {(
+                      [
+                        'length',
+                        'width',
+                        ...(calc.kind === 'Soil / aggregate' ? ['depth'] : []),
+                        'price',
+                      ] as const
+                    ).map((k) => (
+                      <label className="field" key={k}>
+                        <span>
+                          {k === 'price'
+                            ? 'Sell price per ' + unit
+                            : k === 'depth'
+                              ? 'Depth (inches)'
+                              : k === 'length' && calc.kind === 'Plants'
+                                ? 'Plant count'
+                                : k + ' (feet)'}
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={calc[k as keyof typeof calc]}
+                          onChange={(e) => setCalc({ ...calc, [k]: Number(e.target.value) })}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="btn secondary"
+                    disabled={quantity <= 0}
+                    onClick={() =>
+                      set('lines', [
+                        ...draft.lines,
+                        {
+                          id: uid(),
+                          label: calc.kind,
+                          unit,
+                          quantity,
+                          price: calc.price,
+                          accepted: false,
+                        },
+                      ])
+                    }
+                  >
+                    Add {quantity} {unit} · {cash(quantity * calc.price)}
+                  </button>
+                  <h3>Proposal lines</h3>
+                  {draft.lines.map((l: any, i: number) => (
+                    <div className="exp-line" key={l.id}>
+                      <input
+                        aria-label="Scope description"
+                        required
+                        value={l.label}
+                        onChange={(e) =>
+                          set(
+                            'lines',
+                            draft.lines.map((x: any, j: number) =>
+                              j === i ? { ...x, label: e.target.value } : x,
+                            ),
+                          )
+                        }
+                      />
+                      <label className="field">
+                        <span>Quantity ({l.unit})</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          required
+                          value={l.quantity}
+                          onChange={(e) =>
+                            set(
+                              'lines',
+                              draft.lines.map((x: any, j: number) =>
+                                j === i ? { ...x, quantity: Number(e.target.value) } : x,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="field">
+                        <span>Unit price ($)</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="any"
+                          required
+                          value={l.price}
+                          onChange={(e) =>
+                            set(
+                              'lines',
+                              draft.lines.map((x: any, j: number) =>
+                                j === i ? { ...x, price: Number(e.target.value) } : x,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                      <label className="exp-check">
+                        <Checkbox
+                          checked={l.accepted}
+                          onCheckedChange={(v) =>
+                            set(
+                              'lines',
+                              draft.lines.map((x: any, j: number) =>
+                                j === i ? { ...x, accepted: v === true } : x,
+                              ),
+                            )
+                          }
+                        />{' '}
+                        Accepted
+                      </label>
+                      <button
+                        className="text-button"
+                        type="button"
+                        onClick={() =>
+                          set(
+                            'lines',
+                            draft.lines.filter((_: any, j: number) => j !== i),
+                          )
+                        }
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() =>
+                      set('lines', [
+                        ...draft.lines,
+                        {
+                          id: uid(),
+                          label: 'Custom scope',
+                          unit: 'job',
+                          quantity: 1,
+                          price: calc.price,
+                          accepted: false,
+                        },
+                      ])
+                    }
+                  >
+                    Add custom line using entered price
+                  </button>
+                  <strong>Estimate total: {cash(estimateTotal(draft))}</strong>
+                  <p className="muted">
+                    Acceptance is recorded by the office. Enter supporting evidence before
+                    conversion. Calculations exclude tax and waste unless included in your entered
+                    price.
+                  </p>
+                </>
+              )}
+              {modal === 'asset' && (
+                <>
+                  <h3>Truck checklist</h3>
+                  {draft.checklist.map((t: any, i: number) => (
+                    <div className="exp-line" key={i}>
+                      <input
+                        aria-label="Checklist item"
+                        required
+                        value={t.label}
+                        onChange={(e) =>
+                          set(
+                            'checklist',
+                            draft.checklist.map((x: any, j: number) =>
+                              j === i ? { ...x, label: e.target.value } : x,
+                            ),
+                          )
+                        }
+                      />
+                      <button
+                        type="button"
+                        className="text-button"
+                        onClick={() =>
+                          set(
+                            'checklist',
+                            draft.checklist.filter((_: any, j: number) => i !== j),
+                          )
+                        }
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() =>
+                      set('checklist', [...draft.checklist, { label: '', done: false }])
+                    }
+                  >
+                    Add checklist item
+                  </button>
+                  <p className="muted">
+                    Confirm the suggested interval against your service manual.
+                  </p>
+                </>
+              )}
+              {modal === 'importItems' && (
+                <>
+                  <p>
+                    Paste CSV with this header. Quoted fields may contain commas. Imports add new
+                    records; existing prices can be edited in the catalog.
+                  </p>
+                  <code>name,vendor,unit,cost,asOf,source</code>
+                  <label className="field">
+                    <span>Supplier price CSV</span>
+                    <textarea
+                      rows={12}
+                      required
+                      value={csv}
+                      onChange={(e) => setCsv(e.target.value)}
+                      placeholder={'Drip tube,Supplier,ft,0.25,2026-09-16,Quote reference'}
+                    />
+                  </label>
+                </>
+              )}
+              {modal === 'allocate' && (
+                <p className="info-line">
+                  This adds{' '}
+                  {cash(
+                    (data.items.find((i) => i.id === draft.itemId)?.cost || 0) *
+                      (draft.quantity || 0),
+                  )}{' '}
+                  to the existing material cost. Record each purchase once.
+                </p>
+              )}
+              <div className="editor-footer">
+                <button type="button" className="btn secondary" onClick={() => setModal('')}>
+                  Cancel
+                </button>
+                <button disabled={busy} className="btn" type="submit">
+                  {busy
+                    ? 'Saving…'
+                    : modal === 'convert'
+                      ? 'Create project'
+                      : modal === 'repair'
+                        ? 'Create work order'
+                        : 'Save'}
+                </button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+export function parseCSV(input: string) {
+  const rows: string[][] = [];
+  let row: string[] = [],
+    cell = '',
+    quote = false;
+  for (let i = 0; i < input.length; i++) {
+    const c = input[i];
+    if (c === '"') {
+      if (quote && input[i + 1] === '"') {
+        cell += '"';
+        i++;
+      } else quote = !quote;
+    } else if (c === ',' && !quote) {
+      row.push(cell.trim());
+      cell = '';
+    } else if (c === '\n' && !quote) {
+      row.push(cell.trim());
+      if (row.some(Boolean)) rows.push(row);
+      row = [];
+      cell = '';
+    } else cell += c;
+  }
+  if (quote) throw Error('Unclosed CSV quote');
+  row.push(cell.trim());
+  if (row.some(Boolean)) rows.push(row);
+  const header = rows.shift();
+  if (header?.join(',') !== 'name,vendor,unit,cost,asOf,source')
+    throw Error('Use the exact CSV header shown');
+  return rows.map((r, i) => {
+    if (r.length !== 6 || !r[3].trim() || !Number.isFinite(Number(r[3])))
+      throw Error('Invalid fields on CSV row ' + (i + 2));
+    return {
+      id: uid(),
+      name: r[0],
+      vendor: r[1],
+      unit: r[2],
+      cost: Number(r[3]),
+      asOf: r[4],
+      source: r[5],
+    };
+  });
+}
