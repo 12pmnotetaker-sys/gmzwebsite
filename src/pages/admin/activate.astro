@@ -12,7 +12,7 @@ if(Astro.request.method==='POST'){
   if(Astro.request.headers.get('content-type')?.includes('application/json')){
    const raw=await Astro.request.text();if(raw.length>1024)return new Response('Invalid request',{status:400});
    const {token}=JSON.parse(raw);
-   if(typeof token!=='string'||!/^[a-f0-9]{64}$/i.test(token))return Response.json({error:'This invitation is invalid or expired.'},{status:400,headers:privateHeaders});
+   if(typeof token!=='string'||!/^(?:[a-f0-9]{56}|[a-f0-9]{64})$/i.test(token))return Response.json({error:'This invitation is invalid or expired.'},{status:400,headers:privateHeaders});
    const {data,error}=await passwordClient().auth.verifyOtp({type:'invite',token_hash:token});
    const admin=!error&&data.session?await authenticateAdmin(data.session.access_token):null;
    if(!admin||!data.session)return Response.json({error:'This invitation is invalid, expired, or not enabled for GMZ Admin.'},{status:403,headers:privateHeaders});
