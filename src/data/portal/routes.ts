@@ -69,5 +69,9 @@ export const routes = {
 export const publicPortalPaths = [routes.signIn, routes.linkExpired, routes.signOut] as const;
 export const publicPortalPrefixes = [`${PORTAL_PREFIX}/auth/`] as const;
 
-/** What the nav calls it. */
-export const portalNav = { label: 'Client portal', href: routes.signIn } as const;
+/**
+ * What the nav calls it. One sign-in screen for a client, an Admin or a
+ * Staff account, so the nav no longer names just the client portal; see
+ * src/pages/portal/sign-in.astro.
+ */
+export const portalNav = { label: 'Log in', href: routes.signIn } as const;
