@@ -305,11 +305,16 @@ async function checkIndexingConsistency(files) {
       noindex: /<meta[^>]+name=["']robots["'][^>]+noindex/i.test(source),
     };
     /*
-     * Two kinds of gated page. The portfolio renders the veil; the client
+     * Three kinds of gated page. The portfolio renders the veil; the client
      * portal marks its body with data-portal and never draws one, because it
-     * has a sign-in screen of its own. Both are private in every state.
+     * has a sign-in screen of its own; GMZ Admin and GMZ Staff are the same
+     * shape as the portal, private staff tooling with no veil, and mark their
+     * body with data-private-tool for the same reason. All three are private
+     * in every state.
      */
-    (source.includes('data-gate-veil') || /<body\b[^>]*\bdata-portal\b/i.test(source)
+    (source.includes('data-gate-veil') ||
+    /<body\b[^>]*\bdata-portal\b/i.test(source) ||
+    /<body\b[^>]*\bdata-private-tool\b/i.test(source)
       ? gated
       : open
     ).push(entry);
