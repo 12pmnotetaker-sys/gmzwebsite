@@ -2,6 +2,8 @@
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 import vercel from '@astrojs/vercel';
+import react from '@astrojs/react';
+import tailwindcss from '@tailwindcss/vite';
 import { searchIndexing, isGatedPath } from './src/data/publication.ts';
 import { canonicalPath } from './src/data/canonical.ts';
 
@@ -33,6 +35,7 @@ const SITE = process.env.SITE_URL ?? 'https://www.gmzlandscape.com';
  */
 export default defineConfig({
   site: SITE,
+  vite: { plugins: [tailwindcss()] },
   output: 'static',
   // Trust only this site's hosts when Vercel forwards requests to the function.
   // Keep Astro's origin check enabled for form submissions.
@@ -56,7 +59,7 @@ export default defineConfig({
     imageService: false,
   }),
   trailingSlash: 'ignore',
-  integrations: searchIndexing.enabled
+  integrations: [react(), ...(searchIndexing.enabled
     ? [
         sitemap({
           // The private routes never appear in the sitemap, whatever the
@@ -68,7 +71,7 @@ export default defineConfig({
           }),
         }),
       ]
-    : [],
+    : [])],
   image: {
     // Project photography is the whole point of the /work section, so keep the
     // optimizer on and let Astro emit responsive AVIF/WebP at build time.
