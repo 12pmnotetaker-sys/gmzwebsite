@@ -1,0 +1,52 @@
+---
+export const prerender = false;
+import wordmark from '@/assets/brand/gmz-wordmark.png';
+import { ADMIN_COOKIE, authenticateAdmin, passwordClient, privateHeaders, sameOrigin } from '../../server/operations-admin/auth';
+const SETUP_COOKIE = 'gmz_operations_setup';
+Object.entries({...privateHeaders,'Referrer-Policy':'no-referrer'}).forEach(([k,v])=>Astro.response.headers.set(k,v));
+const cookieOptions = {httpOnly:true,secure:Astro.url.protocol==='https:',sameSite:'strict' as const,path:'/admin/activate',maxAge:900};
+let message='';
+if(Astro.request.method==='POST'){
+ if(!sameOrigin(Astro.request))return new Response('Forbidden',{status:403,headers:privateHeaders});
+ try{
+  if(Astro.request.headers.get('content-type')?.includes('application/json')){
+   const raw=await Astro.request.text();if(raw.length>1024)return new Response('Invalid request',{status:400});
+   const {token}=JSON.parse(raw);
+   if(typeof token!=='string'||!/^[a-f0-9]{64}$/i.test(token))return Response.json({error:'This invitation is invalid or expired.'},{status:400,headers:privateHeaders});
+   const {data,error}=await passwordClient().auth.verifyOtp({type:'invite',token_hash:token});
+   const admin=!error&&data.session?await authenticateAdmin(data.session.access_token):null;
+   if(!admin||!data.session)return Response.json({error:'This invitation is invalid, expired, or not enabled for GMZ Admin.'},{status:403,headers:privateHeaders});
+   Astro.cookies.set(SETUP_COOKIE,data.session.access_token,cookieOptions);
+   return Response.json({ready:true},{headers:privateHeaders});
+  }
+  const form=await Astro.request.formData();
+  const password=String(form.get('password')||''),confirm=String(form.get('confirm')||'');
+  if(password.length<12||password.length>128||password!==confirm){message='Use 12–128 characters and enter the same password twice.';}
+  else{
+   const admin=await authenticateAdmin(Astro.cookies.get(SETUP_COOKIE)?.value);
+   if(!admin){message='Your setup session expired. Open a new Admin invitation.';}
+   else{
+    const client=passwordClient();const {error}=await client.auth.admin.updateUserById(admin.userId,{password});
+    if(error){message='That password could not be saved. Choose a stronger password and try again.';}
+    else{
+     Astro.cookies.delete(SETUP_COOKIE,{path:'/admin/activate'});
+     // Require a normal password login after setup; never expose the invitation session.
+     Astro.cookies.delete(ADMIN_COOKIE,{path:'/'});
+     return Astro.redirect('/admin/operations?setup=complete');
+    }
+   }
+  }
+ }catch{message='Setup could not be completed. Please try again.';}
+}
+let admin=null;try{admin=await authenticateAdmin(Astro.cookies.get(SETUP_COOKIE)?.value);}catch{}
+---
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width"/><meta name="robots" content="noindex,nofollow"/><meta name="referrer" content="no-referrer"/><title>Activate GMZ Admin</title></head><body><main><img src={wordmark.src} width="235" alt="GMZ Landscaping"/><h1>Set up your Admin account</h1><p id="setup-status" role="status">{message || (admin ? 'Choose a password for your GMZ Admin account.' : 'Open your one-time Admin invitation to continue.')}</p>{admin&&<><p>{admin.email}</p><form method="POST"><label>New password<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required/></label><label>Confirm password<input name="confirm" type="password" autocomplete="new-password" minlength="12" maxlength="128" required/></label><button type="submit">Save password</button></form></>}<a href="/admin/operations">Back to Admin sign-in</a></main></body></html>
+<script>
+const params=new URLSearchParams(location.hash.slice(1));const token=params.get('token');
+if(token){
+ history.replaceState(null,'',location.pathname);
+ const status=document.getElementById('setup-status')!;status.textContent='Checking your invitation…';
+ fetch('/admin/activate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})}).then(async response=>{const result=await response.json();if(response.ok&&result.ready)location.replace('/admin/activate');else status.textContent=result.error||'This invitation could not be opened.';}).catch(()=>{status.textContent='The invitation could not be checked. Please try your invitation link again.';});
+}
+</script>
+<style is:global>@font-face{font-family:Gabarito;src:url('/fonts/gabarito-latin.woff2') format('woff2');font-weight:400 900;font-display:swap}body{margin:0;background:#f4f7f6;color:#002b37;font-family:Gabarito,Arial,sans-serif;font-size:16px}main{max-width:460px;margin:8vh auto;padding:32px;background:white;border:1px solid #bccdcc}h1{font-size:30px;line-height:1.2;margin:28px 0 16px}p{line-height:1.6}form,label{display:flex;flex-direction:column;gap:10px}form{gap:18px;margin:24px 0}input{font:inherit;padding:13px;border:1px solid #718a91}button{font:inherit;padding:14px;background:#002b37;color:white;border:0;cursor:pointer}a{color:#006837}button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #f6a400;outline-offset:3px}@media(max-width:560px){main{margin:24px 16px;padding:24px}}</style>
