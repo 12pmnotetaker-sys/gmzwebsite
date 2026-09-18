@@ -52,6 +52,15 @@ together: `noindex` on every gated page, `Disallow: /portfolio/` in robots.txt,
 and exclusion from the sitemap. Keep all three. Never put anything in this repo
 that genuinely must not be public.
 
+**The repository must be private.** The three signals above protect the
+built site. The source holds what they fence: the portfolio entries indexed by
+street, the unlock code, the seed records, and the office's configuration. A
+public repository has no veil, no `noindex` and no robots.txt, so the
+visibility setting on GitHub is part of the gate, and it is not relaxed to make
+a preview or a deploy easier. The same reasoning keeps anything that names a
+client out of source: a route identifier, a property, an address. Those live
+in the database, in a row the office edits, never in a file.
+
 **Gated status is derived from the route, not passed as a prop.** `BaseLayout`
 asks `isGatedPath()`, so a new page under `/portfolio` is gated because of where
 it lives. A prop can be forgotten; a path cannot. Change the set by editing

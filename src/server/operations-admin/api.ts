@@ -144,13 +144,18 @@ export async function adminApi(request: Request, admin: Admin, path: string): Pr
     if ((path === 'field-feed' || path === 'staff-route') && request.method === 'GET') {
       const { data, error } = await db()
         .from('gmz_operations_config')
-        .select('route_book')
+        .select('route_book, hidden_route_ids')
         .eq('scope', scope)
         .maybeSingle();
       if (error) throw Error('Route configuration unavailable');
       let book = data?.route_book ? routeBookSchema.parse(data.route_book) : null;
-      if (book)
-        book.rows = book.rows.filter((r) => !['judy-hoff', 'jill-hoff', 'gemello'].includes(r.id));
+      // Rows the office keeps out of the staff feed are named in the config
+      // row beside the route book. An identifier that names a client belongs
+      // in the database, never in this file.
+      const hidden = new Set(
+        Array.isArray(data?.hidden_route_ids) ? data.hidden_route_ids.map(String) : [],
+      );
+      if (book) book.rows = book.rows.filter((r) => !hidden.has(r.id));
       if (path === 'staff-route') {
         const p = new URL(request.url).searchParams,
           date = p.get('date') || '',
