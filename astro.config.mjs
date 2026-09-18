@@ -59,19 +59,22 @@ export default defineConfig({
     imageService: false,
   }),
   trailingSlash: 'ignore',
-  integrations: [react(), ...(searchIndexing.enabled
-    ? [
-        sitemap({
-          // The private routes never appear in the sitemap, whatever the
-          // marketing site's indexing state.
-          filter: (page) => !isGatedPath(new URL(page).pathname),
-          serialize: (item) => ({
-            ...item,
-            url: new URL(canonicalPath(new URL(item.url).pathname), SITE).href,
+  integrations: [
+    react(),
+    ...(searchIndexing.enabled
+      ? [
+          sitemap({
+            // The private routes never appear in the sitemap, whatever the
+            // marketing site's indexing state.
+            filter: (page) => !isGatedPath(new URL(page).pathname),
+            serialize: (item) => ({
+              ...item,
+              url: new URL(canonicalPath(new URL(item.url).pathname), SITE).href,
+            }),
           }),
-        }),
-      ]
-    : [])],
+        ]
+      : []),
+  ],
   image: {
     // Project photography is the whole point of the /work section, so keep the
     // optimizer on and let Astro emit responsive AVIF/WebP at build time.

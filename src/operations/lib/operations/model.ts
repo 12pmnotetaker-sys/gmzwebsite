@@ -1,48 +1,430 @@
-import {serviceRequestFields,assignServiceRequests} from './service-requests.ts';
-import {timesheetFields,reviewTimesheet,absenceCommand} from './timesheets.ts';
-import {hubFields,applyHubCommand,serviceTemplates} from './hub-workflows.ts';
+import { serviceRequestFields, assignServiceRequests } from './service-requests.ts';
+import { timesheetFields, reviewTimesheet, absenceCommand } from './timesheets.ts';
+import { hubFields, applyHubCommand, serviceTemplates } from './hub-workflows.ts';
 import { z } from 'zod';
-import {extensionFields,extensionCommand} from './extensions.ts';
-const txt=z.string().trim().max(4000), id=z.string().min(1).max(100), money=z.number().finite().min(0).max(100000000);
-const date=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v=>!isNaN(Date.parse(v))&&new Date(v).toISOString().slice(0,10)===v,'Enter a valid date');
-export const clientSchema=z.object({id,name:txt.min(1),contact:txt,email:z.string().email().or(z.literal('')),phone:txt,accountOwner:txt.optional(),preferredContact:txt.optional(),billingContact:txt.optional(),billingEmail:z.string().email().or(z.literal('')).optional(),billingAddress:txt.optional(),notes:txt.optional()});
-export const propertySchema=z.object({id,clientId:id,name:txt.min(1),address:txt,city:txt,monthly:money.nullable(),budgetMinutes:z.number().int().min(1).max(1440).nullable(),crew:txt,truck:txt,access:txt,notes:txt,cadence:z.enum(['Weekly','Every two weeks','Monthly','On request','Not set']),internal:z.boolean().optional()});
-export const taskSchema=z.object({id,label:txt.min(1),done:z.boolean()});
-export const photoSchema=z.object({id:z.string().uuid(),kind:z.enum(['Before','After']),caption:txt,visible:z.boolean()});
-export const visitSchema=z.object({id,propertyId:id,date,start:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),crew:txt.min(1),truck:txt.min(1),crewCount:z.number().int().min(1).max(30),budgetMinutes:z.number().int().min(1).max(1440),status:z.enum(['Scheduled','In progress','Completed','Skipped']),checklist:z.array(taskSchema).min(1).max(50),instructions:txt,internalNotes:txt,report:txt,reportStatus:z.enum(['Draft','Reviewed','Published to preview','Published to portal']),actualMinutes:z.number().int().min(0).max(1440).nullable(),hourlyCost:money.nullable(),materials:money.nullable(),photos:z.array(photoSchema).max(20),completedAt:txt.nullable(),publishedAt:txt.nullable()});
-export const stages=['Design','Estimate','Approval','Installation','Complete'] as const;
-export const projectSchema=z.object({id,propertyId:id,title:txt.min(1),stage:z.enum(stages),owner:txt.min(1),due:date,budget:money,laborCost:money.nullable(),materialCost:money.nullable(),notes:txt,approvalUrl:z.string().url().refine(v=>v.startsWith('https://'),'Use an HTTPS link').or(z.literal('')),tasks:z.array(taskSchema).max(50)});
-export const stateSchema=z.object({...serviceRequestFields,...timesheetFields,...extensionFields,...hubFields,dataMode:z.enum(['sample','actual']).default('sample'),importIds:z.array(z.string()).default([]),clients:z.array(clientSchema).max(500),properties:z.array(propertySchema).max(1000),visits:z.array(visitSchema).max(5000),projects:z.array(projectSchema).max(1000),activity:z.array(z.object({id,at:txt,text:txt})).max(100)});
-export type Client=z.infer<typeof clientSchema>;export type Property=z.infer<typeof propertySchema>;export type Visit=z.infer<typeof visitSchema>;export type Project=z.infer<typeof projectSchema>;export type State=z.infer<typeof stateSchema>;
-export type Command={type:'extension';action:string;value:unknown}|{type:'client'|'property'|'visit'|'project';value:unknown}|{type:'schedule';propertyId:string;date:string;start:string;count:number;interval:number;exceptions?:string[];template?:string}|{type:'report';id:string;status:'Draft'|'Reviewed'|'Published to preview'};
-export function visitCost(v:Visit){return v.actualMinutes===null||v.hourlyCost===null||v.materials===null?null:Math.round((v.actualMinutes/60*v.crewCount*v.hourlyCost+v.materials)*100)/100;}
-export function clientReport(v:Visit,p:Property,c:Client){return {client:c.name,property:p.name,date:v.date,summary:v.report,tasks:v.checklist.filter(t=>t.done).map(t=>t.label),photos:v.photos.filter(p=>p.visible).map(({id,kind,caption})=>({id,kind,caption})),status:v.reportStatus};}
-export function validateState(s:State){for(const rows of [s.absences,s.serviceRequests,s.timesheets,s.clients,s.properties,s.visits,s.projects,s.leads,s.assets,s.services,s.zones,s.issues,s.items,s.allocations,s.routes,s.purchases,s.fuelLogs,s.officeTasks])if(new Set(rows.map(r=>r.id)).size!==rows.length)throw Error('Duplicate record');for(const r of s.serviceRequests){if(!s.properties.some(p=>p.id===r.propertyId&&p.clientId===r.clientId))throw Error('Service request client/property mismatch');if(r.visitId&&!s.visits.some(v=>v.id===r.visitId&&v.propertyId===r.propertyId))throw Error('Service request work order mismatch');}for(const p of s.properties)if(!s.clients.some(c=>c.id===p.clientId))throw Error('Client not found');for(const v of [...s.visits,...s.projects])if(!s.properties.some(p=>p.id===v.propertyId))throw Error('Property not found');}
-function replace<T extends {id:string}>(rows:T[],value:T){const at=rows.findIndex(x=>x.id===value.id);if(at<0)rows.push(value);else rows[at]=value;}
-export function applyCommand(old:State,command:Command,now=new Date().toISOString()):State{
- const s=structuredClone(old);let message='Record updated';
- if(command.type==='extension'){message=['absence','reviewAbsence'].includes(command.action)?absenceCommand(s.absences,command.action,command.value,now):command.action==='reviewTimesheet'?reviewTimesheet(s.timesheets,command.value,now):['purchase','postPurchase','fuel','officeTask'].includes(command.action)?applyHubCommand(s,command.action,command.value,now):extensionCommand(s,command.action,command.value,now);}
- else if(command.type==='client'){const v=clientSchema.parse(command.value);replace(s.clients,v);message=`Client saved: ${v.name}`;}
- else if(command.type==='property'){const v=propertySchema.parse(command.value);replace(s.properties,v);message=`Property saved: ${v.name}`;}
- else if(command.type==='project'){const v=projectSchema.parse(command.value);replace(s.projects,v);message=`Project saved: ${v.title}`;}
- else if(command.type==='visit'){
- const v=visitSchema.parse(command.value),prev=s.visits.find(x=>x.id===v.id);if(!prev)throw Error('Schedule a visit first');if(v.propertyId!==prev.propertyId&&s.serviceRequests.some(r=>r.visitId===v.id))throw Error('A linked client request must stay with its property');
- if(v.status==='Completed'&&(!v.checklist.every(t=>t.done)||!v.actualMinutes||!v.report.trim()))throw Error('Complete the checklist, enter time on site, and write the client summary first');
- v.completedAt=v.status==='Completed'?(prev.completedAt||now):null;
- const changed=JSON.stringify(clientReport(v,s.properties.find(p=>p.id===v.propertyId)!,{name:''} as Client))!==JSON.stringify(clientReport(prev,s.properties.find(p=>p.id===prev.propertyId)!,{name:''} as Client));
- v.reportStatus=changed||v.status!=='Completed'?'Draft':prev.reportStatus;v.publishedAt=['Published to preview','Published to portal'].includes(v.reportStatus)?prev.publishedAt:null;replace(s.visits,v);message=`Work order ${v.status.toLowerCase()}`;
- }else if(command.type==='schedule'){
- const parsed=z.object({propertyId:id,date,start:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),count:z.number().int().min(1).max(12),interval:z.number().int().min(1).max(31),exceptions:z.array(date).max(50).default([]),template:z.enum(['General service','Hardscape','Planting','Repair']).default('General service')}).parse(command);const p=s.properties.find(x=>x.id===parsed.propertyId);if(!p)throw Error('Property not found');if(!p.crew.trim()||!p.truck.trim()||p.budgetMinutes===null)throw Error('Set the property’s crew, truck and visit budget before scheduling');
- let created=0;for(let i=0;i<parsed.count;i++){const d=new Date(parsed.date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+i*parsed.interval);const day=d.toISOString().slice(0,10);if(parsed.exceptions.includes(day))continue;created++;if(s.visits.some(v=>v.propertyId===p.id&&v.date===day&&v.status!=='Skipped'))throw Error('A visit already exists for this property on '+day);s.visits.push({id:crypto.randomUUID(),propertyId:p.id,date:day,start:parsed.start,crew:p.crew,truck:p.truck,crewCount:2,budgetMinutes:p.budgetMinutes!,status:'Scheduled',checklist:serviceTemplates[parsed.template].map(label=>({id:crypto.randomUUID(),label,done:false})),instructions:p.notes,internalNotes:'',report:'',reportStatus:'Draft',actualMinutes:null,hourlyCost:null,materials:null,photos:[],completedAt:null,publishedAt:null});}if(!created)throw Error('All selected dates are excluded');message=`${created} visit${created===1?'':'s'} scheduled: ${p.name}`;
- }else if(command.type==='report'){
- const v=s.visits.find(v=>v.id===command.id);if(!v)throw Error('Visit not found');if(!['Draft','Reviewed','Published to preview'].includes(command.status))throw Error('Invalid report status');if(v.status!=='Completed'||!v.report.trim())throw Error('Complete the work order before reviewing its report');if(command.status==='Published to preview'&&v.reportStatus!=='Reviewed')throw Error('Review the report before publishing to preview');v.reportStatus=command.status;v.publishedAt=command.status==='Published to preview'?now:null;message=`Report ${command.status.toLowerCase()}`;
- }else throw Error('Unsupported action');
- assignServiceRequests(s,new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(now)));
- s.activity.unshift({id:crypto.randomUUID(),at:now,text:message});s.activity=s.activity.slice(0,100);validateState(s);return stateSchema.parse(s);
+import { extensionFields, extensionCommand } from './extensions.ts';
+const txt = z.string().trim().max(4000),
+  id = z.string().min(1).max(100),
+  money = z.number().finite().min(0).max(100000000);
+const date = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine(
+    (v) => !isNaN(Date.parse(v)) && new Date(v).toISOString().slice(0, 10) === v,
+    'Enter a valid date',
+  );
+export const clientSchema = z.object({
+  id,
+  name: txt.min(1),
+  contact: txt,
+  email: z.string().email().or(z.literal('')),
+  phone: txt,
+  accountOwner: txt.optional(),
+  preferredContact: txt.optional(),
+  billingContact: txt.optional(),
+  billingEmail: z.string().email().or(z.literal('')).optional(),
+  billingAddress: txt.optional(),
+  notes: txt.optional(),
+});
+export const propertySchema = z.object({
+  id,
+  clientId: id,
+  name: txt.min(1),
+  address: txt,
+  city: txt,
+  monthly: money.nullable(),
+  budgetMinutes: z.number().int().min(1).max(1440).nullable(),
+  crew: txt,
+  truck: txt,
+  access: txt,
+  notes: txt,
+  cadence: z.enum(['Weekly', 'Every two weeks', 'Monthly', 'On request', 'Not set']),
+  internal: z.boolean().optional(),
+});
+export const taskSchema = z.object({ id, label: txt.min(1), done: z.boolean() });
+export const photoSchema = z.object({
+  id: z.string().uuid(),
+  kind: z.enum(['Before', 'After']),
+  caption: txt,
+  visible: z.boolean(),
+});
+export const visitSchema = z.object({
+  id,
+  propertyId: id,
+  date,
+  start: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+  crew: txt.min(1),
+  truck: txt.min(1),
+  crewCount: z.number().int().min(1).max(30),
+  budgetMinutes: z.number().int().min(1).max(1440),
+  status: z.enum(['Scheduled', 'In progress', 'Completed', 'Skipped']),
+  checklist: z.array(taskSchema).min(1).max(50),
+  instructions: txt,
+  internalNotes: txt,
+  report: txt,
+  reportStatus: z.enum(['Draft', 'Reviewed', 'Published to preview', 'Published to portal']),
+  actualMinutes: z.number().int().min(0).max(1440).nullable(),
+  hourlyCost: money.nullable(),
+  materials: money.nullable(),
+  photos: z.array(photoSchema).max(20),
+  completedAt: txt.nullable(),
+  publishedAt: txt.nullable(),
+});
+export const stages = ['Design', 'Estimate', 'Approval', 'Installation', 'Complete'] as const;
+export const projectSchema = z.object({
+  id,
+  propertyId: id,
+  title: txt.min(1),
+  stage: z.enum(stages),
+  owner: txt.min(1),
+  due: date,
+  budget: money,
+  laborCost: money.nullable(),
+  materialCost: money.nullable(),
+  notes: txt,
+  approvalUrl: z
+    .string()
+    .url()
+    .refine((v) => v.startsWith('https://'), 'Use an HTTPS link')
+    .or(z.literal('')),
+  tasks: z.array(taskSchema).max(50),
+});
+export const stateSchema = z.object({
+  ...serviceRequestFields,
+  ...timesheetFields,
+  ...extensionFields,
+  ...hubFields,
+  dataMode: z.enum(['sample', 'actual']).default('sample'),
+  importIds: z.array(z.string()).default([]),
+  clients: z.array(clientSchema).max(500),
+  properties: z.array(propertySchema).max(1000),
+  visits: z.array(visitSchema).max(5000),
+  projects: z.array(projectSchema).max(1000),
+  activity: z.array(z.object({ id, at: txt, text: txt })).max(100),
+});
+export type Client = z.infer<typeof clientSchema>;
+export type Property = z.infer<typeof propertySchema>;
+export type Visit = z.infer<typeof visitSchema>;
+export type Project = z.infer<typeof projectSchema>;
+export type State = z.infer<typeof stateSchema>;
+export type Command =
+  | { type: 'extension'; action: string; value: unknown }
+  | { type: 'client' | 'property' | 'visit' | 'project'; value: unknown }
+  | {
+      type: 'schedule';
+      propertyId: string;
+      date: string;
+      start: string;
+      count: number;
+      interval: number;
+      exceptions?: string[];
+      template?: string;
+    }
+  | { type: 'report'; id: string; status: 'Draft' | 'Reviewed' | 'Published to preview' };
+export function visitCost(v: Visit) {
+  return v.actualMinutes === null || v.hourlyCost === null || v.materials === null
+    ? null
+    : Math.round(((v.actualMinutes / 60) * v.crewCount * v.hourlyCost + v.materials) * 100) / 100;
 }
-export function seedState(today=new Date().toISOString().slice(0,10)):State{
- const clients:Client[]=[['c1','Oak Court Residence','Jordan Lee'],['c2','Cypress Offices','Morgan Chen'],['c3','Terrace Garden','Alex Rivera'],['c4','Creekside Estate','Taylor Park']].map(([id,name,contact])=>({id,name,contact,email:`${id}@example.com`,phone:''}));
- const properties:Property[]=clients.map((c,i)=>({id:'p'+(i+1),clientId:c.id,name:c.name,address:'Sample property',city:['Palo Alto','Belmont','Redwood City','Woodside'][i],monthly:[640,980,520,850][i],budgetMinutes:[75,90,60,80][i],crew:i%2?'Crew B':'Crew A',truck:i%2?'Silverado HD':'F-150',access:'Confirm access with the office before arrival.',notes:['Inspect drip emitters and tend the entry garden.','Clear courtyard paths and inspect irrigation.','Hand weed beds and check new planting.','Seasonal pruning and irrigation review.'][i],cadence:'Weekly'}));
- const visits:Visit[]=properties.map((p,i)=>({id:'v'+(i+1),propertyId:p.id,date:today,start:['08:00','08:00','10:00','10:30'][i],crew:p.crew,truck:p.truck,crewCount:2,budgetMinutes:p.budgetMinutes!,status:i===0?'Completed':'Scheduled',checklist:['Inspect irrigation','Tend planting beds','Clear paths and finish'].map((label,j)=>({id:`t${i}${j}`,label,done:i===0})),instructions:p.notes,internalNotes:'',report:i===0?'We tended the planting beds, checked the irrigation, and cleared the paths. The garden is ready for the week.':'',reportStatus:'Draft',actualMinutes:i===0?85:null,hourlyCost:i===0?32:null,materials:i===0?12:null,photos:[],completedAt:i===0?today+'T17:00:00Z':null,publishedAt:null}));
- return {absences:[],serviceRequests:[],timesheets:[],purchases:[],fuelLogs:[],officeTasks:[],leads:[],assets:[],services:[],zones:[],issues:[],items:[],allocations:[],routes:[],dataMode:'sample',importIds:[],clients,properties,visits,projects:[{id:'j1',propertyId:'p1',title:'Entry garden renewal',stage:'Design',owner:'Design team',due:today,budget:18000,laborCost:null,materialCost:null,notes:'Develop planting concept and irrigation approach.',approvalUrl:'',tasks:[{id:'jt1',label:'Prepare concept plan',done:false},{id:'jt2',label:'Confirm plant palette',done:false}]},{id:'j2',propertyId:'p4',title:'Terrace & lighting',stage:'Installation',owner:'Project team',due:today,budget:42000,laborCost:8200,materialCost:14100,notes:'Coordinate lighting installation with paving schedule.',approvalUrl:'',tasks:[{id:'jt3',label:'Confirm fixture locations',done:true},{id:'jt4',label:'Schedule evening walkthrough',done:false}]}],activity:[]};
+export function clientReport(v: Visit, p: Property, c: Client) {
+  return {
+    client: c.name,
+    property: p.name,
+    date: v.date,
+    summary: v.report,
+    tasks: v.checklist.filter((t) => t.done).map((t) => t.label),
+    photos: v.photos
+      .filter((p) => p.visible)
+      .map(({ id, kind, caption }) => ({ id, kind, caption })),
+    status: v.reportStatus,
+  };
+}
+export function validateState(s: State) {
+  for (const rows of [
+    s.absences,
+    s.serviceRequests,
+    s.timesheets,
+    s.clients,
+    s.properties,
+    s.visits,
+    s.projects,
+    s.leads,
+    s.assets,
+    s.services,
+    s.zones,
+    s.issues,
+    s.items,
+    s.allocations,
+    s.routes,
+    s.purchases,
+    s.fuelLogs,
+    s.officeTasks,
+  ])
+    if (new Set(rows.map((r) => r.id)).size !== rows.length) throw Error('Duplicate record');
+  for (const r of s.serviceRequests) {
+    if (!s.properties.some((p) => p.id === r.propertyId && p.clientId === r.clientId))
+      throw Error('Service request client/property mismatch');
+    if (r.visitId && !s.visits.some((v) => v.id === r.visitId && v.propertyId === r.propertyId))
+      throw Error('Service request work order mismatch');
+  }
+  for (const p of s.properties)
+    if (!s.clients.some((c) => c.id === p.clientId)) throw Error('Client not found');
+  for (const v of [...s.visits, ...s.projects])
+    if (!s.properties.some((p) => p.id === v.propertyId)) throw Error('Property not found');
+}
+function replace<T extends { id: string }>(rows: T[], value: T) {
+  const at = rows.findIndex((x) => x.id === value.id);
+  if (at < 0) rows.push(value);
+  else rows[at] = value;
+}
+export function applyCommand(old: State, command: Command, now = new Date().toISOString()): State {
+  const s = structuredClone(old);
+  let message = 'Record updated';
+  if (command.type === 'extension') {
+    message = ['absence', 'reviewAbsence'].includes(command.action)
+      ? absenceCommand(s.absences, command.action, command.value, now)
+      : command.action === 'reviewTimesheet'
+        ? reviewTimesheet(s.timesheets, command.value, now)
+        : ['purchase', 'postPurchase', 'fuel', 'officeTask'].includes(command.action)
+          ? applyHubCommand(s, command.action, command.value, now)
+          : extensionCommand(s, command.action, command.value, now);
+  } else if (command.type === 'client') {
+    const v = clientSchema.parse(command.value);
+    replace(s.clients, v);
+    message = `Client saved: ${v.name}`;
+  } else if (command.type === 'property') {
+    const v = propertySchema.parse(command.value);
+    replace(s.properties, v);
+    message = `Property saved: ${v.name}`;
+  } else if (command.type === 'project') {
+    const v = projectSchema.parse(command.value);
+    replace(s.projects, v);
+    message = `Project saved: ${v.title}`;
+  } else if (command.type === 'visit') {
+    const v = visitSchema.parse(command.value),
+      prev = s.visits.find((x) => x.id === v.id);
+    if (!prev) throw Error('Schedule a visit first');
+    if (v.propertyId !== prev.propertyId && s.serviceRequests.some((r) => r.visitId === v.id))
+      throw Error('A linked client request must stay with its property');
+    if (
+      v.status === 'Completed' &&
+      (!v.checklist.every((t) => t.done) || !v.actualMinutes || !v.report.trim())
+    )
+      throw Error('Complete the checklist, enter time on site, and write the client summary first');
+    v.completedAt = v.status === 'Completed' ? prev.completedAt || now : null;
+    const changed =
+      JSON.stringify(
+        clientReport(
+          v,
+          s.properties.find((p) => p.id === v.propertyId)!,
+          { name: '' } as Client,
+        ),
+      ) !==
+      JSON.stringify(
+        clientReport(
+          prev,
+          s.properties.find((p) => p.id === prev.propertyId)!,
+          { name: '' } as Client,
+        ),
+      );
+    v.reportStatus = changed || v.status !== 'Completed' ? 'Draft' : prev.reportStatus;
+    v.publishedAt = ['Published to preview', 'Published to portal'].includes(v.reportStatus)
+      ? prev.publishedAt
+      : null;
+    replace(s.visits, v);
+    message = `Work order ${v.status.toLowerCase()}`;
+  } else if (command.type === 'schedule') {
+    const parsed = z
+      .object({
+        propertyId: id,
+        date,
+        start: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+        count: z.number().int().min(1).max(12),
+        interval: z.number().int().min(1).max(31),
+        exceptions: z.array(date).max(50).default([]),
+        template: z
+          .enum(['General service', 'Hardscape', 'Planting', 'Repair'])
+          .default('General service'),
+      })
+      .parse(command);
+    const p = s.properties.find((x) => x.id === parsed.propertyId);
+    if (!p) throw Error('Property not found');
+    if (!p.crew.trim() || !p.truck.trim() || p.budgetMinutes === null)
+      throw Error('Set the property’s crew, truck and visit budget before scheduling');
+    let created = 0;
+    for (let i = 0; i < parsed.count; i++) {
+      const d = new Date(parsed.date + 'T12:00:00Z');
+      d.setUTCDate(d.getUTCDate() + i * parsed.interval);
+      const day = d.toISOString().slice(0, 10);
+      if (parsed.exceptions.includes(day)) continue;
+      created++;
+      if (s.visits.some((v) => v.propertyId === p.id && v.date === day && v.status !== 'Skipped'))
+        throw Error('A visit already exists for this property on ' + day);
+      s.visits.push({
+        id: crypto.randomUUID(),
+        propertyId: p.id,
+        date: day,
+        start: parsed.start,
+        crew: p.crew,
+        truck: p.truck,
+        crewCount: 2,
+        budgetMinutes: p.budgetMinutes!,
+        status: 'Scheduled',
+        checklist: serviceTemplates[parsed.template].map((label) => ({
+          id: crypto.randomUUID(),
+          label,
+          done: false,
+        })),
+        instructions: p.notes,
+        internalNotes: '',
+        report: '',
+        reportStatus: 'Draft',
+        actualMinutes: null,
+        hourlyCost: null,
+        materials: null,
+        photos: [],
+        completedAt: null,
+        publishedAt: null,
+      });
+    }
+    if (!created) throw Error('All selected dates are excluded');
+    message = `${created} visit${created === 1 ? '' : 's'} scheduled: ${p.name}`;
+  } else if (command.type === 'report') {
+    const v = s.visits.find((v) => v.id === command.id);
+    if (!v) throw Error('Visit not found');
+    if (!['Draft', 'Reviewed', 'Published to preview'].includes(command.status))
+      throw Error('Invalid report status');
+    if (v.status !== 'Completed' || !v.report.trim())
+      throw Error('Complete the work order before reviewing its report');
+    if (command.status === 'Published to preview' && v.reportStatus !== 'Reviewed')
+      throw Error('Review the report before publishing to preview');
+    v.reportStatus = command.status;
+    v.publishedAt = command.status === 'Published to preview' ? now : null;
+    message = `Report ${command.status.toLowerCase()}`;
+  } else throw Error('Unsupported action');
+  assignServiceRequests(
+    s,
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Los_Angeles',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date(now)),
+  );
+  s.activity.unshift({ id: crypto.randomUUID(), at: now, text: message });
+  s.activity = s.activity.slice(0, 100);
+  validateState(s);
+  return stateSchema.parse(s);
+}
+export function seedState(today = new Date().toISOString().slice(0, 10)): State {
+  const clients: Client[] = [
+    ['c1', 'Oak Court Residence', 'Jordan Lee'],
+    ['c2', 'Cypress Offices', 'Morgan Chen'],
+    ['c3', 'Terrace Garden', 'Alex Rivera'],
+    ['c4', 'Creekside Estate', 'Taylor Park'],
+  ].map(([id, name, contact]) => ({ id, name, contact, email: `${id}@example.com`, phone: '' }));
+  const properties: Property[] = clients.map((c, i) => ({
+    id: 'p' + (i + 1),
+    clientId: c.id,
+    name: c.name,
+    address: 'Sample property',
+    city: ['Palo Alto', 'Belmont', 'Redwood City', 'Woodside'][i],
+    monthly: [640, 980, 520, 850][i],
+    budgetMinutes: [75, 90, 60, 80][i],
+    crew: i % 2 ? 'Crew B' : 'Crew A',
+    truck: i % 2 ? 'Silverado HD' : 'F-150',
+    access: 'Confirm access with the office before arrival.',
+    notes: [
+      'Inspect drip emitters and tend the entry garden.',
+      'Clear courtyard paths and inspect irrigation.',
+      'Hand weed beds and check new planting.',
+      'Seasonal pruning and irrigation review.',
+    ][i],
+    cadence: 'Weekly',
+  }));
+  const visits: Visit[] = properties.map((p, i) => ({
+    id: 'v' + (i + 1),
+    propertyId: p.id,
+    date: today,
+    start: ['08:00', '08:00', '10:00', '10:30'][i],
+    crew: p.crew,
+    truck: p.truck,
+    crewCount: 2,
+    budgetMinutes: p.budgetMinutes!,
+    status: i === 0 ? 'Completed' : 'Scheduled',
+    checklist: ['Inspect irrigation', 'Tend planting beds', 'Clear paths and finish'].map(
+      (label, j) => ({ id: `t${i}${j}`, label, done: i === 0 }),
+    ),
+    instructions: p.notes,
+    internalNotes: '',
+    report:
+      i === 0
+        ? 'We tended the planting beds, checked the irrigation, and cleared the paths. The garden is ready for the week.'
+        : '',
+    reportStatus: 'Draft',
+    actualMinutes: i === 0 ? 85 : null,
+    hourlyCost: i === 0 ? 32 : null,
+    materials: i === 0 ? 12 : null,
+    photos: [],
+    completedAt: i === 0 ? today + 'T17:00:00Z' : null,
+    publishedAt: null,
+  }));
+  return {
+    absences: [],
+    serviceRequests: [],
+    timesheets: [],
+    purchases: [],
+    fuelLogs: [],
+    officeTasks: [],
+    leads: [],
+    assets: [],
+    services: [],
+    zones: [],
+    issues: [],
+    items: [],
+    allocations: [],
+    routes: [],
+    dataMode: 'sample',
+    importIds: [],
+    clients,
+    properties,
+    visits,
+    projects: [
+      {
+        id: 'j1',
+        propertyId: 'p1',
+        title: 'Entry garden renewal',
+        stage: 'Design',
+        owner: 'Design team',
+        due: today,
+        budget: 18000,
+        laborCost: null,
+        materialCost: null,
+        notes: 'Develop planting concept and irrigation approach.',
+        approvalUrl: '',
+        tasks: [
+          { id: 'jt1', label: 'Prepare concept plan', done: false },
+          { id: 'jt2', label: 'Confirm plant palette', done: false },
+        ],
+      },
+      {
+        id: 'j2',
+        propertyId: 'p4',
+        title: 'Terrace & lighting',
+        stage: 'Installation',
+        owner: 'Project team',
+        due: today,
+        budget: 42000,
+        laborCost: 8200,
+        materialCost: 14100,
+        notes: 'Coordinate lighting installation with paving schedule.',
+        approvalUrl: '',
+        tasks: [
+          { id: 'jt3', label: 'Confirm fixture locations', done: true },
+          { id: 'jt4', label: 'Schedule evening walkthrough', done: false },
+        ],
+      },
+    ],
+    activity: [],
+  };
 }

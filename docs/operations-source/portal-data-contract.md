@@ -4,16 +4,16 @@ Verified 2026-09-16. Operations layout is the accepted baseline.
 
 ## Ownership and data flow
 
-| Data | Input / authority | Output |
-| --- | --- | --- |
-| Client name and email | Canonical `portal_clients` UUID | Operations local ID mapped through `gmz_operations_clients`; edits save to canonical record |
-| Property | `gmz_operations_properties`, keyed by scope and property ID | Client property selector; primary property also mirrors legacy `admin_properties` |
-| Requests | Client-session `portal_requests.client_id` | Admin inbox, client profile, linked scope draft or next-service instructions |
-| Request photos | Client-prefixed private request storage | Admin selected-request viewer; validated paths, signed for five minutes, manual refresh |
-| Existing portal approvals | `portal_approvals`, immutable client/subject evidence | Admin Approvals inbox; not interpreted as approval of an unrelated Operations draft |
-| Reviewed reports | Completed work order plus explicit publication | Client-bound report history with completed tasks and selected photos only |
-| Announcements | Admin draft plus explicit publication | Matching client audience during Pacific start/end dates |
-| Office notes, rates, access codes, attendance, fleet, vendors | Operations only | No client publication |
+| Data                                                          | Input / authority                                           | Output                                                                                      |
+| ------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Client name and email                                         | Canonical `portal_clients` UUID                             | Operations local ID mapped through `gmz_operations_clients`; edits save to canonical record |
+| Property                                                      | `gmz_operations_properties`, keyed by scope and property ID | Client property selector; primary property also mirrors legacy `admin_properties`           |
+| Requests                                                      | Client-session `portal_requests.client_id`                  | Admin inbox, client profile, linked scope draft or next-service instructions                |
+| Request photos                                                | Client-prefixed private request storage                     | Admin selected-request viewer; validated paths, signed for five minutes, manual refresh     |
+| Existing portal approvals                                     | `portal_approvals`, immutable client/subject evidence       | Admin Approvals inbox; not interpreted as approval of an unrelated Operations draft         |
+| Reviewed reports                                              | Completed work order plus explicit publication              | Client-bound report history with completed tasks and selected photos only                   |
+| Announcements                                                 | Admin draft plus explicit publication                       | Matching client audience during Pacific start/end dates                                     |
+| Office notes, rates, access codes, attendance, fleet, vendors | Operations only                                             | No client publication                                                                       |
 
 ## Translation rules
 
