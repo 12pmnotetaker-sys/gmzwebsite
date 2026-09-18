@@ -37,7 +37,7 @@ CI runs. Node 22 still works locally; the floor in `package.json` is the truth.
 npm run check          # types, content schemas, broken image paths
 npm run build          # check + build + content lint + photo metadata scan
 npm run lint:content   # the written rules, against dist/
-npm run lint:photos    # no committed image carries a location
+npm run lint:photos    # no committed image or video carries a location
 npm run format:check   # prettier
 npm test               # the unit suites, and the on-demand routes with nothing configured
 ```

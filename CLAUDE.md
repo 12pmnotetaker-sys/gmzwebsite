@@ -102,6 +102,17 @@ output, never the original.** The audit reports that coordinates are present and
 how precise they are, never what they are, because a build log is not the place
 to reprint a client's address either.
 
+Footage follows the same rule with a different tool. `audit` and `scan` read a
+video for the location atoms a phone writes into the container (`©xyz`,
+`loci`, the QuickTime location key, or a bare ISO 6709 string) and fail on any
+of them. `clean` refuses a video, because it cannot rewrite one; strip the
+container metadata without re-encoding, then audit the result:
+
+```sh
+ffmpeg -i original.mp4 -map_metadata -1 -c copy public/media/<name>.mp4
+npm run photo:audit -- public/media/<name>.mp4
+```
+
 **Accessibility floor.** The skip link, visible `:focus-visible` rings (amber on
 the teal chrome), `aria-current` on the active nav item, one `h1` per page, the
 `prefers-reduced-motion` block, and real semantics on interactive pieces all
