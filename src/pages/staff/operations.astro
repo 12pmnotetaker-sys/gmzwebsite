@@ -1,0 +1,151 @@
+---
+export const prerender = false;
+import wordmark from '@/assets/brand/gmz-wordmark.png';
+import {
+  STAFF_COOKIE,
+  clearSessionCookie,
+  createSession,
+  destroySession,
+  readSession,
+  setSessionCookie,
+  signInWithPassword,
+} from '../../server/staff/auth';
+import { privateHeaders, sameOrigin } from '../../server/operations-admin/auth';
+
+Object.entries(privateHeaders).forEach(([k, v]) => Astro.response.headers.set(k, v));
+
+let message = '';
+if (Astro.request.method === 'POST') {
+  if (!sameOrigin(Astro.request))
+    return new Response('Forbidden', { status: 403, headers: privateHeaders });
+  try {
+    const form = await Astro.request.formData();
+    if (form.get('action') === 'logout') {
+      const token = Astro.cookies.get(STAFF_COOKIE)?.value;
+      if (token) await destroySession(token);
+      clearSessionCookie(Astro.cookies, Astro.url);
+      return Astro.redirect('/staff/operations');
+    }
+    const email = String(form.get('email') || '').trim();
+    const password = String(form.get('password') || '');
+    if (email.length > 254 || password.length > 512) throw new Error('Invalid credentials');
+    const staff = await signInWithPassword(email, password);
+    if (!staff) {
+      message = 'Sign-in failed. Use an account enabled for GMZ Staff.';
+    } else {
+      setSessionCookie(Astro.cookies, Astro.url, await createSession(staff.id));
+      return Astro.redirect('/staff/operations');
+    }
+  } catch {
+    message = 'Staff sign-in is unavailable. Please try again later.';
+  }
+}
+
+let staff = null;
+try {
+  staff = await readSession(Astro.cookies.get(STAFF_COOKIE)?.value);
+} catch {
+  message = 'Staff access is being configured. The private workspace remains available below.';
+}
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>GMZ Staff</title>
+  </head>
+  <body>
+    {
+      staff ? (
+        <main class="staff-session">
+          <img src={wordmark.src} alt="GMZ Landscaping" width="235" />
+          <h1>Signed in as {staff.name}</h1>
+          <p>Your route, hours and time-away requests live in the private workspace.</p>
+          <a class="btn" href="https://gmz-operations.gmzhavi.chatgpt.site/staff">
+            Open GMZ Staff ↗
+          </a>
+          <form method="POST">
+            <button name="action" value="logout">
+              Sign out
+            </button>
+          </form>
+        </main>
+      ) : (
+        <main class="staff-login">
+          <img src={wordmark.src} alt="GMZ Landscaping" width="235" />
+          <h1>GMZ Staff sign-in</h1>
+          <p>Sign in with your enabled Staff account.</p>
+          {message && <p role="alert">{message}</p>}
+          <form method="POST">
+            <label>
+              Email
+              <input type="email" name="email" autocomplete="username" required maxlength="254" />
+            </label>
+            <label>
+              Password
+              <input
+                type="password"
+                name="password"
+                autocomplete="current-password"
+                required
+                maxlength="512"
+              />
+            </label>
+            <button type="submit">Sign in</button>
+          </form>
+          <a href="/staff">Back to GMZ Staff</a>
+        </main>
+      )
+    }
+  </body>
+</html>
+<style>
+  .staff-login,
+  .staff-session {
+    max-width: 460px;
+    margin: 10vh auto;
+    padding: 32px;
+    font-size: 16px;
+  }
+  .staff-login h1,
+  .staff-session h1 {
+    font-size: 32px;
+    margin: 24px 0 12px;
+  }
+  .staff-login p,
+  .staff-session p {
+    margin: 16px 0;
+    line-height: 1.6;
+  }
+  .staff-login form,
+  .staff-login label {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .staff-login input {
+    border: 1px solid #9db3ba;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+  .staff-login button,
+  .staff-session .btn,
+  .staff-session button {
+    background: #002b37;
+    color: white;
+    padding: 14px;
+    margin: 8px 0 24px;
+    border: 0;
+    display: inline-block;
+    text-align: center;
+    text-decoration: none;
+    font: inherit;
+    cursor: pointer;
+  }
+  .staff-login a,
+  .staff-session a {
+    text-decoration: underline;
+  }
+</style>

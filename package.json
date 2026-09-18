@@ -21,7 +21,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "astro": "astro",
-    "portal": "tsx scripts/portal-admin.ts"
+    "portal": "tsx scripts/portal-admin.ts",
+    "staff": "tsx scripts/staff-admin.ts"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
