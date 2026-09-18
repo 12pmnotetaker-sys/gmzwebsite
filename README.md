@@ -35,9 +35,13 @@ npm run build          # check + build + content lint + photo metadata scan
 npm run lint:content   # the written rules, against dist/
 npm run lint:photos    # no committed image carries a location
 npm run format:check   # prettier
+npm test               # the unit suites, and the on-demand routes with nothing configured
 ```
 
-`npm run build` is the gate. It fails on a broken photo path, absent alt text, a
+`npm run build` is the gate for everything prerendered. `npm test` is the gate
+for what is not: it starts the dev server with every provider variable unset
+and checks that the portal says it is off, the intake endpoint answers `503`
+rather than a false thank-you, and the admin API refuses. CI runs both. It fails on a broken photo path, absent alt text, a
 schema violation, a sentence that breaks house style, or a committed photograph
 that still carries GPS coordinates. CI runs it on every push.
 

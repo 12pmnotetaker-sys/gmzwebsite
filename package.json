@@ -20,6 +20,7 @@
     "photo:clean": "node scripts/photo-intake.mjs clean",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "test": "tsx --test tests/*.test.ts tests/*.mjs",
     "astro": "astro",
     "portal": "tsx scripts/portal-admin.ts"
   },

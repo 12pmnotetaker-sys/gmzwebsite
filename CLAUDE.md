@@ -228,7 +228,16 @@ npm run build          # check + build + content lint + photo metadata scan
 npm run lint:content   # the written rules, against dist/
 npm run lint:photos    # no committed image carries a location
 npm run format:check   # prettier
+npm test               # unit suites, and the on-demand routes with nothing configured
 ```
+
+`npm test` is the gate for the half of the site the build cannot see. The
+portal, the intake endpoint and the admin API are rendered on demand, so
+`tests/ssr-smoke.test.mjs` starts the dev server with every provider variable
+unset and reads them over HTTP: the sign-in screen has to say the portal is
+off and give the phone number, `/api/enquiry` has to answer `503` rather than
+a false thank-you, and `/api/admin/*` has to answer `401`. A new on-demand
+route that must behave honestly when unconfigured gets a case there.
 
 `npm run build` fails loudly on a broken photo path, a missing video, absent alt
 text, a schema violation or a photograph carrying GPS, which is the point.

@@ -49,6 +49,14 @@ jobs:
       - name: Type-check and validate content
         run: npm run check
 
+      # The unit suites, then the on-demand routes with every provider
+      # variable unset: the portal must say it is off, the intake endpoint
+      # must answer 503 rather than a false thank-you, the admin API must
+      # refuse. Those pages are rendered on demand, so the static build gate
+      # below never sees them; this is their gate.
+      - name: Test
+        run: npm test
+
       - name: Build
         run: npm run build:fast
 
