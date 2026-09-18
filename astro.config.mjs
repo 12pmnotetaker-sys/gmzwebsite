@@ -38,17 +38,17 @@ export default defineConfig({
   vite: { plugins: [tailwindcss()] },
   output: 'static',
   // Trust only this site's hosts when Vercel forwards requests to the function.
-  // Keep Astro's origin check enabled for form submissions.
+  // Keep Astro's origin check enabled for form submissions. The two Vercel
+  // variables name the deployment being built, so every preview trusts itself
+  // and nothing else; no branch is named here by hand, because a branch is
+  // deleted long before anyone remembers to remove it from this list.
   security: {
     checkOrigin: true,
     allowedDomains: [
       ...new Set(
-        [
-          new URL(SITE).hostname,
-          process.env.VERCEL_URL,
-          process.env.VERCEL_BRANCH_URL,
-          'gmzwebsite-git-codex-homepa-8a3419-12pmnotetaker-7527s-projects.vercel.app',
-        ].filter((host) => typeof host === 'string' && host.length > 0),
+        [new URL(SITE).hostname, process.env.VERCEL_URL, process.env.VERCEL_BRANCH_URL].filter(
+          (host) => typeof host === 'string' && host.length > 0,
+        ),
       ),
     ].map((hostname) => ({ hostname })),
   },

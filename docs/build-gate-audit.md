@@ -111,6 +111,11 @@ to `npm run build`.
 
 All five confirmed by fixture.
 
+**Fixed.** Video is now audited and scanned for the `©xyz` and `loci` atoms,
+the QuickTime location key and a bare ISO 6709 string, confirmed by fixture
+in both directions; `clean` refuses a video and names the ffmpeg invocation
+that strips one. The other four holes in this section still stand.
+
 **Video is never scanned.** `IMAGE_EXTENSIONS` has no video types, and sharp
 could not read them anyway. There are 14 `.mp4` files and 1 `.webm` under
 `public/media/`, all handed over as footage, and phone video routinely carries

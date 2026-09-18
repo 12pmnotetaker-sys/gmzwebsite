@@ -1,7 +1,7 @@
 ---
 import BaseLayout from '@layouts/BaseLayout.astro';
 import PageHeader from '@components/PageHeader.astro';
-import { company, serviceRegionInline } from '@data/site';
+import { claims, company, serviceRegionInline } from '@data/site';
 
 /**
  * Note what this page does not say, because the omissions are the decisions.
@@ -18,11 +18,18 @@ import { company, serviceRegionInline } from '@data/site';
  * this site to do and the hardest to take back.
  */
 const { people, license, memberships, drawings, address, heritage } = company;
+
+/*
+ * The generations line is a claim with one weak source, so `claims` decides
+ * whether it is said at all. Without it the page still has the founding year,
+ * which is confirmed, and "family-owned", which four names below make good on.
+ */
+const generational = claims.familyHeritage ? `A ${heritage.ordinal} generation family` : 'A family';
 ---
 
 <BaseLayout
   title="About"
-  description={`A ${heritage.ordinal} generation family company on the San Francisco Peninsula, landscaping from a ${address.locality} yard since ${company.founded}.`}
+  description={`${generational} company on the San Francisco Peninsula, landscaping from a ${address.locality} yard since ${company.founded}.`}
 >
   <PageHeader
     eyebrow="Who we are"
@@ -45,8 +52,16 @@ const { people, license, memberships, drawings, address, heritage } = company;
         <p>
           {company.founder} founded {company.name} in {company.founded}. Based in
           {address.locality}, we are a family-owned landscape design, construction and maintenance
-          company serving {serviceRegionInline}. Our family's landscaping experience began in
-          {heritage.tradeSince} and now spans {heritage.generations} generations.
+          company serving {serviceRegionInline}.
+          {
+            claims.familyHeritage && (
+              <>
+                {' '}
+                Our family's landscaping experience began in {heritage.tradeSince} and now spans{' '}
+                {heritage.generations} generations.
+              </>
+            )
+          }
         </p>
         <p>
           Family members are directly involved in design, project management and maintenance. We

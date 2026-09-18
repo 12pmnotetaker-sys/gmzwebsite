@@ -23,12 +23,16 @@
  *       Walk everything already committed (src/assets and public by default)
  *       and fail if any of it carries location. Wired into `npm run build`.
  *
+ * Video is audited and scanned too, for the location atoms a phone writes
+ * into a container. It is not cleaned here: sharp cannot rewrite a video, so
+ * `clean` refuses one and says which ffmpeg invocation strips it.
+ *
  * A deliberate omission: this reports that coordinates are PRESENT and how
  * precise they are, never what they are. The whole point is a client's home
  * address, and a build log is not the place to reprint it.
  */
 
-import { readdir, stat } from 'node:fs/promises';
+import { open, readdir, stat } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
 
@@ -43,6 +47,15 @@ const IMAGE_EXTENSIONS = new Set([
   '.heic',
   '.heif',
 ]);
+
+/**
+ * Footage gets the same scan. Phone video routinely carries an ISO 6709
+ * location string in a user-data atom, and the walkthrough films under
+ * public/media were handed over exactly the way the photographs were. sharp
+ * cannot read a video, so these are searched byte by byte for the markers a
+ * location is stored under; see `inspectVideo`.
+ */
+const VIDEO_EXTENSIONS = new Set(['.mp4', '.m4v', '.mov', '.webm', '.mkv']);
 
 const DEFAULT_SCAN_DIRS = ['src/assets', 'public'];
 
@@ -261,8 +274,69 @@ function kb(bytes) {
   return `${(bytes / 1024).toFixed(1)} KB`;
 }
 
+/*
+ * Where a video keeps a location, and what the string looks like.
+ *
+ *   ©xyz   QuickTime user data: the four bytes 0xA9 'x' 'y' 'z', then the
+ *          ISO 6709 string. What an iPhone writes.
+ *   loci   The 3GPP location box, fixed-point latitude and longitude.
+ *   com.apple.quicktime.location.ISO6709
+ *          The keyed-metadata form of the same thing, in a MOV.
+ *
+ * The ISO 6709 form is "+37.4419-122.1430+012.000/": a sign, two digits of
+ * latitude, a sign, three of longitude. Specific enough that it does not
+ * occur by accident in compressed video, which is what lets this search the
+ * whole file rather than parse every atom.
+ */
+const VIDEO_LOCATION_MARKERS = [
+  ['©xyz', Buffer.from([0xa9, 0x78, 0x79, 0x7a])],
+  ['loci', Buffer.from('loci', 'latin1')],
+  ['quicktime.location', Buffer.from('com.apple.quicktime.location', 'latin1')],
+];
+
+const ISO_6709 = /[+-]\d{2}(?:\.(\d+))?[+-]\d{3}(?:\.\d+)?(?:[+-]\d+(?:\.\d+)?)?\/?/;
+
+/** Long enough to hold any marker or coordinate string across a chunk boundary. */
+const OVERLAP = 64;
+
+async function inspectVideo(file, bytes) {
+  const markers = new Set();
+  let places = null;
+  let handle;
+  try {
+    handle = await open(file, 'r');
+    const chunk = Buffer.alloc(1024 * 1024);
+    let carry = Buffer.alloc(0);
+    for (let position = 0; position < bytes;) {
+      const { bytesRead } = await handle.read(chunk, 0, chunk.length, position);
+      if (bytesRead === 0) break;
+      const window = Buffer.concat([carry, chunk.subarray(0, bytesRead)]);
+      for (const [name, marker] of VIDEO_LOCATION_MARKERS) {
+        if (window.includes(marker)) markers.add(name);
+      }
+      const match = ISO_6709.exec(window.toString('latin1'));
+      if (match) places = Math.max(places ?? 0, match[1]?.length ?? 0);
+      carry = window.subarray(Math.max(0, window.length - OVERLAP));
+      position += bytesRead;
+    }
+  } catch (error) {
+    return { file, unreadable: error.message, bytes };
+  } finally {
+    await handle?.close();
+  }
+  return {
+    file,
+    bytes,
+    format: 'video',
+    video: { markers: [...markers], places, locating: markers.size > 0 || places !== null },
+  };
+}
+
 async function inspect(file) {
   const info = await stat(file);
+  if (VIDEO_EXTENSIONS.has(path.extname(file).toLowerCase())) {
+    return inspectVideo(file, info.size);
+  }
   let meta;
   try {
     meta = await sharp(file).metadata();
@@ -289,11 +363,12 @@ async function inspect(file) {
 
 /** True when the file carries a location and must not be committed as it is. */
 function locates(report) {
-  return Boolean(report.exif?.gps?.locating);
+  return Boolean(report.exif?.gps?.locating || report.video?.locating);
 }
 
 /** True when the file carries any metadata at all, location or not. */
 function carriesMetadata(report) {
+  if (report.video) return report.video.locating;
   return Boolean(
     report.exif ||
     report.exifUnparsed ||
@@ -309,6 +384,28 @@ function print(report) {
     console.log(`\n${report.file}`);
     console.log(`  unreadable   ${report.unreadable}`);
     console.log('  VERDICT      cannot be checked. Convert to JPEG or PNG first.');
+    return;
+  }
+
+  if (report.video) {
+    console.log(`\n${report.file}`);
+    console.log(`  video  ${kb(report.bytes)}`);
+    if (report.video.locating) {
+      const shape =
+        report.video.places === null
+          ? 'a location atom, coordinates not read'
+          : `coordinates to about ${report.video.places} decimal places`;
+      console.log(`  LOCATION     PRESENT   ${shape}`);
+      if (report.video.markers.length) {
+        console.log(`               markers: ${report.video.markers.join(', ')}`);
+      }
+      console.log(
+        '  VERDICT      DO NOT COMMIT. Strip it first: ' +
+          'ffmpeg -i in.mp4 -map_metadata -1 -c copy out.mp4, then audit the output.',
+      );
+    } else {
+      console.log('  VERDICT      no location found.');
+    }
     return;
   }
 
@@ -391,6 +488,16 @@ async function clean(argv) {
   const width = flag('width', 1600);
   const quality = flag('quality', 82);
 
+  if (VIDEO_EXTENSIONS.has(path.extname(source).toLowerCase())) {
+    console.error(
+      'clean handles photographs. For footage, strip the container metadata without ' +
+        're-encoding, then audit the result:\n' +
+        '  ffmpeg -i in.mp4 -map_metadata -1 -c copy out.mp4\n' +
+        '  npm run photo:audit -- out.mp4',
+    );
+    return 2;
+  }
+
   const before = await inspect(source);
   print(before);
 
@@ -429,8 +536,9 @@ async function walk(directory, found = []) {
   }
   for (const entry of entries) {
     const full = path.join(directory, entry.name);
+    const extension = path.extname(entry.name).toLowerCase();
     if (entry.isDirectory()) await walk(full, found);
-    else if (IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) found.push(full);
+    else if (IMAGE_EXTENSIONS.has(extension) || VIDEO_EXTENSIONS.has(extension)) found.push(full);
   }
   return found;
 }
@@ -440,7 +548,7 @@ async function scan(dirs) {
   const files = (await Promise.all(roots.map((dir) => walk(dir)))).flat();
 
   if (files.length === 0) {
-    console.log(`No images under ${roots.join(', ')}.`);
+    console.log(`No images or video under ${roots.join(', ')}.`);
     return 0;
   }
 
@@ -451,7 +559,7 @@ async function scan(dirs) {
   if (located.length > 0) {
     located.forEach(print);
     console.error(
-      `\n${located.length} committed image(s) carry a location. ` +
+      `\n${located.length} committed file(s) carry a location. ` +
         'Replace each with a cleaned derivative. Note that git history keeps ' +
         'the original, so a deletion alone does not undo this.',
     );
@@ -465,7 +573,11 @@ async function scan(dirs) {
   for (const report of reports.filter((entry) => entry.exifUnparsed)) {
     console.warn(`Unreadable EXIF in ${report.file}. Check it by hand.`);
   }
-  console.log(`${files.length} committed image(s) checked, none carrying a location.`);
+  const videos = reports.filter((report) => report.video).length;
+  console.log(
+    `${files.length - videos} committed image(s) and ${videos} video(s) checked, ` +
+      'none carrying a location.',
+  );
   return 0;
 }
 
