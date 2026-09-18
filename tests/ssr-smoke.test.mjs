@@ -125,6 +125,15 @@ test('the enquiry endpoint refuses other methods', async () => {
   assert.equal(response.status, 405);
 });
 
+test("an unknown address gets the site's own not-found page, with a 404", async () => {
+  const response = await fetch(`${ORIGIN}/this-page-does-not-exist`, { redirect: 'manual' });
+  assert.equal(response.status, 404);
+  const html = await response.text();
+  assert.match(html, /That page is not here/);
+  assert.ok(html.includes(primaryPhone), 'the not-found page must offer the phone number');
+  assert.match(html, /class="skip-link"/, 'the not-found page must carry the site chrome');
+});
+
 test('the admin API refuses without a session', async () => {
   const response = await fetch(`${ORIGIN}/api/admin/anything`);
   assert.ok(response.status === 401 || response.status === 503, `unexpected ${response.status}`);

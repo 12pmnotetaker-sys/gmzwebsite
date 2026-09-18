@@ -146,6 +146,16 @@ export const company = {
     days: 'Monday to Friday',
     daysShort: 'Mon–Fri',
     time: '8am – 4pm',
+    /**
+     * The same hours in the form structured data wants. Change these with
+     * the strings above, never instead of them: a search result that shows
+     * different hours from the footer is the drift this file exists to stop.
+     */
+    schedule: {
+      dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+      opens: '08:00',
+      closes: '16:00',
+    },
   },
 
   /**
@@ -391,11 +401,15 @@ export const site = {
  * This is a courtesy screen, NOT access control. The code ships in the client
  * bundle and every page stays directly fetchable by URL, so treat it as a
  * "please don't browse this casually" sign rather than a lock. Anything that
- * genuinely must not be public does not belong in this repo at all. See the
- * "Private portfolio" section of README.md.
+ * genuinely must not be public does not belong in this repo at all; see "The
+ * veil" in CLAUDE.md.
+ *
+ * There is no `enabled` switch here on purpose. One existed, was read by
+ * nothing, and looked like a way to lift the veil; a flag that does nothing
+ * is worse than none. The veil is drawn by route (`veiledPrefixes` in
+ * src/data/publication.ts), and that list is the switch.
  */
 export const gate = {
-  enabled: true,
   /** Compared case-insensitively after trimming. */
   code: 'cercis',
   /**

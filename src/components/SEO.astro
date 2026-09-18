@@ -1,6 +1,7 @@
 ---
 import { company, site } from '@data/site';
 import { canonicalUrl } from '@data/canonical';
+import mark from '@/assets/brand/gmz-mark.png';
 
 interface Props {
   title?: string;
@@ -22,7 +23,9 @@ const socialImage = new URL(image ?? site.ogImage, origin);
 
 /**
  * LocalBusiness structured data. Every value is read from src/data/site.ts, so
- * a corrected phone number reaches the search result too.
+ * a corrected phone number reaches the search result too. The hours, the logo
+ * and the social image are the same ones the page shows; a search result
+ * must never say something the footer does not.
  *
  * `hasCredential` states the CSLB licence and nothing else. It deliberately
  * does not assert insurance: see `claims.licensedAndInsured` in site.ts.
@@ -36,6 +39,14 @@ const structuredData = {
   email: company.email,
   telephone: company.phones[0].tel,
   foundingDate: String(company.founded),
+  logo: new URL(mark.src, origin).href,
+  image: socialImage.href,
+  openingHoursSpecification: {
+    '@type': 'OpeningHoursSpecification',
+    dayOfWeek: company.hours.schedule.dayOfWeek,
+    opens: company.hours.schedule.opens,
+    closes: company.hours.schedule.closes,
+  },
   address: {
     '@type': 'PostalAddress',
     addressLocality: company.address.locality,
