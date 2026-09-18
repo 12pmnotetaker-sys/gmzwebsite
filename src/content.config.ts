@@ -558,27 +558,52 @@ export const SORE_POINTS = ['range-vs-price', 'design-fee', 'change-orders', 'ti
 
 const faqs = defineCollection({
   loader: glob({ base: './src/content/faqs', pattern: '**/*.md' }),
-  schema: z.object({
-    /** In the client's own words, the way they would actually ask it. */
-    question: z.string(),
-    /** Three to six words, for compact navigation. */
-    short: z.string(),
-    phase: z.enum(FAQ_PHASES),
-    serviceLine: z.enum([...SERVICE_LINES, 'both']),
-    sorePoint: z.enum(SORE_POINTS).optional(),
-    /** Sort weight within a phase; lower sorts first. */
-    order: z.number().default(0),
-    /**
-     * Nothing renders in production until this is true. An answer that states
-     * a policy nobody has decided is worse than no answer, because a client
-     * will hold GMZ to whatever the website said. Same gate as a testimonial.
-     */
-    published: z.boolean().default(false),
-    /** True when the answer depends on a decision that has not been made. */
-    needsDecision: z.boolean().default(false),
-    /** Exactly what has to be confirmed before this can be published. */
-    decisionNote: z.string().optional(),
-  }),
+  schema: z
+    .object({
+      /** In the client's own words, the way they would actually ask it. */
+      question: z.string(),
+      /** Three to six words, for compact navigation. */
+      short: z.string(),
+      phase: z.enum(FAQ_PHASES),
+      serviceLine: z.enum([...SERVICE_LINES, 'both']),
+      sorePoint: z.enum(SORE_POINTS).optional(),
+      /** Sort weight within a phase; lower sorts first. */
+      order: z.number().default(0),
+      /**
+       * Nothing renders in production until this is true. An answer that states
+       * a policy nobody has decided is worse than no answer, because a client
+       * will hold GMZ to whatever the website said. Same gate as a review.
+       */
+      published: z.boolean().default(false),
+      /** True when the answer depends on a decision that has not been made. */
+      needsDecision: z.boolean().default(false),
+      /** Exactly what has to be confirmed before this can be published. */
+      decisionNote: z.string().optional(),
+    })
+    .superRefine((faq, ctx) => {
+      /*
+       * The same treatment the towns got: the two flags cannot contradict each
+       * other. An answer that still needs a decision cannot be published, and
+       * one that needs a decision has to say which, or the next person cannot
+       * tell what would let it ship.
+       */
+      if (faq.published && faq.needsDecision) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['published'],
+          message:
+            'This answer still needs a decision, so it cannot be published. Make the ' +
+            'decision and clear needsDecision, or leave it unpublished.',
+        });
+      }
+      if (faq.needsDecision && !faq.decisionNote) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['decisionNote'],
+          message: 'Say exactly what has to be decided before this answer can be published.',
+        });
+      }
+    }),
 });
 
 /**

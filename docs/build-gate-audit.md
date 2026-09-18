@@ -23,10 +23,26 @@ more, recorded in section 3.
 accompanied this document: `lint:photos` now runs in CI, `site.title` no longer carries an
 em-dash, and content-lint now reads the writing that ships inside a script.
 Two more followed, before the `/work` split: `townOnly` no longer accepts a
-street name, and the `testimonials` reference is gone. The findings are left as
-they were written, because the record of what the gate did and did not catch is
-the point of the document; each is marked below and in the closing list.
-Everything else stands open.
+street name, and the `testimonials` reference is gone.
+
+**A third round closed most of what remained.** Attributes are no longer
+outside every rule: alt text, `<title>` and the meta description are read for
+internal terms, em-dashes and manufacturer names. The accessibility floor in
+section 4 is now checked on every prerendered page and over the built CSS.
+"Licensed and insured" fails the build while `claims.licensedAndInsured` is
+false, read off the source text of `site.ts` the same way `gatedPrefixes` is.
+Plant counts in prose fail as `raw-quantity`; other figures are recorded in
+CLAUDE.md as held by review. `faqs` gained the `superRefine` that ties
+`published` to `needsDecision`. Each positive control was re-run against a
+copy of the built output before the round was called done.
+
+The findings are left as they were written, because the record of what the
+gate did and did not catch is the point of the document; each is marked below
+and in the closing list. What still stands open: the photo scan's coverage
+holes (video, XMP, SVG, unreadable files, directories outside the two
+scanned), `budgetBand` and `duration` as unvalidated strings now that `/work`
+renders them, `seo.noindex` and `gate.enabled` as dead flags, and the
+structural note in section 6.
 
 ## What holds
 
@@ -194,6 +210,10 @@ company fact.
 
 ## 4. CLAUDE.md rules with no check at all
 
+**Mostly fixed.** The claims flag, plant counts and the accessibility floor are
+now checked; one fact one home and scope figures other than plant counts are
+recorded in CLAUDE.md as held by review. What follows is what was found.
+
 **One fact, one home.** Nothing prevents a phone number, the CSLB number, the
 mailing address or the tagline being retyped into a component. Grepping the tree
 for the phone patterns, the license number, the email and the P.O. box finds
@@ -261,6 +281,8 @@ that both halves of the gate miss this: `/work` is still a `Placeholder` and no
 page renders the `projects` collection, so content-lint never sees the string
 either. When the Phase 1 `/work` split lands, these become live.
 
+**Fixed.** `faqs` now carries the same `superRefine`.
+
 **`faqs` allows `published: true` with `needsDecision: true`.** The `towns`
 collection got exactly the treatment this needs, a `superRefine` tying
 `published` to its preconditions. `faqs` did not. The collection is also
@@ -302,13 +324,12 @@ silently becomes a no-op. Not a risk today with seven live entries.
    Done. Shape tests catch an address that announces itself; a public project's
    town must also be one of the ten in `serviceArea`, which is what stops a
    gated entry named "Marlowe" being copied across.
-5. ~~Fix `site.title`.~~ Done. Linting `<title>` and the meta description for
-   house style is still open: attributes are still outside every rule, so the
-   next em-dash written into one ships the same way.
+5. ~~Fix `site.title`.~~ Done, and `<title>` and the meta description are now
+   linted for house style.
 6. ~~Register `testimonials` or drop the reference.~~ Dropped.
 7. ~~Lint the JSON-LD block and the bundled client scripts.~~ Done, and inline
-   scripts with them. Image alt text is still unlinted, along with every other
-   attribute.
-8. Decide whether the unenforced CLAUDE.md rules should be checks or should be
-   marked in the document as held by review. Either is defensible. What is not
-   is a document that reads as if they are all enforced.
+   scripts with them, and alt text after that.
+8. ~~Decide whether the unenforced CLAUDE.md rules should be checks or should
+   be marked in the document as held by review.~~ Done both ways: the claims
+   flag, plant counts and the accessibility floor became checks; the rest is
+   named in CLAUDE.md under "Held by review, not by the build".

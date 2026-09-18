@@ -233,6 +233,21 @@ npm run format:check   # prettier
 `npm run build` fails loudly on a broken photo path, a missing video, absent alt
 text, a schema violation or a photograph carrying GPS, which is the point.
 
+`content-lint` also holds the accessibility floor and the claims rule on every
+prerendered page: one `h1`, the skip link and its `#main` target, a labelled
+`<nav>` with at most one `aria-current` item, a `:focus-visible` rule and a
+`prefers-reduced-motion` block in the built CSS, no "licensed and insured"
+while `claims.licensedAndInsured` is false, no plant counts in prose, and the
+writing rules applied to alt text, `<title>` and the meta description as well
+as to paragraphs.
+
+**Held by review, not by the build.** Some rules cannot be checked mechanically
+and are stated here so nobody assumes they are: one fact one home (a retyped
+phone number builds green; grep for it), scope in shape (only plant counts are
+caught, a contract value in prose is not), brand names not on the short
+blocklist in `scripts/lib/copy-rules.mjs`, and a street name written into a
+sentence rather than a schema field. A reviewer reads for these.
+
 **Nobody edits this site through a CMS.** Changes go through a commit, so there
 is no human editor standing between a mistake and the public. That makes the
 build gate the only reviewer, and it is why `content-lint.mjs` exists rather than

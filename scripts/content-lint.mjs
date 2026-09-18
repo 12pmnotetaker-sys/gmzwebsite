@@ -44,6 +44,23 @@ const SERVER_BUNDLE = path.resolve('.vercel/output/functions/_render.func/dist/s
 /* ---- Rules ------------------------------------------------------------- */
 
 /**
+ * A count of plants. House style describes scope in shape, never in figures:
+ * "shrubs, perennials and grasses", not "about 165 shrubs". Plant nouns only,
+ * on purpose. Areas and lengths are left alone because an ordinance article
+ * legitimately says "500 square feet", and that is a rule, not a scope.
+ */
+const RAW_QUANTITY =
+  /\b\d{2,}\s+(?:shrubs?|perennials?|grasses|trees|plants|flats|boulders|pavers|bulbs)\b/gi;
+
+/**
+ * The claim the site is not yet allowed to make. `claims.licensedAndInsured`
+ * in src/data/site.ts is false until someone confirms a carrier and a coverage
+ * amount, and until then the words must not ship, in any order.
+ */
+const LICENSED_AND_INSURED =
+  /\b(?:licen[cs]ed\s+(?:and|&)\s+insured|insured\s+(?:and|&)\s+licen[cs]ed|fully\s+insured)\b/gi;
+
+/**
  * Prose elements. The rules about writing apply to writing, not to markup.
  *
  * The list is wider than a paragraph because the client portal sets most of
@@ -115,12 +132,17 @@ function checkDocument(file, html) {
   for (const [rule, pattern] of [
     ['internal-figures', INTERNAL_TERMS],
     ['hourly-rate', HOURLY_RATE],
+    ['raw-quantity', RAW_QUANTITY],
+    ...(insuranceClaimAllowed ? [] : [['unconfirmed-claim', LICENSED_AND_INSURED]]),
   ]) {
     pattern.lastIndex = 0;
     for (const match of visible.matchAll(pattern)) {
       report(file, rule, `"${match[0]}" in: ...${excerpt(visible, match.index)}...`);
     }
   }
+
+  checkAccessibilityFloor(file, body);
+  checkHeadProse(file, body);
 
   // Writing rules apply only to writing.
   PROSE_ELEMENTS.lastIndex = 0;
@@ -177,7 +199,150 @@ function checkDocument(file, html) {
         'empty-alt',
         `<img> with empty alt, no presentation role and no data-alt-set-by-script: ${tag[0].slice(0, 90)}`,
       );
+    else if (value.trim()) {
+      // Alt text is read aloud, so the writing rules reach it too. It is the
+      // one attribute a reader meets; the audit found no rule saw any. The
+      // manufacturer rule stays out of it: a supplier logo's alt text is the
+      // supplier's name, and the logo strip is the exception house style names.
+      const spoken = decode(value);
+      for (const [rule, pattern] of ALT_RULES) {
+        pattern.lastIndex = 0;
+        for (const match of spoken.matchAll(pattern)) {
+          report(file, `${rule}-in-alt`, `"${match[0]}" in alt text: ${spoken.slice(0, 90)}`);
+        }
+      }
+    }
   }
+}
+
+/** The writing rules, as they apply to alt text. */
+const ALT_RULES = [
+  ['internal-figures', INTERNAL_TERMS],
+  ['em-dash', EM_DASH],
+];
+
+/** The writing rules, as they apply to the title and the meta description. */
+const ATTRIBUTE_RULES = [...ALT_RULES, ['manufacturer', MANUFACTURERS]];
+
+/**
+ * The title and the meta description are the most client-facing lines on the
+ * site: a search result and a browser tab show nothing else. The audit found
+ * an em-dash shipping in <title> with nothing to catch it, because neither is
+ * a prose element and `text()` drops attributes before any rule runs.
+ */
+function checkHeadProse(file, body) {
+  const title = body.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1];
+  const description = body.match(
+    /<meta\b[^>]*\bname=["']description["'][^>]*\bcontent=["']([^"']*)["']/i,
+  )?.[1];
+  for (const [where, value] of [
+    ['<title>', title],
+    ['meta description', description],
+  ]) {
+    if (!value) continue;
+    const spoken = decode(value);
+    for (const [rule, pattern] of ATTRIBUTE_RULES) {
+      pattern.lastIndex = 0;
+      for (const match of spoken.matchAll(pattern)) {
+        report(file, `${rule}-in-head`, `"${match[0]}" in ${where}: ${spoken.slice(0, 90)}`);
+      }
+    }
+  }
+}
+
+/**
+ * The accessibility floor, checked on every prerendered page.
+ *
+ * CLAUDE.md names five things a redesign must not drop: the skip link, visible
+ * focus rings, `aria-current` on the active nav item, one h1 per page, and the
+ * reduced-motion block. Until now all five were held by care. The first four
+ * are visible in the HTML and are checked here; the two CSS rules are checked
+ * once, over the built stylesheets, in `checkStylesheets`.
+ *
+ * A veiled page is not exempt: a prospect using a screen reader is still a
+ * prospect. The on-demand pages (the portal, the admin screens) are not HTML
+ * in dist/ and are not seen here; PortalLayout carries its own skip link.
+ */
+function checkAccessibilityFloor(file, body) {
+  const h1s = body.match(/<h1\b/gi)?.length ?? 0;
+  if (h1s !== 1) {
+    report(file, 'heading-floor', `${h1s} <h1> elements; every page has exactly one.`);
+  }
+
+  if (!/<a\b[^>]*\bclass=["'][^"']*\bskip-link\b[^"']*["'][^>]*\bhref=["']#main["']/i.test(body)) {
+    report(file, 'skip-link', 'No skip link to #main. BaseLayout renders one; this page lost it.');
+  }
+  if (!/<main\b[^>]*\bid=["']main["']/i.test(body)) {
+    report(file, 'skip-link', 'No <main id="main"> for the skip link to land on.');
+  }
+
+  // One current item per nav, and every nav must be labelled. Two navs on a
+  // page (the masthead and the drawer) may each mark the same item current.
+  for (const nav of body.matchAll(/<nav\b([^>]*)>([\s\S]*?)<\/nav>/gi)) {
+    const attrs = nav[1];
+    if (!/\baria-label(?:ledby)?=/i.test(attrs)) {
+      report(file, 'nav-label', `A <nav> without aria-label: <nav${attrs.slice(0, 60)}>`);
+    }
+    const current = nav[2].match(/\baria-current=["']page["']/gi)?.length ?? 0;
+    if (current > 1) {
+      report(file, 'aria-current', `${current} links marked aria-current="page" in one nav.`);
+    }
+  }
+}
+
+/**
+ * The two halves of the accessibility floor that live in CSS.
+ *
+ * Astro bundles every stylesheet under dist, so the check is whether the
+ * built CSS, taken together, still styles `:focus-visible` and still carries
+ * a `prefers-reduced-motion` block. A redesign that drops either is a
+ * regression, not a style change, and it should fail here.
+ */
+async function checkStylesheets(files) {
+  const sheets = files.filter((f) => f.endsWith('.css'));
+  let css = '';
+  for (const file of sheets) css += await readFile(file, 'utf8');
+
+  if (sheets.length === 0) {
+    problems.push({ file: 'dist/', rule: 'stylesheets', detail: 'No CSS was built.' });
+    return;
+  }
+  if (!/:focus-visible\b/.test(css)) {
+    problems.push({
+      file: 'dist/**/*.css',
+      rule: 'focus-ring',
+      detail: 'No :focus-visible rule in the built CSS. Keyboard users have lost the focus ring.',
+    });
+  }
+  if (!/@media\s*\([^)]*prefers-reduced-motion\s*:\s*reduce/.test(css)) {
+    problems.push({
+      file: 'dist/**/*.css',
+      rule: 'reduced-motion',
+      detail: 'No prefers-reduced-motion block in the built CSS.',
+    });
+  }
+}
+
+/**
+ * Whether the site may say "licensed and insured".
+ *
+ * The flag lives in src/data/site.ts, which this script cannot import: it is
+ * TypeScript, and content-lint is plain Node on purpose so that it has no
+ * build step of its own. Reading the flag off the source text is deliberate
+ * and narrow, the same way `checkIndexingConsistency` reads `gatedPrefixes`:
+ * the pattern matches the one assignment, and if the line moves or is
+ * rewritten the read fails loudly rather than assuming either answer.
+ */
+async function readInsuranceClaimFlag() {
+  const source = await readFile(path.resolve('src/data/site.ts'), 'utf8');
+  const match = source.match(/\blicensedAndInsured:\s*(true|false)\b/);
+  if (!match) {
+    console.error(
+      'content-lint: could not find `licensedAndInsured: true|false` in src/data/site.ts.',
+    );
+    process.exit(1);
+  }
+  return match[1] === 'true';
 }
 
 /**
@@ -292,6 +457,24 @@ async function checkIndexingConsistency(files) {
   /** A bare `Disallow: /` closes the whole site: the scaffold state. */
   const scaffold = /^\s*Disallow:\s*\/\s*$/m.test(robots);
 
+  /*
+   * The prefixes to check against robots.txt and the sitemap come from
+   * `gatedPrefixes` in src/data/publication.ts, read from its source, plus
+   * whatever rendered as gated. Deriving them only from built pages would
+   * miss /portal entirely, since its screens are rendered on demand and are
+   * not HTML in dist/.
+   */
+  const declared = (
+    (await readFile(path.resolve('src/data/publication.ts'), 'utf8')).match(
+      /gatedPrefixes\s*=\s*\[([^\]]*)\]/,
+    )?.[1] ?? ''
+  )
+    .split(',')
+    .map((s) => s.trim().replace(/^['"]|['"]$/g, ''))
+    .filter(Boolean);
+  const underDeclaredPrefix = (route) =>
+    declared.some((prefix) => route === prefix || route.startsWith(`${prefix}/`));
+
   const gated = [];
   const open = [];
   for (const file of files.filter((f) => f.endsWith('.html'))) {
@@ -305,11 +488,17 @@ async function checkIndexingConsistency(files) {
       noindex: /<meta[^>]+name=["']robots["'][^>]+noindex/i.test(source),
     };
     /*
-     * Two kinds of gated page. The portfolio renders the veil; the client
+     * Three kinds of gated page. The portfolio renders the veil; the client
      * portal marks its body with data-portal and never draws one, because it
-     * has a sign-in screen of its own. Both are private in every state.
+     * has a sign-in screen of its own; and the admin and staff entry pages
+     * sit under a declared prefix with a layout of their own and neither
+     * marker. All are private in every state, and a page that is declared
+     * gated but has lost its noindex is caught below rather than read as a
+     * public page that should open up.
      */
-    (source.includes('data-gate-veil') || /<body\b[^>]*\bdata-portal\b/i.test(source)
+    (source.includes('data-gate-veil') ||
+    /<body\b[^>]*\bdata-portal\b/i.test(source) ||
+    underDeclaredPrefix(route)
       ? gated
       : open
     ).push(entry);
@@ -326,21 +515,6 @@ async function checkIndexingConsistency(files) {
     });
   }
 
-  /*
-   * The prefixes to check against robots.txt and the sitemap come from
-   * `gatedPrefixes` in src/data/publication.ts, read from its source, plus
-   * whatever rendered as gated. Deriving them only from built pages would
-   * miss /portal entirely, since its screens are rendered on demand and are
-   * not HTML in dist/.
-   */
-  const declared = (
-    (await readFile(path.resolve('src/data/publication.ts'), 'utf8')).match(
-      /gatedPrefixes\s*=\s*\[([^\]]*)\]/,
-    )?.[1] ?? ''
-  )
-    .split(',')
-    .map((s) => s.trim().replace(/^['"]|['"]$/g, ''))
-    .filter(Boolean);
   const gatedPrefixes = [
     ...new Set([
       ...declared,
@@ -414,6 +588,7 @@ if (!existsSync(DIST)) {
 
 const files = await walk(DIST);
 const pages = files.filter((f) => f.endsWith('.html'));
+const insuranceClaimAllowed = await readInsuranceClaimFlag();
 
 const bodies = new Map();
 for (const file of pages) {
@@ -441,6 +616,7 @@ if (existsSync(SERVER_BUNDLE)) {
   }
 }
 checkTownPagesDiffer(pages, bodies);
+await checkStylesheets(files);
 await checkIndexingConsistency(files);
 
 if (problems.length === 0) {
