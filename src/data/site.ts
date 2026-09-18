@@ -277,6 +277,18 @@ export const claims = {
   licensedAndInsuredNote:
     'Insurance wording unconfirmed as of 2026-08-19. Only the CSLB number is settled. ' +
     'Confirm carrier and coverage before setting this true.',
+  /**
+   * "The family's experience began in the 1960s and spans three generations."
+   * `heritage` above holds the words; this flag decides whether the About
+   * page says them. False until Xavier confirms, because the only source is
+   * the old website and that site is wrong about the phone number. With it
+   * false the page states the founding year, which is confirmed, and nothing
+   * older.
+   */
+  familyHeritage: false,
+  familyHeritageNote:
+    'Sourced from the old website alone as of 2026-09-18; item 9 in ' +
+    'docs/decisions-before-launch.md. Confirm with Xavier before setting this true.',
 } as const;
 
 /**

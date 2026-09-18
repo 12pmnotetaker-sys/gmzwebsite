@@ -24,7 +24,8 @@ npm ci
 npm run dev        # http://localhost:4321
 ```
 
-Node 22 (see `.nvmrc`).
+Node 24 (see `.nvmrc`), which is what the Vercel project builds with and what
+CI runs. Node 22 still works locally; the floor in `package.json` is the truth.
 
 ## The build gate
 
