@@ -22,7 +22,8 @@
     "format:check": "prettier --check .",
     "test": "tsx --test tests/*.test.ts tests/*.mjs",
     "astro": "astro",
-    "portal": "tsx scripts/portal-admin.ts"
+    "portal": "tsx scripts/portal-admin.ts",
+    "test:portal": "playwright test"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
@@ -50,6 +51,8 @@
     "zod": "3.25.76"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
     "@types/node": "^24.13.3",
     "prettier": "^3.4.2",
     "prettier-plugin-astro": "^0.14.1",

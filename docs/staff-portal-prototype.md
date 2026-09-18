@@ -1,6 +1,6 @@
 # Staff portal prototype
 
-The main website now has `/admin` and `/staff`, linked from its footer.
+The main website has `/admin` and `/staff`. Neither is linked from the public site; the office reaches them by address.
 
 - `/admin` opens the deployed GMZ Operations workspace at https://gmz-operations.gmzhavi.chatgpt.site/. Existing owner-only access remains required. This is an entry point, not a migration of the private Operations runtime or its database credentials into the public website.
 - `/staff` is an interactive prototype. All route names and instructions are sample data. The browser stores demo shifts, stop notes/completion and attendance requests under `gmz-staff-prototype-v1`. No real employee, client, address, access code, payroll data or server credentials are bundled.

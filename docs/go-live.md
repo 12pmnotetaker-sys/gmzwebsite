@@ -31,8 +31,14 @@ The service role key bypasses every row-level policy. It is set on the
 server, read by `src/server/env.ts`, and never reaches a browser. Do not put
 it in a `PUBLIC_` variable, a client script or a commit.
 
-The schema is already applied to the project (`supabase/migrations/0001_portal.sql`)
-and the private `portal` storage bucket exists. The two example clients from
+The schema is applied to the project, and `supabase/migrations/` is the whole
+of it: every migration the project has ever recorded, under the version the
+project recorded it with, so `supabase migration list` shows the two sides in
+agreement and CI proves the directory builds a working database from nothing.
+A change to the schema is a new file there, applied with the CLI or the
+dashboard and committed in the same change. One setting lives outside SQL and
+is made in the dashboard, under Authentication, Password security: leaked
+password protection, on. The private `portal` storage bucket exists. The two example clients from
 the brief are seeded, under `kate.games@example.com` and `heron@example.com`,
 so the portal can be walked end to end before a real client is added.
 

@@ -37,12 +37,57 @@ const anchor = (phase: string) => `faq-${phase}`;
    becomes a second space on the page. */
 const consultationLine = `The consultation is ${fees.consultation.display} and covers ${fees.consultation.covers}.`;
 const walkLine = `The maintenance walk is ${fees.maintenanceWalk.display}.`;
+const hoursLine = `${company.hours.days}, ${company.hours.time}. ${phones
+  .map((phone) => `${phone.name}: ${phone.display}`)
+  .join('. ')}.`;
+
+/*
+ * The same answers as structured data, so a search result can show the
+ * question and its answer. Only what the page renders: the published entries,
+ * with the same facts appended from site.ts, and the Markdown reduced to the
+ * words. content-lint reads this block like any other script, so house style
+ * applies here as it does on the page.
+ */
+const plain = (markdown: string) =>
+  markdown
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/[*_`#>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const factLines: Record<string, string> = {
+  'consultation-fee': consultationLine,
+  'maintenance-walk': walkLine,
+  'hours-and-phones': hoursLine,
+};
+
+const faqStructuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: sections.flatMap((section) =>
+    section.items.map(({ entry, facts }) => ({
+      '@type': 'Question',
+      name: entry.data.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: [plain(entry.body ?? ''), ...facts.map((fact) => factLines[fact])].join(' '),
+      },
+    })),
+  ),
+};
 ---
 
 <BaseLayout
   title="Answers"
   description="The questions clients actually ask, answered before they have to call."
 >
+  <script
+    type="application/ld+json"
+    slot="head"
+    set:html={JSON.stringify(faqStructuredData)}
+    is:inline
+  />
+
   <PageHeader
     eyebrow="Straight answers"
     title="Answers"
