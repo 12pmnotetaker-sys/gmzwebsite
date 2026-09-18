@@ -2,7 +2,7 @@
 
 The public marketing site and client portal for GMZ Landscaping Inc. Astro:
 the marketing pages prerendered, the portal rendered on demand, no CSS
-framework, deployed to Vercel.
+framework outside the fenced operations app (see below), deployed to Vercel.
 
 Read this before changing anything.
 
@@ -143,6 +143,24 @@ with an em dash in it does not reach a screen. Photographs a client attaches
 are re-encoded before they are stored, so no metadata, and no coordinates,
 survive the upload.
 
+**The operations app is fenced.** `/admin/operations` is the office's
+operations workspace, ported from another host as a React app styled with
+Tailwind and a vendored shadcn stylesheet. It is the one place in this repo
+where a CSS framework and a component library are allowed, and the fence is
+three directories: `src/operations/` (the UI and its models),
+`src/server/operations-admin/` (its protected backend) and
+`src/pages/admin/`. Nothing outside those imports from them, nothing inside
+them is imported by a marketing or portal page, and `tokens.css` and
+`global.css` stay the only design authority everywhere else. Tailwind is
+wired through `@import 'tailwindcss'` in `src/operations/operations.css`
+alone, so it never touches the marketing stylesheets; a build that grows
+`dist/client/_astro/index.*.css` past a few kilobytes is the sign it has
+leaked. The app's bundle is still read by `content-lint` as string literals,
+so house style applies to its screens too. The `/admin` entry page also links
+to the previous host of this workspace; that link is a transition-period
+dependency recorded in `docs/operations-vercel-migration.md` and comes out
+when its remaining cutover steps are done.
+
 **The portal is honest about being off.** With no database the sign-in screen
 says so and gives the phone number; with no mail provider it says a link
 cannot be sent. A request or an approval is acknowledged only once the row
@@ -162,33 +180,36 @@ requests` lists anything the office was not told about.
 
 ## Where things are
 
-| What                       | Where                                                                          |
-| -------------------------- | ------------------------------------------------------------------------------ |
-| Company facts              | `src/data/site.ts`                                                             |
-| Claims not yet allowed     | `claims` in `src/data/site.ts`                                                 |
-| Search indexing switch     | `src/data/publication.ts`                                                      |
-| Canonical URL form         | `src/data/canonical.ts`                                                        |
-| Design tokens              | `src/styles/tokens.css`                                                        |
-| Repeated patterns          | `src/styles/global.css`                                                        |
-| Content schemas            | `src/content.config.ts`                                                        |
-| The last check before live | `scripts/content-lint.mjs`                                                     |
-| Photograph intake          | `scripts/photo-intake.mjs`                                                     |
-| The intake form's fields   | `src/data/enquiry.ts`                                                          |
-| The intake endpoint        | `src/pages/api/enquiry.ts`                                                     |
-| The veil                   | `gate` in `src/data/site.ts`, `Gate.astro`                                     |
-| Which routes are gated     | `gatedPrefixes` in `src/data/publication.ts`                                   |
-| Which of those are veiled  | `veiledPrefixes` in `src/data/publication.ts`                                  |
-| Gated content              | `src/content/portfolio/`, `src/pages/portfolio/`                               |
-| The client portal          | `src/pages/portal/`, `src/layouts/PortalLayout.astro`, `src/styles/portal.css` |
-| Portal routes and shapes   | `src/data/portal/routes.ts`, `src/data/portal/shapes.ts`                       |
-| Portal seed records        | `src/data/portal/garden.ts`, `src/data/portal/project.ts`                      |
-| Sessions, links, mail      | `src/server/auth.ts`, `src/server/mail.ts`, `src/middleware.ts`                |
-| Records and requests       | `src/server/records.ts`, `src/server/requests.ts`, `src/server/screen.ts`      |
-| The portal's tables        | `supabase/migrations/`                                                         |
-| The office's command line  | `scripts/portal-admin.ts` (`npm run portal`)                                   |
-| House style, as regexes    | `scripts/lib/copy-rules.mjs`                                                   |
-| Portal design record       | `docs/portal-handoff.md`                                                       |
-| Going live                 | `docs/go-live.md`, `docs/decisions-before-launch.md`                           |
+| What                        | Where                                                                          |
+| --------------------------- | ------------------------------------------------------------------------------ |
+| Company facts               | `src/data/site.ts`                                                             |
+| Claims not yet allowed      | `claims` in `src/data/site.ts`                                                 |
+| Search indexing switch      | `src/data/publication.ts`                                                      |
+| Canonical URL form          | `src/data/canonical.ts`                                                        |
+| Design tokens               | `src/styles/tokens.css`                                                        |
+| Repeated patterns           | `src/styles/global.css`                                                        |
+| Content schemas             | `src/content.config.ts`                                                        |
+| The last check before live  | `scripts/content-lint.mjs`                                                     |
+| Photograph intake           | `scripts/photo-intake.mjs`                                                     |
+| The intake form's fields    | `src/data/enquiry.ts`                                                          |
+| The intake endpoint         | `src/pages/api/enquiry.ts`                                                     |
+| The veil                    | `gate` in `src/data/site.ts`, `Gate.astro`                                     |
+| Which routes are gated      | `gatedPrefixes` in `src/data/publication.ts`                                   |
+| Which of those are veiled   | `veiledPrefixes` in `src/data/publication.ts`                                  |
+| Gated content               | `src/content/portfolio/`, `src/pages/portfolio/`                               |
+| The client portal           | `src/pages/portal/`, `src/layouts/PortalLayout.astro`, `src/styles/portal.css` |
+| Portal routes and shapes    | `src/data/portal/routes.ts`, `src/data/portal/shapes.ts`                       |
+| Portal seed records         | `src/data/portal/garden.ts`, `src/data/portal/project.ts`                      |
+| Sessions, links, mail       | `src/server/auth.ts`, `src/server/mail.ts`, `src/middleware.ts`                |
+| Records and requests        | `src/server/records.ts`, `src/server/requests.ts`, `src/server/screen.ts`      |
+| The portal's tables         | `supabase/migrations/`                                                         |
+| The office's command line   | `scripts/portal-admin.ts` (`npm run portal`)                                   |
+| House style, as regexes     | `scripts/lib/copy-rules.mjs`                                                   |
+| The operations app (fenced) | `src/operations/`, `src/server/operations-admin/`, `src/pages/admin/`          |
+| The staff prototype         | `src/staff/`, `src/pages/staff/`, `docs/staff-portal-prototype.md`             |
+| The on-demand routes' gate  | `tests/ssr-smoke.test.mjs` (`npm test`)                                        |
+| Portal design record        | `docs/portal-handoff.md`                                                       |
+| Going live                  | `docs/go-live.md`, `docs/decisions-before-launch.md`                           |
 
 ## Restyling
 

@@ -1,11 +1,15 @@
 # gmzwebsite
 
-The public marketing site for **GMZ Landscaping Inc.** — Astro, static output,
-deployed to Vercel at `gmzlandscape.com`.
+The public marketing site for **GMZ Landscaping Inc.**: Astro, the marketing
+pages prerendered and the portal rendered on demand, deployed to Vercel at
+`gmzlandscape.com`.
 
 This repo carries all three of GMZ's surfaces in one site: the public marketing
 pages, the private portfolio under `/portfolio` behind its veil, and the client
-portal under `/portal` with its sign-in in the nav. The marketing pages are
+portal under `/portal` with its sign-in in the nav. Two office tools ride along
+behind `/admin`: the operations workspace, which is the one fenced corner of
+the repo that uses React and Tailwind, and a staff prototype under `/staff`
+that stores nothing outside the browser. `CLAUDE.md` says where the fence is. The marketing pages are
 built and stay `noindex` until the domain moves (`docs/go-live.md`); the
 portal signs a client in by an emailed link, reads their own record from the
 `gmz-client-portal` database, and keeps what they send.
