@@ -69,3 +69,44 @@ jobs:
 
       - name: Check formatting
         run: npm run format:check
+
+  # The other half of the gate: the portal switched on. The Supabase CLI
+  # builds a database from nothing out of supabase/migrations/, which fails
+  # here if a migration references a table nothing creates, and then a
+  # browser walks the portal against it the way a client would: link,
+  # request with a photograph, receipt, approval; and runs axe over every
+  # public page and the portal screens. The keys the stack prints are the
+  # CLI's fixed local demo keys, not secrets.
+  portal:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.117.0
+
+      - name: Build the database from the migrations directory
+        run: supabase start -x realtime,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+
+      - name: Hand the stack's address and key to the tests
+        run: supabase status -o env | sed 's/"//g' >> "$GITHUB_ENV"
+
+      - run: npx playwright install --with-deps chromium
+
+      - name: Walk the portal, and run axe
+        run: npm run test:portal
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: portal-journey-traces
+          path: test-results/
+          retention-days: 7

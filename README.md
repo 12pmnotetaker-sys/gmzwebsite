@@ -40,6 +40,16 @@ npm run lint:content   # the written rules, against dist/
 npm run lint:photos    # no committed image or video carries a location
 npm run format:check   # prettier
 npm test               # the unit suites, and the on-demand routes with nothing configured
+npm run test:portal    # the portal switched on, walked by a browser against a local database
+```
+
+The last one needs the Supabase CLI's local stack, which it builds from
+`supabase/migrations/`:
+
+```sh
+npx supabase start
+eval "$(npx supabase status -o env)"
+npm run test:portal
 ```
 
 `npm run build` is the gate for everything prerendered. `npm test` is the gate

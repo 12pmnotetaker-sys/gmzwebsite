@@ -20,6 +20,15 @@
   /* ---- Brand palette ------------------------------------------------ */
   --gmz-teal: #002b37;
   --gmz-green: #008c41;
+  /*
+   * The brand green, wherever it carries text. #008C41 measures 4.35:1 on
+   * white, under AA, and 4.05:1 on the subtle ground; this is the same hue
+   * two steps darker, 5.12:1 and 4.77:1, and the eye does not tell them
+   * apart. Links, button fills under white text and the portal's action
+   * colour read this; the mark, the rules and any fill that carries no text
+   * keep the uncorrected green above.
+   */
+  --gmz-green-text: #007f3b;
   --gmz-amber: #f6a400;
   --gmz-blue: #0062b9;
   --gmz-ink: #222222;
@@ -42,7 +51,7 @@
   --color-text-muted: var(--gmz-muted);
   --color-text-inverse: #ffffff;
 
-  --color-accent: var(--gmz-green);
+  --color-accent: var(--gmz-green-text);
   --color-accent-hover: var(--gmz-teal);
   --color-accent-contrast: #ffffff;
 
@@ -164,17 +173,17 @@
  * Tokens the portal adds to the palette above. Additive: nothing the
  * marketing site reads changes value.
  *
- * One contrast correction. #008C41 measures 4.35:1 on white, under AA, and it
- * hits twice in the portal: as link text and as a button fill under white
- * text. `--portal-action` is #00883F at 4.57:1, visually indistinguishable.
- * The uncorrected green stays for the mark, the rules and the active stage
- * marker, where it never carries text.
+ * One contrast correction, made once for the whole site: `--portal-action`
+ * is `--gmz-green-text`, the brand green two steps darker so it clears AA
+ * as link text and as a button fill under white text. The uncorrected green
+ * stays for the mark, the rules and the active stage marker, where it never
+ * carries text.
  *
  * Three status states, derived from the four jobs rather than invented. Amber
  * is always a fill with teal text, never amber text.
  */
 :root {
-  --portal-action: #00883f;
+  --portal-action: var(--gmz-green-text);
   --portal-action-contrast: #ffffff;
   --portal-tint: var(--gmz-green-light);
   --portal-hair: #d8dcdd;

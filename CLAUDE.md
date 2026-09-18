@@ -270,6 +270,7 @@ npm run lint:content   # the written rules, against dist/
 npm run lint:photos    # no committed image carries a location
 npm run format:check   # prettier
 npm test               # unit suites, and the on-demand routes with nothing configured
+npm run test:portal    # the portal switched on, walked by a browser; needs `npx supabase start`
 ```
 
 `npm test` is the gate for the half of the site the build cannot see. The
@@ -279,6 +280,22 @@ unset and reads them over HTTP: the sign-in screen has to say the portal is
 off and give the phone number, `/api/enquiry` has to answer `503` rather than
 a false thank-you, and `/api/admin/*` has to answer `401`. A new on-demand
 route that must behave honestly when unconfigured gets a case there.
+
+`npm run test:portal` is the gate for the portal switched on. The Supabase
+CLI builds a database from nothing out of `supabase/migrations/`, which is
+how the directory is proven to be the whole of the schema: a migration that
+references a table nothing creates fails there. Then Playwright walks the
+portal against it the way a client would (a link asked for and read back
+from the mail sink, a request with a photograph, the receipt, an approval,
+sign-out) and runs axe over every public page and the portal screens for the
+part of the accessibility floor a regex cannot see: contrast, names, roles.
+It only ever runs against a local database, because its setup clears the
+example clients' requests. CI runs it on every push, in its own job.
+
+`supabase/migrations/` is the whole of the database, every migration under
+the version the live project recorded it with, and `supabase migration list`
+shows the two in agreement. A schema change is a new file there, applied and
+committed in the same change; never a change made in the dashboard alone.
 
 `npm run build` fails loudly on a broken photo path, a missing video, absent alt
 text, a schema violation or a photograph carrying GPS, which is the point.

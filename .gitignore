@@ -26,3 +26,8 @@ Thumbs.db
 
 # deploy platform caches
 .vercel
+
+# playwright
+.playwright/
+test-results/
+playwright-report/
